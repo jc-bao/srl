@@ -59,11 +59,16 @@ class Arguments:
     # save old data to splice and get a complete trajectory (for vector env)
     self.if_use_old_traj = False
     if self.if_off_policy:  # off-policy
-      self.max_memo = 2 ** 21  # capacity of replay buffer
-      self.target_step = 2 ** 10  # repeatedly update network to keep critic's loss small
+      self.num_rollout_per_update = 10
+      self.reuse = 10
+      self.max_memo = 2 ** 20  # capacity of replay buffer
+      # self.target_step = 2 ** 10  # repeatedly update network to keep critic's loss small
+      self.target_step = self.max_step * self.num_rollout_per_update
       # num of transitions sampled from replay buffer.
-      self.batch_size = self.net_dim
-      self.repeat_times = 2 ** 0  # collect target_step, then update network
+      # self.batch_size = self.net_dim
+      self.batch_size = 2**14 # 1.6M 
+      # self.repeat_times = 2 ** 0  # collect target_step, then update network
+      self.repeat_times = int(self.target_step*self.env_num / self.batch_size * self.reuse)
       # use PER (Prioritized Experience Replay) for sparse reward
       self.if_use_per = False
     else:  # on-policy

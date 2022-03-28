@@ -20,6 +20,7 @@ def train(args):
 
 	agent.state = env.reset()
 	if args.if_off_policy:
+		print('explore...')
 		trajectory = agent.explore_env(env, args.target_step)
 		buffer.update_buffer((trajectory,))
 
@@ -28,9 +29,11 @@ def train(args):
 	del args
 
 	for _ in range(100):  # TODO fix it
+		print('explore...')
 		trajectory = agent.explore_env(env, target_step)
 		steps, r_exp = buffer.update_buffer((trajectory,))
 
+		print('update...')
 		torch.set_grad_enabled(True)
 		logging_tuple = agent.update_net(buffer)
 		torch.set_grad_enabled(False)
@@ -73,7 +76,7 @@ def init_buffer(args, gpu_id):
 if __name__ == '__main__':
 	env_func = ReachToyEnv 
 	env_args = {
-		'env_num': 4, 
+		'env_num': 2**10, 
 		'max_step': 20, 
 		'env_name': 'ReachToy-v0',
 		'state_dim': 4, # obs+goal

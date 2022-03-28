@@ -9,13 +9,17 @@ from attrdict import AttrDict
 
 
 class ReachToyEnv(gym.Env):
-  def __init__(self, dim: int = 2, env_num: int = 2, device='cuda:0'):
+  def __init__(self, dim: int = 2, env_num: int = 2, device='cuda:0', max_step=20, auto_reset=True):
     self.dim = dim
     self.env_num = env_num
     self.device = device
-    self._max_episode_steps = 20
+    self._max_episode_steps = max_step
     self.err = 0.05
     self.vel = 0.2
+    self.auto_reset = auto_reset
+    self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
+    self.goal = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
+    self.pos = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
 
     # gym space
     self.space = spaces.Box(low=-np.ones(self.dim), high=np.ones(self.dim))
@@ -34,7 +38,7 @@ class ReachToyEnv(gym.Env):
       low=-torch.ones(self.dim*2, device=self.device), high=torch.ones(self.dim*2, device=self.device)
     )
     self.torch_goal_space = self.torch_space
-
+    
     self.reset()
 
   def step(self, action):
@@ -51,12 +55,18 @@ class ReachToyEnv(gym.Env):
       dim=-1)
     done = torch.logical_or(
       (self.num_step >= self._max_episode_steps), (d < self.err)).type(torch.float32)
+    if self.auto_reset:
+      env_idx = torch.where(done > 1-1e-3)[0] # to avoid nan
+      self.reset(env_idx)
     return self.get_obs(), reward, done, info
 
-  def reset(self):
-    self.num_step = torch.zeros(self.env_num, device=self.device)
-    self.goal = self.torch_goal_space.sample((self.env_num,))
-    self.pos = self.torch_goal_space.sample((self.env_num,))
+  def reset(self, env_idx = None):
+    if env_idx is None:
+      env_idx = torch.arange(self.env_num)
+    num_reset_env = env_idx.shape[0]
+    self.num_step[env_idx] = 0
+    self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
+    self.pos[env_idx] = self.torch_goal_space.sample((num_reset_env,))
     return self.get_obs()
 
   def render(self):

@@ -79,12 +79,35 @@ class AgentBase:
   def explore_vec_env(self, env, target_step) -> list:
     traj_list = list()
     last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
+    self.states = env.reset()
     ten_s = self.states
 
     step_i = 0
     ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
-    while step_i < target_step or not any(ten_dones):
+    while step_i < target_step: 
       ten_a = self.act.get_action(ten_s).detach()  # different
+      ten_s_next, ten_rewards, ten_dones, _ = env.step(ten_a)  # different
+
+      traj_list.append((ten_s.clone(), ten_rewards.clone(),
+                       ten_dones.clone(), ten_a))  # different
+
+      step_i += 1
+      last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
+      ten_s = ten_s_next
+
+    self.states = ten_s
+    return self.convert_trajectory(traj_list, last_done)  # traj_list
+
+  def eval_vec_env(self, env, target_step) -> list:
+    traj_list = list()
+    last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
+    self.states = env.reset()
+    ten_s = self.states
+
+    step_i = 0
+    ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
+    while step_i < target_step: 
+      ten_a = torch.ones((2,2), device=self.device) 
       ten_s_next, ten_rewards, ten_dones, _ = env.step(ten_a)  # different
 
       traj_list.append((ten_s.clone(), ten_rewards.clone(),

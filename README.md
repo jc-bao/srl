@@ -8,7 +8,13 @@
 - [ ] Add HER
 - [ ] Toy Env
   - [x] reach
+  - [ ] pnp
+  - [ ] handover
 - [ ] Eval Func (in agent)
+- [ ] Normalizer
+- [ ] logger
+- [ ] check buffer function for multi done collect
+- [ ] env reset function 
 
 ### L2
 
@@ -23,3 +29,4 @@
 - [ ] add HGG
 - [ ] add curiosity
 - [ ] add optuna (wandb)
+- [ ] update according to collected steps
