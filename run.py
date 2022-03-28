@@ -21,16 +21,16 @@ def train(args):
 	agent.state = env.reset()
 	if args.if_off_policy:
 		print('explore...')
-		trajectory = agent.explore_env(env, args.target_step)
+		trajectory = agent.explore_env(env, args.target_steps_per_env)
 		buffer.update_buffer((trajectory,))
 
 	'''start training'''
-	target_step = args.target_step
+	target_steps_per_env = args.target_steps_per_env
 	del args
 
 	for _ in range(100):  # TODO fix it
 		print('explore...')
-		trajectory = agent.explore_env(env, target_step)
+		trajectory = agent.explore_env(env, target_steps_per_env)
 		steps, r_exp = buffer.update_buffer((trajectory,))
 
 		print('update...')
@@ -39,6 +39,9 @@ def train(args):
 		torch.set_grad_enabled(False)
 		# TODO add eval here
 		print(steps, r_exp, logging_tuple)
+
+		print('eval...')
+		print(agent.evaluate_save(steps, env))
 
 
 def init_agent(args, gpu_id, env=None):

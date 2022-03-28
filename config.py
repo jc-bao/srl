@@ -60,24 +60,24 @@ class Arguments:
     self.if_use_old_traj = False
     if self.if_off_policy:  # off-policy
       self.num_rollout_per_update = 10
-      self.reuse = 10
+      self.reuse = 3 
       self.max_memo = 2 ** 20  # capacity of replay buffer
-      # self.target_step = 2 ** 10  # repeatedly update network to keep critic's loss small
-      self.target_step = self.max_step * self.num_rollout_per_update
+      # self.target_steps_per_env = 2 ** 10  # repeatedly update network to keep critic's loss small
+      self.target_steps_per_env = self.max_step * self.num_rollout_per_update
       # num of transitions sampled from replay buffer.
       # self.batch_size = self.net_dim
-      self.batch_size = 2**14 # 1.6M 
-      # self.repeat_times = 2 ** 0  # collect target_step, then update network
-      self.repeat_times = int(self.target_step*self.env_num / self.batch_size * self.reuse)
+      self.batch_size = 2**13 # 8k 
+      # self.repeat_times = 2 ** 0  # collect target_steps_per_env, then update network
+      self.repeat_times = int(self.target_steps_per_env*self.env_num / self.batch_size * self.reuse)
       # use PER (Prioritized Experience Replay) for sparse reward
       self.if_use_per = False
     else:  # on-policy
       self.max_memo = 2 ** 12  # capacity of replay buffer
       # repeatedly update network to keep critic's loss small
-      self.target_step = self.max_memo
+      self.target_steps_per_env = self.max_memo
       # num of transitions sampled from replay buffer.
       self.batch_size = self.net_dim * 2
-      self.repeat_times = 2 ** 4  # collect target_step, then update network
+      self.repeat_times = 2 ** 4  # collect target_steps_per_env, then update network
       # use PER: GAE (Generalized Advantage Estimation) for sparse reward
       self.if_use_gae = False
 
@@ -104,8 +104,11 @@ class Arguments:
     self.if_allow_break = True
 
     '''Arguments for evaluate'''
-    self.eval_gap = 2 ** 7  # evaluate the agent per eval_gap seconds
+    eval_cycle_gap = 10
+    eval_ep_per_env = 10
+    self.eval_gap = self.target_steps_per_env * self.env_num * eval_cycle_gap  # evaluate the agent per eval_gap steps
     self.eval_times = 2 ** 4  # number of times that get episode return
+    self.eval_steps_per_env = eval_ep_per_env * self.max_step
 
   def init_before_training(self):
     np.random.seed(self.random_seed)

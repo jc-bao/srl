@@ -10,11 +10,11 @@
   - [x] reach
   - [ ] pnp
   - [ ] handover
-- [ ] Eval Func (in agent)
+- [x] Eval Func (in agent)
 - [ ] Normalizer
-- [ ] logger
+- [x] logger
 - [ ] check buffer function for multi done collect
-- [ ] env reset function 
+- [x] env reset function 
 
 ### L2
 
@@ -30,3 +30,4 @@
 - [ ] add curiosity
 - [ ] add optuna (wandb)
 - [ ] update according to collected steps
+- [ ] merge buffer into agent

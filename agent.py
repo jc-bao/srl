@@ -1,9 +1,11 @@
 import torch
 import numpy as np
 from copy import deepcopy
-import os
+import os, time
+from attrdict import AttrDict
 
 from net import ActorSAC, CriticTwin
+
 
 class AgentBase:
   def __init__(self, net_dim: int, state_dim: int, action_dim: int, gpu_id=0, args=None):
@@ -53,15 +55,24 @@ class AgentBase:
     else:
       self.criterion = torch.nn.SmoothL1Loss(reduction='mean')
       self.get_obj_critic = self.get_obj_critic_raw
+    
+    '''record params'''
+    self.total_step = 0
+    self.last_eval_step = -1
+    self.eval_gap = args.eval_gap
+    self.eval_steps_per_env = args.eval_steps_per_env
+    self.cwd = args.cwd
+    self.start_time = time.time()
+    self.r_max = -np.inf
 
-  def explore_one_env(self, env, target_step) -> list:
+  def explore_one_env(self, env, target_steps_per_env) -> list:
     traj_list = list()
     last_done = [0, ]
     state = self.states[0]
 
     step_i = 0
     done = False
-    while step_i < target_step or not done:
+    while step_i < target_steps_per_env or not done:
       ten_s = torch.as_tensor(state, dtype=torch.float32).unsqueeze(0)
       ten_a = self.act.get_action(
         ten_s.to(self.device)).detach().cpu()  # different
@@ -76,49 +87,79 @@ class AgentBase:
     last_done[0] = step_i
     return self.convert_trajectory(traj_list, last_done)  # traj_list
 
-  def explore_vec_env(self, env, target_step) -> list:
-    traj_list = list()
+  def explore_vec_env(self, env, target_steps_per_env, eval_mode = False) -> list:
+    if eval_mode:
+      num_ep = torch.zeros(self.env_num, device=self.device)
+      ep_rew = torch.zeros(self.env_num, device=self.device) 
+      ep_step = torch.zeros(self.env_num, device=self.device)
+      final_rew = torch.zeros(self.env_num, device=self.device) 
+    else:
+      traj_list = list()
     last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
     self.states = env.reset()
     ten_s = self.states
 
     step_i = 0
     ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
-    while step_i < target_step: 
-      ten_a = self.act.get_action(ten_s).detach()  # different
+    while step_i < target_steps_per_env:
+      if eval_mode: 
+        ten_a = self.act(ten_s).detach()
+      else:
+        ten_a = self.act.get_action(ten_s).detach()  # different
       ten_s_next, ten_rewards, ten_dones, _ = env.step(ten_a)  # different
-
-      traj_list.append((ten_s.clone(), ten_rewards.clone(),
-                       ten_dones.clone(), ten_a))  # different
+      if eval_mode:
+        done_idx = torch.where(ten_dones)[0]
+        num_ep[done_idx] += 1
+        ep_rew += ten_rewards
+        ep_step += 1
+        final_rew[done_idx] += ten_rewards[done_idx]
+      else:
+        traj_list.append((ten_s.clone(), ten_rewards.clone(),
+                        ten_dones.clone(), ten_a))  # different
 
       step_i += 1
       last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
       ten_s = ten_s_next
 
-    self.states = ten_s
-    return self.convert_trajectory(traj_list, last_done)  # traj_list
+    if eval_mode:
+      ep_rew /= num_ep
+      final_rew /= num_ep
+      ep_step /= num_ep
+      return torch.mean(ep_rew), torch.mean(final_rew), torch.mean(ep_step)
+    else:
+      return self.convert_trajectory(traj_list, last_done)  # traj_list
 
-  def eval_vec_env(self, env, target_step) -> list:
-    traj_list = list()
-    last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
-    self.states = env.reset()
-    ten_s = self.states
+  def evaluate_save(self, steps, env) -> (bool, bool):
+    self.total_step += steps  # update total training steps
 
-    step_i = 0
-    ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
-    while step_i < target_step: 
-      ten_a = torch.ones((2,2), device=self.device) 
-      ten_s_next, ten_rewards, ten_dones, _ = env.step(ten_a)  # different
+    if time.time() - self.last_eval_step < self.eval_gap:
+      return None
+    else:
+      self.last_eval_step = self.total_step
 
-      traj_list.append((ten_s.clone(), ten_rewards.clone(),
-                       ten_dones.clone(), ten_a))  # different
+      '''evaluate first time'''
+      r_avg, r_final, s_avg = self.explore_vec_env(env, self.eval_steps_per_env, eval_mode=True)
+      r_avg = r_avg.detach().cpu().numpy()
+      s_avg = s_avg.detach().cpu().numpy()
+      r_final = r_final.detach().cpu().numpy() 
 
-      step_i += 1
-      last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
-      ten_s = ten_s_next
+      '''save the policy network'''
+      if_save = r_avg > self.r_max
+      if if_save:  # save checkpoint with highest episode return
+        self.r_max = r_avg  # update max reward (episode return)
 
-    self.states = ten_s
-    return self.convert_trajectory(traj_list, last_done)  # traj_list
+        act_path = f"{self.cwd}/actor_{self.total_step:08}_{self.r_max:09.3f}.pth"
+        # save policy and print
+        torch.save(self.act.state_dict(), act_path)  # save policy network in *.pth
+        print(f"{self.total_step:8.2e}{self.r_max:8.2f} |")
+
+    return AttrDict(
+      step = self.total_step, 
+      r_avg = r_avg, 
+      r_final = r_final,
+      s_avg = s_avg,
+      used_time = time.time()-self.start_time
+    )
 
   def convert_trajectory(self, buf_items, last_done):  # [ElegantRL.2022.01.01]
     # assert len(buf_items) == step_i
