@@ -1,0 +1,19 @@
+# Python-created cache files
+**/__pycache__
+
+# Saved actor/critic networks from training
+*.pth
+
+# Plots, recorders, replay buffers
+*plot_*.jpg
+*recorder.npy
+*replay*.npz
+
+# Runs created by Isaac Gym
+runs/
+
+# VS Code
+**/.vscode
+# JetBrains folder
+.idea/
+results/
