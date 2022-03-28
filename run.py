@@ -5,9 +5,7 @@ import numpy as np
 from config import build_env, Arguments
 from agent import AgentSAC
 from replay_buffer import ReplayBuffer, ReplayBufferList
-from envs.IsaacGym import IsaacVecEnv
-from envs.utils.config_utils import get_isaac_env_args
-
+from envs import ReachToyEnv
 
 def train(args):
 	torch.set_grad_enabled(False)
@@ -73,7 +71,16 @@ def init_buffer(args, gpu_id):
 
 
 if __name__ == '__main__':
-	env_func = IsaacVecEnv
-	env_args = get_isaac_env_args('Ant')
-	args = Arguments(agent=AgentSAC, env_func=env_func, env_args=env_args)
+	env_func = ReachToyEnv 
+	env_args = {
+		'env_num': 4, 
+		'max_step': 20, 
+		'env_name': 'ReachToy-v0',
+		'state_dim': 4, # obs+goal
+		'goal_dim': 2, 
+		'action_dim': 2,
+		'if_discrete': False,
+		'target_return': 0, 
+	}
+	args = Arguments(agent=AgentSAC, env_func=env_func, env_args = env_args)
 	train(args)

@@ -4,9 +4,10 @@
 
 ### L1
 
-- [ ] Add SAC
+- [x] Add SAC
 - [ ] Add HER
 - [ ] Toy Env
+  - [x] reach
 - [ ] Eval Func (in agent)
 
 ### L2
@@ -14,6 +15,7 @@
 - [ ] Add Attention
 - [ ] Add Isaac Env
 - [ ] Hydra
+- [ ] Render function
 
 ### L3
 
