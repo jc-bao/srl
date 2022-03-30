@@ -37,13 +37,20 @@ class Arguments:
     self.env_func = env_func  # env = env_func(*env_args)
     self.env_args = env_args  # env = env_func(*env_args)
 
+    # HER
+    self.her_rate = 0.8
+
+    # env params
     # env_num = 1. In vector env, env_num > 1.
     self.env_num = self.update_attr('env_num')
     self.max_step = self.update_attr('max_step')  # the max step of an episode
     # the env name. Be used to set 'cwd'.
     self.env_name = self.update_attr('env_name')
+    self.max_env_step = self.update_attr('max_step')
     # vector dimension (feature number) of state
     self.state_dim = self.update_attr('state_dim')
+    self.goal_dim = self.update_attr('goal_dim')
+    self.info_dim = self.update_attr('info_dim')
     # vector dimension (feature number) of action
     self.action_dim = self.update_attr('action_dim')
     # discrete or continuous action space
@@ -60,13 +67,14 @@ class Arguments:
     self.if_use_old_traj = False
     if self.if_off_policy:  # off-policy
       self.num_rollout_per_update = 10
-      self.reuse = 3 
+      self.reuse = 0.1
       self.max_memo = 2 ** 20  # capacity of replay buffer
       # self.target_steps_per_env = 2 ** 10  # repeatedly update network to keep critic's loss small
       self.target_steps_per_env = self.max_step * self.num_rollout_per_update
       # num of transitions sampled from replay buffer.
       # self.batch_size = self.net_dim
       self.batch_size = 2**13 # 8k 
+      # self.batch_size = 2**10 # 1k 
       # self.repeat_times = 2 ** 0  # collect target_steps_per_env, then update network
       self.repeat_times = int(self.target_steps_per_env*self.env_num / self.batch_size * self.reuse)
       # use PER (Prioritized Experience Replay) for sparse reward
@@ -104,7 +112,7 @@ class Arguments:
     self.if_allow_break = True
 
     '''Arguments for evaluate'''
-    eval_cycle_gap = 10
+    eval_cycle_gap = 1
     eval_ep_per_env = 10
     self.eval_gap = self.target_steps_per_env * self.env_num * eval_cycle_gap  # evaluate the agent per eval_gap steps
     self.eval_times = 2 ** 4  # number of times that get episode return

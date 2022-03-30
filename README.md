@@ -5,7 +5,9 @@
 ### L1
 
 - [x] Add SAC
-- [ ] Add HER
+- [x] Add HER
+  - [x] add info (env_step, traj_idx) to HER
+  - [-] add trajectory extra info (traj_len, ag_pool) to HER
 - [ ] Toy Env
   - [x] reach
   - [ ] pnp
@@ -13,7 +15,7 @@
 - [x] Eval Func (in agent)
 - [ ] Normalizer
 - [x] logger
-- [ ] check buffer function for multi done collect
+- [x] check buffer function for multi done collect
 - [x] env reset function 
 
 ### L2
@@ -22,6 +24,8 @@
 - [ ] Add Isaac Env
 - [ ] Hydra
 - [ ] Render function
+- [ ] merge other buffer and state buffer
+- [ ]  `get_env_params` function
 
 ### L3
 
@@ -31,3 +35,10 @@
 - [ ] add optuna (wandb)
 - [ ] update according to collected steps
 - [ ] merge buffer into agent
+- [ ] fix relabel for to generate to left index
+- [ ] add vec transitions at a time
+
+
+## check
+
+- [ ] use mask to change final state obs to solve boundary issue (if correct )

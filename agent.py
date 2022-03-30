@@ -1,3 +1,4 @@
+from turtle import done
 import torch
 import numpy as np
 from copy import deepcopy
@@ -8,7 +9,7 @@ from net import ActorSAC, CriticTwin
 
 
 class AgentBase:
-  def __init__(self, net_dim: int, state_dim: int, action_dim: int, gpu_id=0, args=None):
+  def __init__(self, net_dim: int, state_dim: int, action_dim: int, max_env_step: int, info_dim:int, goal_dim:int = 0, gpu_id=0, args=None):
     self.gamma = getattr(args, 'gamma', 0.99)
     self.env_num = getattr(args, 'env_num', 1)
     self.batch_size = getattr(args, 'batch_size', 128)
@@ -17,6 +18,12 @@ class AgentBase:
     self.lambda_gae_adv = getattr(args, 'lambda_entropy', 0.98)
     self.if_use_old_traj = getattr(args, 'if_use_old_traj', False)  # ?
     self.soft_update_tau = getattr(args, 'soft_update_tau', 2 ** -8)
+    self.her_rate = getattr(args, 'her_rate', 0)
+    self.state_dim = state_dim
+    self.action_dim = action_dim
+    self.goal_dim = goal_dim
+    self.max_env_step = max_env_step
+    self.info_dim = info_dim
 
     if_act_target = getattr(args, 'if_act_target', False)
     if_cri_target = getattr(args, 'if_cri_target', False)
@@ -26,8 +33,8 @@ class AgentBase:
     self.states = None
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
-    self.traj_list = [[list() for _ in range(4 if if_off_policy else 5)]
-                      for _ in range(self.env_num)]  # for `self.explore_vec_env()`
+    # self.traj_list = [[list() for _ in range(5 if if_off_policy else 6)]
+    #                   for _ in range(self.env_num)]  # for `self.explore_vec_env()`
 
     act_class = getattr(self, 'act_class', None)
     cri_class = getattr(self, 'cri_class', None)
@@ -64,6 +71,9 @@ class AgentBase:
     self.cwd = args.cwd
     self.start_time = time.time()
     self.r_max = -np.inf
+    self.traj_idx = torch.arange(self.env_num, device=self.device)
+    self.num_traj = self.env_num 
+    self.traj_list = torch.empty((self.env_num, self.max_env_step, state_dim+2+action_dim+info_dim), device=self.device, dtype=torch.float32)
 
   def explore_one_env(self, env, target_steps_per_env) -> list:
     traj_list = list()
@@ -87,26 +97,30 @@ class AgentBase:
     last_done[0] = step_i
     return self.convert_trajectory(traj_list, last_done)  # traj_list
 
-  def explore_vec_env(self, env, target_steps_per_env, eval_mode = False) -> list:
+  def explore_vec_env(self, env, target_steps_per_env, eval_mode = False, random_mode = False, buffer = None) -> list:
     if eval_mode:
       num_ep = torch.zeros(self.env_num, device=self.device)
       ep_rew = torch.zeros(self.env_num, device=self.device) 
       ep_step = torch.zeros(self.env_num, device=self.device)
       final_rew = torch.zeros(self.env_num, device=self.device) 
-    else:
-      traj_list = list()
     last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
     self.states = env.reset()
     ten_s = self.states
 
     step_i = 0
     ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
+    traj_lens = torch.zeros(self.env_num, dtype=torch.long, device=self.device)
+    traj_start_ptr = torch.zeros(self.env_num, dtype=torch.long, device=self.device)
+    data_ptr = 0
     while step_i < target_steps_per_env:
-      if eval_mode: 
+      step_i += 1
+      if random_mode:
+        ten_a = torch.randn(self.env_num, self.action_dim, device=self.device)
+      elif eval_mode: 
         ten_a = self.act(ten_s).detach()
       else:
         ten_a = self.act.get_action(ten_s).detach()  # different
-      ten_s_next, ten_rewards, ten_dones, _ = env.step(ten_a)  # different
+      ten_s_next, ten_rewards, ten_dones, ten_info = env.step(ten_a)  # different
       if eval_mode:
         done_idx = torch.where(ten_dones)[0]
         num_ep[done_idx] += 1
@@ -114,11 +128,67 @@ class AgentBase:
         ep_step += 1
         final_rew[done_idx] += ten_rewards[done_idx]
       else:
-        traj_list.append((ten_s.clone(), ten_rewards.clone(),
-                        ten_dones.clone(), ten_a))  # different
+        # preprocess info, add done, trajectory index, traj len, to left 
+        ten_info = torch.cat((ten_info, ten_dones.unsqueeze(1), self.traj_idx.unsqueeze(1),
+        torch.zeros((self.env_num,2), device=self.device)), dim=-1)
+        self.traj_list[:,data_ptr,:] = torch.cat((
+          ten_s, ten_rewards.unsqueeze(1)*self.reward_scale, ((1-ten_dones)*self.gamma).unsqueeze(1), 
+          ten_a, ten_info), dim=-1)
+        data_ptr = (data_ptr+1)%self.max_env_step
 
-      step_i += 1
-      last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
+        traj_lens += 1
+
+        # handle done
+        done_idx = torch.where(ten_dones)[0]
+        last_done[done_idx] = step_i  # behind `step_i+=1`
+        done_env_num = torch.sum(ten_dones).type(torch.int32)
+        self.traj_idx[done_idx] = (self.num_traj+torch.arange(done_env_num, device=self.device))
+        self.num_traj += done_env_num # do it after update traj_idx
+        assert torch.max(self.traj_idx)+1 == self.num_traj, f'traj index {self.traj_idx} and num traj {self.num_traj} not match'
+        # reset traj recorder
+        if done_idx.shape[0] > 0:
+          # add traj len, to left to info
+          # traj len
+          tiled_traj_len = traj_lens[done_idx].unsqueeze(1).tile(1, self.max_env_step).float()
+          self.traj_list[done_idx, :, -2] = tiled_traj_len
+          # to left = len - step
+          self.traj_list[done_idx, :, -1] = (tiled_traj_len - self.traj_list[done_idx, :, -self.info_dim+1])
+          # mask
+          
+          # for env_idx in done_idx:
+          #   for env_step in range(traj_lens[env_idx]):
+          #     traj_list_idx = len(traj_list) + env_step - traj_lens[env_idx]
+          #     # number of transitions, not equals to last index
+          #     traj_list[traj_list_idx][-1][env_idx, -2] = traj_lens[env_idx]
+          #     # to left length e.g. [3,2,1]. use randint(1,3) to get sample idx 
+          #     traj_list[traj_list_idx][-1][..., -1] = traj_lens[env_idx] - env_step
+          state_traj = []
+          other_traj = []
+          for i in done_idx: # TODO fix the one by one add traj process
+            start_point = traj_start_ptr[i]
+            end_point = (start_point + traj_lens[i]) % self.max_env_step
+            if start_point < end_point:
+              state_traj.append(self.traj_list[i, start_point:end_point, :self.state_dim])
+              other_traj.append(self.traj_list[i, start_point:end_point, self.state_dim:])
+            # elif end_point == 0:
+            #   state_traj.append(self.traj_list[i, start_point:, :self.state_dim])
+            #   other_traj.append(self.traj_list[i, start_point:, self.state_dim:])
+            else:
+              state_traj.append(torch.cat((
+                self.traj_list[i, start_point:, :self.state_dim],
+                self.traj_list[i, :end_point, :self.state_dim]
+              ), dim=0))
+              other_traj.append(torch.cat((
+                self.traj_list[i, start_point:, self.state_dim:],
+                self.traj_list[i, :end_point, self.state_dim:]
+              ), dim=0))
+          state_traj = torch.cat(state_traj, dim=0)
+          other_traj = torch.cat(other_traj, dim=0)
+          buffer.extend_buffer(state_traj, other_traj)
+          self.total_step += state_traj.shape[0]
+          traj_start_ptr[done_idx] = data_ptr+1
+          traj_lens[done_idx] = 0
+
       ten_s = ten_s_next
 
     if eval_mode:
@@ -127,12 +197,11 @@ class AgentBase:
       ep_step /= num_ep
       return torch.mean(ep_rew), torch.mean(final_rew), torch.mean(ep_step)
     else:
-      return self.convert_trajectory(traj_list, last_done)  # traj_list
+      return self.total_step 
 
-  def evaluate_save(self, steps, env) -> (bool, bool):
-    self.total_step += steps  # update total training steps
+  def evaluate_save(self, env) -> (bool, bool):
 
-    if time.time() - self.last_eval_step < self.eval_gap:
+    if self.total_step - self.last_eval_step < self.eval_gap:
       return None
     else:
       self.last_eval_step = self.total_step
@@ -173,14 +242,21 @@ class AgentBase:
 
     '''stack items'''
     buf_items[0] = torch.stack(buf_items[0])
+    # action, info
     buf_items[3:] = [torch.stack(item) for item in buf_items[3:]]
 
+    # action
     if len(buf_items[3].shape) == 2:
       buf_items[3] = buf_items[3].unsqueeze(2)
 
+    # info
+
+
     if self.env_num > 1:
+      # rew
       buf_items[1] = (torch.stack(buf_items[1]) *
                       self.reward_scale).unsqueeze(2)
+      # mask
       buf_items[2] = ((1 - torch.stack(buf_items[2]))
                       * self.gamma).unsqueeze(2)
     else:
@@ -210,7 +286,7 @@ class AgentBase:
       buf_items[j] = torch.vstack(cur_item)
 
     # on-policy:  buf_item = [states, rewards, dones, actions, noises]
-    # off-policy: buf_item = [states, rewards, dones, actions]
+    # off-policy: buf_item = [states, rewards, dones, actions, info]
     # buf_items = [buf_item, ...]
     return buf_items
 
@@ -223,7 +299,7 @@ class AgentBase:
     :return: the loss of the network and states.
     """
     with torch.no_grad():
-      reward, mask, action, state, next_s = buffer.sample_batch(batch_size)
+      reward, mask, action, state, next_s, info = buffer.sample_batch(batch_size, her_rate=self.her_rate)
       next_a = self.act_target(next_s)
       critic_targets: torch.Tensor = self.cri_target(next_s, next_a)
       (next_q, min_indices) = torch.min(critic_targets, dim=1, keepdim=True)
@@ -289,11 +365,11 @@ class AgentBase:
 
 
 class AgentSAC(AgentBase):
-  def __init__(self, net_dim, state_dim, action_dim, gpu_id=0, args=None):
+  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
     self.if_off_policy = True
     self.act_class = getattr(self, 'act_class', ActorSAC)
     self.cri_class = getattr(self, 'cri_class', CriticTwin)
-    super().__init__(net_dim, state_dim, action_dim, gpu_id, args)
+    super().__init__(net_dim, state_dim, action_dim, max_env_step=max_env_step, goal_dim=goal_dim, info_dim = info_dim, gpu_id=gpu_id, args=args)
 
     self.alpha_log = torch.tensor((-np.log(action_dim) * np.e,), dtype=torch.float32,
                                   requires_grad=True, device=self.device)  # trainable parameter
@@ -332,7 +408,7 @@ class AgentSAC(AgentBase):
 
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
-      reward, mask, action, state, next_s = buffer.sample_batch(batch_size)
+      reward, mask, action, state, next_s, info = buffer.sample_batch(batch_size, her_rate=self.her_rate)
 
       next_a, next_log_prob = self.act_target.get_action_logprob(
         next_s)  # stochastic policy

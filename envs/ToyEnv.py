@@ -9,15 +9,17 @@ from attrdict import AttrDict
 
 
 class ReachToyEnv(gym.Env):
-  def __init__(self, dim: int = 2, env_num: int = 2, device='cuda:0', max_step=20, auto_reset=True):
+  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=20, auto_reset=True, err=0.05, vel=0.2):
+    self.device = torch.device(f"cuda:{gpu_id}" if (
+      torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
     self.dim = dim
     self.env_num = env_num
-    self.device = device
     self._max_episode_steps = max_step
-    self.err = 0.05
-    self.vel = 0.2
+    self.err = err
+    self.vel = vel
     self.auto_reset = auto_reset
     self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
+    self.reach_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
     self.goal = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
     self.pos = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
 
@@ -48,13 +50,17 @@ class ReachToyEnv(gym.Env):
     self.pos = torch.clamp(self.pos + action*self.vel,
                           self.torch_space.low, self.torch_space.high)
     d = torch.norm(self.pos - self.goal, dim=-1)
-    reward = -(d > self.err).type(torch.float32)
-    info = torch.cat(
-      ((d < self.err).type(torch.float32).unsqueeze(-1),  # success
-       self.pos),  # achieved goal
+    if_reach = (d < self.err)
+    # if reached, not update reach step
+    self.reach_step[~if_reach] = self.num_step[~if_reach]
+    reward = self.compute_reward(self.pos, self.goal, None)
+    info = torch.cat((
+      if_reach.type(torch.float32).unsqueeze(-1),  # success
+      self.num_step.type(torch.float32).unsqueeze(-1),  # step
+      self.pos),  # achieved goal
       dim=-1)
     done = torch.logical_or(
-      (self.num_step >= self._max_episode_steps), (d < self.err)).type(torch.float32)
+      (self.num_step >= self._max_episode_steps), (self.num_step - self.reach_step) > 4).type(torch.float32)
     if self.auto_reset:
       env_idx = torch.where(done > 1-1e-3)[0] # to avoid nan
       self.reset(env_idx)
@@ -65,6 +71,7 @@ class ReachToyEnv(gym.Env):
       env_idx = torch.arange(self.env_num)
     num_reset_env = env_idx.shape[0]
     self.num_step[env_idx] = 0
+    self.reach_step[env_idx] = 0
     self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
     self.pos[env_idx] = self.torch_goal_space.sample((num_reset_env,))
     return self.get_obs()
@@ -97,25 +104,25 @@ class ReachToyEnv(gym.Env):
   def get_obs(self):
     return torch.cat((self.pos, self.goal), dim=-1)
 
-  def compute_reward(self, achieved_goal, desired_goal, info):
-    d = np.linalg.norm(achieved_goal-desired_goal)
-    return (d < self.err).astype(np.float32)
+  def compute_reward(self, ag, dg, info):
+    return -(torch.norm(ag-dg,dim=-1) > self.err).type(torch.float32)
 
   def ezpolicy(self, obs):
-    delta = - obs.observation + obs.desired_goal
-    return delta / torch.norm(delta, dim=-1, keepdim=True)
+    delta = - obs[..., :self.dim] + obs[..., self.dim:]
+    return (delta / torch.norm(delta, dim=-1, keepdim=True))
 
   def parse_info(self, info):
     is_success = info[..., 0:1]
-    achieved_goal = info[..., 1:self.dim+1]
-    return is_success, achieved_goal
+    step = info[..., 1:2]
+    achieved_goal = info[..., 2:self.dim+2]
+    return is_success, step, achieved_goal
 
 
 if __name__ == '__main__':
-  env = ReachToyEnv()
+  env = ReachToyEnv(gpu_id=-1, err=0.2)
   obs = env.reset()
   for _ in range(env._max_episode_steps):
     act = env.ezpolicy(obs)
     obs, reward, done, info = env.step(act)
-    env.render()
+    # env.render()
     # print('[obs, reward, done]', obs, reward, done)

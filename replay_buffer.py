@@ -6,17 +6,20 @@ import torch
 
 
 class ReplayBuffer:  # for off-policy
-  def __init__(self, max_len, state_dim, action_dim, gpu_id=0):
+  def __init__(self, max_len, state_dim, action_dim, goal_dim, info_dim, reward_fn=None, gpu_id=0):
     self.now_len = 0
     self.next_idx = 0
     self.prev_idx = 0
     self.if_full = False
     self.max_len = max_len
     self.action_dim = action_dim
+    self.info_dim = info_dim
+    self.goal_dim = goal_dim
+    self.reward_fn = reward_fn
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
 
-    other_dim = 1 + 1 + self.action_dim  # reward_dim + mask_dim + action_dim
+    other_dim = 1 + 1 + self.action_dim + self.info_dim  # reward_dim + mask_dim + action_dim + info
     self.buf_other = torch.empty(
       (max_len, other_dim), dtype=torch.float32, device=self.device)
 
@@ -52,19 +55,60 @@ class ReplayBuffer:  # for off-policy
       r_exp += traj_list[1].mean().item()
     return steps, r_exp / len(traj_lists)
 
-  def sample_batch(self, batch_size) -> tuple:
-    indices = rd.randint(self.now_len - 1, size=batch_size)
+  def sample_batch(self, batch_size, her_rate=0, indices = None) -> tuple:
+    
+    if indices is None:
+      indices = torch.randint(self.now_len - 1, size=(batch_size,), dtype=torch.long, device=self.device)
+    else:
+      batch_size = indices.shape[0]
+
+      
     # r_m_a = self.buf_other[indices]
     # return (r_m_a[:, 0:1],
     #         r_m_a[:, 1:2],
     #         r_m_a[:, 2:],
     #         self.buf_state[indices],
     #         self.buf_state[indices + 1])
-    return (self.buf_other[indices, 0:1],
-            self.buf_other[indices, 1:2],
-            self.buf_other[indices, 2:],
-            self.buf_state[indices],
-            self.buf_state[indices + 1])
+    # filter done state
+    other =self.buf_other[indices] 
+    filtered_local_indices = other[..., 1] > 1e-3
+    # filter final state
+    indices = indices[filtered_local_indices]
+    other = other[filtered_local_indices]
+    state = self.buf_state[indices]
+    next_state = self.buf_state[indices+1]
+    # get state
+    info = other[..., 2+self.action_dim:2+self.action_dim+self.info_dim]
+    reward = other[..., 0:1]
+    mask = other[..., 1:2]
+    action = other[..., 2:2+self.action_dim]
+    if her_rate > 0:
+      # get indices (filter final state)
+      indices_her_local_bool = torch.rand(size=indices.shape, device=self.device) < her_rate
+      # indices_her_local = torch.randint(batch_size, size=(replace_size,), dtype=torch.long, device=self.device)
+      # indices_her_local = indices_her_local[done < 0.5] # filter out final state
+      # print(indices_her_local)
+      # local variables 
+      # replace_size = indices_her_local.shape[0] 
+      tleft = info[indices_her_local_bool, -1].long()
+      indices_her_global = indices[indices_her_local_bool]
+      # get local variables
+      idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft)).long()
+      future_goal = self.buf_other[(indices_her_global+idx_shift)%self.max_len, 2+self.action_dim+2:2+self.action_dim+2+self.goal_dim] # NOTE: to sample next state
+      # relabel
+      state[indices_her_local_bool, -self.goal_dim:] = future_goal 
+      next_state[indices_her_local_bool, -self.goal_dim:] = future_goal 
+      # recompute
+      next_state_relabeled = next_state[indices_her_local_bool]
+      ag = next_state_relabeled[..., -self.goal_dim*2:-self.goal_dim]
+      dg = next_state_relabeled[..., -self.goal_dim:]
+      reward[indices_her_local_bool] = self.reward_fn(ag, dg, None).unsqueeze(1)
+    return (reward, 
+            mask, # mask
+            action, # action
+            state, # state
+            next_state, # next_state
+            info) # info
 
   def sample_batch_r_m_a_s(self):
     if self.prev_idx <= self.next_idx:
