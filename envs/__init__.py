@@ -1,2 +1,2 @@
 # from .IsaacGym import IsaacVecEnv
-from .ToyEnv import ReachToyEnv
+from .ToyEnv import ReachToyEnv, PNPToyEnv

@@ -59,15 +59,17 @@ class Arguments:
       'target_return')  # target average episode return
 
     self.agent = agent  # DRL algorithm
-    self.net_dim = 2 ** 7  # the network width
+    # self.net_dim = 2 ** 7  # the network width
+    self.net_dim = 2 ** 9  # the network width
     # layer number of MLP (Multi-layer perception, `assert layer_num>=2`)
-    self.layer_num = 2
+    # self.layer_num = 2
+    self.layer_num = 3
     self.if_off_policy = self.get_if_off_policy()  # agent is on-policy or off-policy
     # save old data to splice and get a complete trajectory (for vector env)
     self.if_use_old_traj = False
     if self.if_off_policy:  # off-policy
-      self.num_rollout_per_update = 10
-      self.reuse = 0.1
+      self.num_rollout_per_update = 1
+      self.reuse = 0.1 
       self.max_memo = 2 ** 20  # capacity of replay buffer
       # self.target_steps_per_env = 2 ** 10  # repeatedly update network to keep critic's loss small
       self.target_steps_per_env = self.max_step * self.num_rollout_per_update
