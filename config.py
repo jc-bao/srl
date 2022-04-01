@@ -69,7 +69,7 @@ class Arguments:
     self.if_use_old_traj = False
     if self.if_off_policy:  # off-policy
       self.num_rollout_per_update = 1
-      self.reuse = 1
+      self.reuse = 0.1
       self.max_memo = 2 ** 20  # capacity of replay buffer
       # self.target_steps_per_env = 2 ** 10  # repeatedly update network to keep critic's loss small
       # self.target_steps = self.env_num * self.max_step * self.num_rollout_per_update
@@ -77,8 +77,8 @@ class Arguments:
       self.target_steps = 102400 
       # num of transitions sampled from replay buffer.
       # self.batch_size = self.net_dim
-      # self.batch_size = 2**13 # 8k 
-      self.batch_size = 2**10 # 1k 
+      self.batch_size = 2**13 # 8k 
+      # self.batch_size = 2**10 # 1k 
       # self.repeat_times = 2 ** 0  # collect target_steps_per_env, then update network
       self.repeat_times = int(self.target_steps / self.batch_size * self.reuse)
       # use PER (Prioritized Experience Replay) for sparse reward

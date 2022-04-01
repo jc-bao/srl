@@ -329,7 +329,6 @@ class AgentBase:
       critic_targets: torch.Tensor = self.cri_target(next_s, next_a)
       (next_q, min_indices) = torch.min(critic_targets, dim=1, keepdim=True)
       q_label = reward + mask * next_q
-
     q = self.cri(state, action)
     obj_critic = self.criterion(q, q_label)
 
@@ -544,7 +543,7 @@ class AgentREDqSAC(AgentSAC):
 
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
-      reward, mask, action, state, next_s, info = buffer.sample_batch(batch_size)
+      reward, mask, action, state, next_s, info = buffer.sample_batch(batch_size, her_rate=self.her_rate)
 
       next_a, next_log_prob = self.act_target.get_action_logprob(
         next_s)  # stochastic policy
