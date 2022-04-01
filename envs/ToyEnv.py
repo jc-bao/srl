@@ -282,9 +282,9 @@ class HandoverToyEnv(gym.Env):
   def step(self, action):
     # check if obj is attached
     self.attached0 = (torch.norm(self.obj - self.pos0, dim=-1) < self.err) \
-      & (self.pos0[..., self.dim] < 0)
+      & (self.grip0 < 0)
     self.attached1 = (torch.norm(self.obj - self.pos1, dim=-1) < self.err) \
-      & (self.pos1[..., self.dim] < 0)   
+      & (self.grip1 < 0)   
     both_attached = self.attached0 & self.attached1   
     # move agent
     self.num_step += 1
@@ -292,11 +292,11 @@ class HandoverToyEnv(gym.Env):
                         self.torch_action_space.high)
     # self.pos0[~both_attached] = torch.clamp(self.pos0 + action[..., :self.dim+1]*self.vel,
     #                       self.torch_space0.low, self.torch_space0.high)[~both_attached]
-    self.pos0[..., -1] = torch.clamp(action[..., self.dim],-1, 1) 
-    self.pos0[..., :-1] = torch.clamp(self.pos0[..., :-1] + action[..., :self.dim]*self.vel,
+    self.grip0 = torch.clamp(action[..., self.dim],-1, 1) 
+    self.pos0 = torch.clamp(self.pos0 + action[..., :self.dim]*self.vel,
                           self.torch_space0.low, self.torch_space0.high)
-    self.pos1[..., -1] = torch.clamp(action[..., self.dim*2+1], -1, 1) 
-    self.pos1[..., :-1] = torch.clamp(self.pos1[..., :-1] + action[..., self.dim+1:self.dim*2+1]*self.vel,
+    self.grip1 = torch.clamp(action[..., self.dim*2+1], -1, 1) 
+    self.pos1 = torch.clamp(self.pos1 + action[..., self.dim+1:self.dim*2+1]*self.vel,
                           self.torch_space1.low, self.torch_space1.high)
     # move obj with agent
     if self.use_gripper:
@@ -309,7 +309,7 @@ class HandoverToyEnv(gym.Env):
       self.obj[self.attached1] = self.pos0[self.attached1]
       goal_side = self.goal > 0
       need_handover0 = torch.logical_and((goal_side), self.pos0[..., 0] > -0.005)
-      need_handover1 = torch.logical_and((~goal_side), self.pos1[..., 0] > -0.005)
+      need_handover1 = torch.logical_and((~goal_side), self.pos1[..., 0] < 0.005)
       self.obj[self.attached1 & need_handover0] = self.pos1[self.attached1 & need_handover0]
       self.obj[self.attached0 & need_handover1] = self.pos0[self.attached0 & need_handover1]
     # compute states
@@ -385,7 +385,10 @@ class HandoverToyEnv(gym.Env):
         plt.show()
 
   def get_obs(self):
-    return torch.cat((self.pos0-self.torch_space0_mean, self.pos1-self.torch_space1_mean, self.obj, self.goal), dim=-1)
+    return torch.cat((
+      self.pos0-self.torch_space0_mean, self.grip0.unsqueeze(-1), 
+      self.pos1-self.torch_space1_mean, self.grip1.unsqueeze(-1), 
+      self.obj, self.goal), dim=-1)
 
   def compute_reward(self, ag, dg, info):
     return -(torch.norm(ag-dg,dim=-1) > self.err).type(torch.float32)
@@ -399,19 +402,21 @@ class HandoverToyEnv(gym.Env):
     pos1 = obs[..., self.dim+1:self.dim*2+1]
     grip1 = obs[..., self.dim*2+1]
     attached0 = torch.logical_and((torch.norm(obj_pos - pos0, dim=-1) < self.err), 
-    (pos0[..., self.dim] < 0))
-    attached1 = torch.logical_and((torch.norm(self.obj - self.pos1, dim=-1) < self.err), 
-    (pos1[..., self.dim] < 0))
+    (grip0 < 0))
+    attached1 = torch.logical_and((torch.norm(obj_pos - pos1, dim=-1) < self.err), 
+    (grip1 < 0))
+    # move 0
     delta0 = - pos0 + obj_pos
     delta0[attached0] =  (- pos0 + goal)[attached0]
     vel0 = -torch.ones((self.env_num, self.dim+1), device = self.device)
     vel0[..., :self.dim] = (delta0 / torch.norm(delta0, dim=-1, keepdim=True))
     need_handover0 = torch.logical_and((goal_side), pos0[..., 0] > -0.005)
     vel0[need_handover0, -1] = 1 
+    # move 1
     delta1 = - pos1 + obj_pos
     delta1[attached1] =  (- pos1 + goal)[attached1]
     vel1 = -torch.ones((self.env_num, self.dim+1), device = self.device)
-    vel1 = (delta1 / torch.norm(delta1, dim=-1, keepdim=True))
+    vel1[..., :self.dim] = (delta1 / torch.norm(delta1, dim=-1, keepdim=True))
     need_handover1 = torch.logical_and((~goal_side), pos1[..., 0] < 0.005)
     vel1[need_handover1, -1] = 1 
     reached = (torch.norm(obj_pos-goal, dim=-1) < self.err).unsqueeze(-1)
@@ -425,7 +430,7 @@ class HandoverToyEnv(gym.Env):
 
 
 if __name__ == '__main__':
-  env = HandoverToyEnv(gpu_id=-1, err=0.2, auto_reset=False)
+  env = HandoverToyEnv(gpu_id=-1, err=0.2, auto_reset=False, use_gripper=True)
   obs = env.reset()
   for _ in range(env._max_episode_steps):
     act = env.ezpolicy(obs)
