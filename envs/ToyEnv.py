@@ -244,6 +244,14 @@ class PNPToyEnv(gym.Env):
     return is_success, step, achieved_goal
 
 class HandoverToyEnv(gym.Env):
+  """handover topy env
+
+  Args:
+      gym (_type_): _description_
+
+  NOTE:
+    1. the obs is normalized, please parse it before use
+  """
   def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, use_gripper = False):
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
@@ -432,7 +440,7 @@ class HandoverToyEnv(gym.Env):
 
 
 if __name__ == '__main__':
-  env = HandoverToyEnv(gpu_id=-1, err=0.2, auto_reset=False, use_gripper=True)
+  env = HandoverToyEnv(gpu_id=-1, err=0.2, auto_reset=False, use_gripper=False)
   obs = env.reset()
   for _ in range(env._max_episode_steps):
     act = env.ezpolicy(obs)
