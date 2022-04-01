@@ -344,11 +344,11 @@ class HandoverToyEnv(gym.Env):
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
     self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-    self.goal[env_idx, 0] = abs(self.goal[env_idx, 0])
+    self.goal[env_idx, 0] = -abs(self.goal[env_idx, 0])
     self.pos0[env_idx] = self.torch_space0.sample((num_reset_env,))
     self.pos1[env_idx] = self.torch_space1.sample((num_reset_env,))
     self.obj[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-    self.obj[env_idx, 0] = abs(self.obj[env_idx, 0])
+    self.obj[env_idx, 0] = -abs(self.obj[env_idx, 0])
     self.attached0[env_idx] = False
     self.attached1[env_idx] = False
     return self.get_obs()
@@ -395,6 +395,8 @@ class HandoverToyEnv(gym.Env):
 
   def get_obs(self):
     return torch.cat((
+      # self.pos0, self.grip0.unsqueeze(-1), 
+      # self.pos1, self.grip1.unsqueeze(-1), 
       self.pos0-self.torch_space0_mean, self.grip0.unsqueeze(-1), 
       self.pos1-self.torch_space1_mean, self.grip1.unsqueeze(-1), 
       self.obj, self.goal), dim=-1)
