@@ -314,7 +314,7 @@ class HandoverToyEnv(gym.Env):
     else:
       self.obj[self.attached0 & ~both_attached] = self.pos0[self.attached0 & ~both_attached]
       self.obj[self.attached1 & ~both_attached] = self.pos1[self.attached1 & ~both_attached]
-      goal_side = self.goal > 0
+      goal_side = self.goal[..., 0] > 0
       need_handover0 = torch.logical_and((goal_side), self.pos0[..., 0] > -0.005)
       need_handover1 = torch.logical_and((~goal_side), self.pos1[..., 0] < 0.005)
       self.obj[both_attached & need_handover0] = self.pos1[both_attached & need_handover0]
@@ -344,9 +344,11 @@ class HandoverToyEnv(gym.Env):
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
     self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
+    self.goal[..., 0] = abs(self.goal[..., 0])
     self.pos0[env_idx] = self.torch_space0.sample((num_reset_env,))
     self.pos1[env_idx] = self.torch_space1.sample((num_reset_env,))
     self.obj[env_idx] = self.torch_goal_space.sample((num_reset_env,))
+    self.obj[..., 0] = abs(self.obj[..., 0])
     self.attached0[env_idx] = False
     self.attached1[env_idx] = False
     return self.get_obs()

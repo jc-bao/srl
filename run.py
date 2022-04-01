@@ -83,17 +83,19 @@ def init_buffer(args, gpu_id):
 
 
 if __name__ == '__main__':
-	env_func = HandoverToyEnv 
+	env_func = PNPToyEnv 
+	# env_func = HandoverToyEnv 
 	env_args = {
 		# 'env_num': 2**8, 
 		'env_num': 2**10, 
 		'max_step': 100, 
 		'env_name': 'PNPToy-v0',
-		'state_dim': 10, # obs+goal
+		# 'state_dim': 10, # obs+goal
+		'state_dim': 6, # obs+goal
 		'goal_dim': 2, 
 		'info_dim': 4+4,
-		'action_dim': 6
-		,
+		# 'action_dim': 6,
+		'action_dim': 2,
 		'if_discrete': False,
 		'target_return': 0, 
 		'err': 0.2,
