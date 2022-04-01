@@ -203,7 +203,6 @@ class PNPToyEnv(gym.Env):
       if self.dim == 2:
         for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
           # object
-          print(self.data[t][1])
           o_x = self.data[t][1][env_id][0].detach().cpu()
           o_y = self.data[t][1][env_id][1].detach().cpu()
           ax[env_id].plot(o_x, o_y, 'o', color=[
@@ -308,19 +307,18 @@ class HandoverToyEnv(gym.Env):
                           self.torch_space1.low, self.torch_space1.high)
     # move obj with agent
     if self.use_gripper:
-      print('real', self.attached0)
       old_pos = self.obj[both_attached]
       self.obj[self.attached0] = self.pos0[self.attached0]
       self.obj[self.attached1] = self.pos1[self.attached1]
       self.obj[both_attached] = old_pos
     else:
-      self.obj[self.attached0] = self.pos0[self.attached0]
-      self.obj[self.attached1] = self.pos0[self.attached1]
+      self.obj[self.attached0 & ~both_attached] = self.pos0[self.attached0 & ~both_attached]
+      self.obj[self.attached1 & ~both_attached] = self.pos1[self.attached1 & ~both_attached]
       goal_side = self.goal > 0
       need_handover0 = torch.logical_and((goal_side), self.pos0[..., 0] > -0.005)
       need_handover1 = torch.logical_and((~goal_side), self.pos1[..., 0] < 0.005)
-      self.obj[self.attached1 & need_handover0] = self.pos1[self.attached1 & need_handover0]
-      self.obj[self.attached0 & need_handover1] = self.pos0[self.attached0 & need_handover1]
+      self.obj[both_attached & need_handover0] = self.pos1[both_attached & need_handover0]
+      self.obj[both_attached & need_handover1] = self.pos0[both_attached & need_handover1]
     # compute states
     d = torch.norm(self.obj - self.goal, dim=-1)
     if_reach = (d < self.err)
@@ -415,7 +413,6 @@ class HandoverToyEnv(gym.Env):
     attached1 = torch.logical_and((torch.norm(obj_pos - pos1, dim=-1) < self.err), 
     (grip1 < 0))
     # move 0
-    print('get', attached0)
     delta0 = - pos0 + obj_pos
     delta0[attached0] =  (- pos0 + goal)[attached0]
     vel0 = -torch.ones((self.env_num, self.dim+1), device = self.device)
