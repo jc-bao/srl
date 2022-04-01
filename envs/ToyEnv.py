@@ -244,9 +244,10 @@ class PNPToyEnv(gym.Env):
     return is_success, step, achieved_goal
 
 class HandoverToyEnv(gym.Env):
-  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2):
+  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, use_gripper = False):
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
+    self.use_gripper = use_gripper
     self.dim = dim
     self.env_num = env_num
     self._max_episode_steps = max_step
@@ -256,18 +257,20 @@ class HandoverToyEnv(gym.Env):
     self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
     self.reach_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
     self.goal = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.pos0 = torch.empty((self.env_num, self.dim+1), dtype=torch.float32, device=self.device)
-    self.pos1 = torch.empty((self.env_num, self.dim+1), dtype=torch.float32, device=self.device)
+    self.pos0 = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
+    self.grip0 = torch.empty((self.env_num,), dtype=torch.float32, device=self.device)
+    self.pos1 = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
+    self.grip1 = torch.empty((self.env_num,), dtype=torch.float32, device=self.device)
     self.obj = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
     self.attached0 = torch.empty((self.env_num, ), dtype=torch.bool, device=self.device)
     self.attached1 = torch.empty((self.env_num, ), dtype=torch.bool, device=self.device)
 
     # torch space for vec env
     self.torch_space0 = Uniform(
-      low=torch.tensor([-2.0,-1.0,-1.0], device=self.device), high=torch.tensor([0.,1.,1.], device=self.device))
+      low=torch.tensor([-2.0,-1.0], device=self.device), high=torch.tensor([0.,1.], device=self.device))
     self.torch_space0_mean = (self.torch_space0.low + self.torch_space0.high)/2
     self.torch_space1 = Uniform(
-      low=torch.tensor([0.,-1.,-1.], device=self.device), high=torch.tensor([2.,1.,1.], device=self.device))
+      low=torch.tensor([0.,-1.], device=self.device), high=torch.tensor([2.,1.], device=self.device))
     self.torch_space1_mean = (self.torch_space1.low + self.torch_space1.high)/2
     self.torch_action_space = Uniform(
       low=-torch.ones(self.dim*2+2, device = self.device), high=torch.ones(self.dim*2+2, device = self.device))
@@ -278,9 +281,9 @@ class HandoverToyEnv(gym.Env):
 
   def step(self, action):
     # check if obj is attached
-    self.attached0 = (torch.norm(self.obj - self.pos0[...,:self.dim], dim=-1) < self.err) \
+    self.attached0 = (torch.norm(self.obj - self.pos0, dim=-1) < self.err) \
       & (self.pos0[..., self.dim] < 0)
-    self.attached1 = (torch.norm(self.obj - self.pos1[...,:self.dim], dim=-1) < self.err) \
+    self.attached1 = (torch.norm(self.obj - self.pos1, dim=-1) < self.err) \
       & (self.pos1[..., self.dim] < 0)   
     both_attached = self.attached0 & self.attached1   
     # move agent
@@ -289,23 +292,26 @@ class HandoverToyEnv(gym.Env):
                         self.torch_action_space.high)
     # self.pos0[~both_attached] = torch.clamp(self.pos0 + action[..., :self.dim+1]*self.vel,
     #                       self.torch_space0.low, self.torch_space0.high)[~both_attached]
-    self.pos0[..., -1] = torch.clamp(action[..., self.dim],
-                          self.torch_space0.low[-1], self.torch_space0.high[-1]) 
+    self.pos0[..., -1] = torch.clamp(action[..., self.dim],-1, 1) 
     self.pos0[..., :-1] = torch.clamp(self.pos0[..., :-1] + action[..., :self.dim]*self.vel,
-                          self.torch_space0.low[:-1], self.torch_space0.high[:-1])
-    # self.pos1[~both_attached] = torch.clamp(self.pos1 + action[..., :self.dim+1]*self.vel,
-    #                       self.torch_space1.low, self.torch_space1.high)[~both_attached]
-    self.pos1[..., -1] = torch.clamp(action[..., self.dim*2+1],
-                          self.torch_space1.low[-1], self.torch_space1.high[-1]) 
+                          self.torch_space0.low, self.torch_space0.high)
+    self.pos1[..., -1] = torch.clamp(action[..., self.dim*2+1], -1, 1) 
     self.pos1[..., :-1] = torch.clamp(self.pos1[..., :-1] + action[..., self.dim+1:self.dim*2+1]*self.vel,
-                          self.torch_space1.low[:-1], self.torch_space1.high[:-1])
-    # self.pos1[~both_attached] = torch.clamp(self.pos1 + action[..., self.dim+1:]*self.vel,
-    #                       self.torch_space1.low, self.torch_space1.high)[~both_attached]
+                          self.torch_space1.low, self.torch_space1.high)
     # move obj with agent
-    old_pos = self.obj[both_attached]
-    self.obj[self.attached0] = self.pos0[self.attached0, :self.dim]
-    self.obj[self.attached1] = self.pos1[self.attached1, :self.dim]
-    self.obj[both_attached] = old_pos
+    if self.use_gripper:
+      old_pos = self.obj[both_attached]
+      self.obj[self.attached0] = self.pos0[self.attached0]
+      self.obj[self.attached1] = self.pos1[self.attached1]
+      self.obj[both_attached] = old_pos
+    else:
+      self.obj[self.attached0] = self.pos0[self.attached0]
+      self.obj[self.attached1] = self.pos0[self.attached1]
+      goal_side = self.goal > 0
+      need_handover0 = torch.logical_and((goal_side), self.pos0[..., 0] > -0.005)
+      need_handover1 = torch.logical_and((~goal_side), self.pos1[..., 0] > -0.005)
+      self.obj[self.attached1 & need_handover0] = self.pos1[self.attached1 & need_handover0]
+      self.obj[self.attached0 & need_handover1] = self.pos0[self.attached0 & need_handover1]
     # compute states
     d = torch.norm(self.obj - self.goal, dim=-1)
     if_reach = (d < self.err)
@@ -388,23 +394,24 @@ class HandoverToyEnv(gym.Env):
     obj_pos = obs[..., 2*self.dim+2:3*self.dim+2]
     goal = obs[..., 3*self.dim+2:] 
     goal_side = goal[..., 0] > 0
-    pos0 = obs[..., :self.dim+1]
-    pos1 = obs[..., self.dim+1:self.dim*2+2]
-    attached0 = torch.logical_and((torch.norm(obj_pos - pos0[..., :self.dim], dim=-1) < self.err), 
+    pos0 = obs[..., :self.dim]
+    grip0 = obs[..., self.dim]
+    pos1 = obs[..., self.dim+1:self.dim*2+1]
+    grip1 = obs[..., self.dim*2+1]
+    attached0 = torch.logical_and((torch.norm(obj_pos - pos0, dim=-1) < self.err), 
     (pos0[..., self.dim] < 0))
-    attached1 = torch.logical_and((torch.norm(self.obj - self.pos1[...,:self.dim], dim=-1) < self.err), 
+    attached1 = torch.logical_and((torch.norm(self.obj - self.pos1, dim=-1) < self.err), 
     (pos1[..., self.dim] < 0))
-    both_attached = torch.logical_and(attached0, attached1)
-    delta0 = - pos0[..., :self.dim] + obj_pos
-    delta0[attached0] =  (- pos0[..., :self.dim] + goal)[attached0]
-    vel0 = -torch.ones_like(pos0, device = self.device)
+    delta0 = - pos0 + obj_pos
+    delta0[attached0] =  (- pos0 + goal)[attached0]
+    vel0 = -torch.ones((self.env_num, self.dim+1), device = self.device)
     vel0[..., :self.dim] = (delta0 / torch.norm(delta0, dim=-1, keepdim=True))
     need_handover0 = torch.logical_and((goal_side), pos0[..., 0] > -0.005)
     vel0[need_handover0, -1] = 1 
-    delta1 = - pos1[..., :self.dim] + obj_pos
-    delta1[attached1] =  (- pos1[..., :self.dim] + goal)[attached1]
-    vel1 = -torch.ones_like(pos1, device = self.device)
-    vel1[..., :self.dim] = (delta1 / torch.norm(delta1, dim=-1, keepdim=True))
+    delta1 = - pos1 + obj_pos
+    delta1[attached1] =  (- pos1 + goal)[attached1]
+    vel1 = -torch.ones((self.env_num, self.dim+1), device = self.device)
+    vel1 = (delta1 / torch.norm(delta1, dim=-1, keepdim=True))
     need_handover1 = torch.logical_and((~goal_side), pos1[..., 0] < 0.005)
     vel1[need_handover1, -1] = 1 
     reached = (torch.norm(obj_pos-goal, dim=-1) < self.err).unsqueeze(-1)
