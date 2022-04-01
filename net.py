@@ -269,3 +269,32 @@ class CriticREDq(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-lear
     tensor_qs = [cri_net(tensor_sa) for cri_net in self.critic_list]
     tensor_qs = torch.cat(tensor_qs, dim=1)
     return tensor_qs  # multiple Q values
+
+class CriticREDQ(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-learning)
+  def __init__(self, mid_dim, state_dim, action_dim):
+    super().__init__()
+    self.critic_num = 8
+    self.sample_num = 2
+    self.critic_list = list()
+    for critic_id in range(self.critic_num):
+      child_cri_net = Critic(mid_dim, state_dim, action_dim).net
+      setattr(self, f'critic{critic_id:02}', child_cri_net)
+      self.critic_list.append(child_cri_net)
+
+  def forward(self, state, action):
+    # mean Q value
+    return self.get_q_values(state, action).mean(dim=1, keepdim=True)
+
+  def get_q_min(self, state, action):
+    tensor_qs = self.get_q_values(state, action, self.sample_num)
+    q_min = torch.min(tensor_qs, dim=1, keepdim=True)[0]  # min Q value
+    return q_min
+
+  def get_q_values(self, state, action, num = None):
+    if num is None:
+      num = self.critic_num
+    tensor_sa = torch.cat((state, action), dim=1)
+    idx = np.random.choice(self.critic_num, num, replace=False)
+    tensor_qs = [self.critic_list[i](tensor_sa) for i in idx]
+    tensor_qs = torch.cat(tensor_qs, dim=1)
+    return tensor_qs  # multiple Q values

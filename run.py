@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 from config import build_env, Arguments
-from agent import AgentSAC, AgentModSAC, AgentREDqSAC, AgentDDPG
+from agent import AgentSAC, AgentModSAC, AgentREDqSAC, AgentDDPG, AgentREDQSAC
 from replay_buffer import ReplayBuffer, ReplayBufferList
 from envs import ReachToyEnv, PNPToyEnv, HandoverToyEnv
 
@@ -22,18 +22,18 @@ def train(args):
 	agent.state = env.reset()
 	if args.if_off_policy:
 		print('explore...')
-		total_steps, useless_steps = agent.explore_env(env, args.target_steps_per_env, buffer = buffer)
+		total_steps, useless_steps = agent.explore_env(env, args.target_steps, buffer = buffer)
 		print(useless_steps/total_steps)
 		# buffer.update_buffer((trajectory,))
 
 	'''start training'''
-	target_steps_per_env = args.target_steps_per_env
+	target_steps = args.target_steps
 	del args
 
 	for _ in range(10000):  # TODO fix it
 		# print('explore...')
-		total_steps, useless_steps = agent.explore_env(env, target_steps_per_env, buffer = buffer)
-		# print(useless_steps/total_steps)
+		total_steps, useless_steps = agent.explore_env(env, target_steps, buffer = buffer)
+		print(useless_steps/total_steps)
 
 		# print('update...')
 		torch.set_grad_enabled(True)
@@ -83,19 +83,19 @@ def init_buffer(args, gpu_id):
 
 
 if __name__ == '__main__':
-	env_func = PNPToyEnv 
-	# env_func = HandoverToyEnv 
+	env_func = HandoverToyEnv 
+	# env_func = PNPToyEnv 
 	env_args = {
 		# 'env_num': 2**8, 
 		'env_num': 2**10, 
 		'max_step': 100, 
 		'env_name': 'PNPToy-v0',
-		# 'state_dim': 10, # obs+goal
-		'state_dim': 6, # obs+goal
+		'state_dim': 10, # obs+goal
+		# 'state_dim': 6, # obs+goal
 		'goal_dim': 2, 
 		'info_dim': 4+4,
-		# 'action_dim': 6,
-		'action_dim': 2,
+		'action_dim': 6,
+		# 'action_dim': 2,
 		'if_discrete': False,
 		'target_return': 0, 
 		'err': 0.2,

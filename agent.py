@@ -6,7 +6,7 @@ import os
 import time
 from attrdict import AttrDict
 
-from net import ActorSAC, ActorFixSAC, CriticTwin, CriticREDq
+from net import ActorSAC, ActorFixSAC, CriticTwin, CriticREDq, CriticREDQ
 
 
 class AgentBase:
@@ -68,7 +68,7 @@ class AgentBase:
     self.total_step = 0
     self.last_eval_step = -1
     self.eval_gap = args.eval_gap
-    self.eval_steps_per_env = args.eval_steps_per_env
+    self.eval_steps = args.eval_steps
     self.cwd = args.cwd
     self.start_time = time.time()
     self.r_max = -np.inf
@@ -100,7 +100,7 @@ class AgentBase:
     last_done[0] = step_i
     return self.convert_trajectory(traj_list, last_done)  # traj_list
 
-  def explore_vec_env(self, env, target_steps_per_env, eval_mode=False, random_mode=False, buffer=None) -> list:
+  def explore_vec_env(self, env, target_steps, eval_mode=False, random_mode=False, buffer=None) -> list:
     if eval_mode:
       num_ep = torch.zeros(self.env_num, device=self.device)
       ep_rew = torch.zeros(self.env_num, device=self.device)
@@ -116,7 +116,8 @@ class AgentBase:
     traj_start_ptr = torch.zeros(
       self.env_num, dtype=torch.long, device=self.device)
     data_ptr = 0
-    while step_i < target_steps_per_env:
+    collected_steps = 0
+    while collected_steps < target_steps:
       step_i += 1
       if random_mode:
         ten_a = torch.randn(self.env_num, self.action_dim, device=self.device)
@@ -132,6 +133,7 @@ class AgentBase:
         ep_rew += ten_rewards
         ep_step += 1
         final_rew[done_idx] += ten_rewards[done_idx]
+        collected_steps = (ep_step).sum()
       else:
         # preprocess info, add done, trajectory index, traj len, to left
         ten_info = torch.cat((ten_info, ten_dones.unsqueeze(1), self.traj_idx.unsqueeze(1),
@@ -182,7 +184,7 @@ class AgentBase:
             ag_end = self.traj_list[i, end_point][self.state_dim +
                                                   2+self.info_dim:self.state_dim+4+self.info_dim]
             # dropout unmoved exp
-            if torch.norm(ag_start - ag_end) < 1e-2:
+            if torch.norm(ag_start - ag_end) < 1e-2 and ~eval_mode:
               self.useless_step += traj_lens[i]
               pass
             if start_point < end_point:
@@ -206,6 +208,7 @@ class AgentBase:
           other_traj = torch.cat(other_traj, dim=0)
           buffer.extend_buffer(state_traj, other_traj)
           self.total_step += state_traj.shape[0]
+          collected_steps += state_traj.shape[0] 
           traj_start_ptr[done_idx] = (data_ptr+1) % self.max_env_step
           traj_lens[done_idx] = 0
 
@@ -228,7 +231,7 @@ class AgentBase:
 
       '''evaluate first time'''
       r_avg, r_final, s_avg = self.explore_vec_env(
-        env, self.eval_steps_per_env, eval_mode=True)
+        env, self.eval_steps, eval_mode=True)
       r_avg = r_avg.detach().cpu().numpy()
       s_avg = s_avg.detach().cpu().numpy()
       r_final = r_final.detach().cpu().numpy()
@@ -571,6 +574,59 @@ class AgentREDqSAC(AgentSAC):
     buffer.td_error_update(td_error.detach())
     return obj_critic, state
 
+# Modified SAC using reliable_lambda and TTUR (Two Time-scale Update Rule)
+class AgentREDQSAC(AgentSAC):
+  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
+    self.act_class = getattr(self, 'act_class', ActorFixSAC)
+    self.cri_class = getattr(self, 'cri_class', CriticREDQ)
+    self.repeat_q_times = 1
+    super().__init__(net_dim, state_dim, action_dim, max_env_step, goal_dim, info_dim, gpu_id, args)
+    self.obj_c = (-np.log(0.5)) ** 0.5  # for reliable_lambda
+
+  def get_obj_critic_raw(self, buffer, batch_size):
+    with torch.no_grad():
+      reward, mask, action, state, next_s, info = buffer.sample_batch(batch_size)
+
+      next_a, next_log_prob = self.act_target.get_action_logprob(
+        next_s)  # stochastic policy
+      next_q = self.cri_target.get_q_min(next_s, next_a)
+
+      alpha = self.alpha_log.exp().detach()
+      q_label = reward + mask * (next_q + next_log_prob * alpha)
+    qs = self.cri.get_q_values(state, action)
+    obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
+    return obj_critic, state
+
+  def update_net(self, buffer):
+    buffer.update_now_len()
+
+    obj_critic = obj_actor = None
+    for _ in range(int(1 + buffer.now_len * self.repeat_times / self.batch_size)):
+      for _ in range(self.repeat_q_times):
+        '''objective of critic (loss function of critic)'''
+        obj_critic, state = self.get_obj_critic(buffer, self.batch_size)
+        self.optimizer_update(self.cri_optimizer, obj_critic)
+        self.soft_update(self.cri_target, self.cri, self.soft_update_tau)
+
+      '''objective of alpha (temperature parameter automatic adjustment)'''
+      a_noise_pg, log_prob = self.act.get_action_logprob(
+        state)  # policy gradient
+      obj_alpha = (self.alpha_log * (log_prob -
+                   self.target_entropy).detach()).mean()
+      self.optimizer_update(self.alpha_optim, obj_alpha)
+
+      '''objective of actor'''
+      alpha = self.alpha_log.exp().detach()
+      with torch.no_grad():
+        self.alpha_log[:] = self.alpha_log.clamp(-20, 2)
+
+      q_value_pg = self.cri(state, a_noise_pg)
+      obj_actor = -(q_value_pg + log_prob * alpha).mean()
+      self.optimizer_update(self.act_optimizer, obj_actor)
+
+    return obj_critic.item(), -obj_actor.item(), self.alpha_log.exp().detach().item()
+
+  
 
 class AgentDDPG(AgentBase):
   def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
@@ -595,6 +651,8 @@ class AgentDDPG(AgentBase):
       self.optimizer_update(self.act_optimizer, obj_actor)
       self.soft_update(self.act_target, self.act, self.soft_update_tau)
     return obj_critic.item(), -obj_actor.item()
+
+
 
 
 '''test bench'''
