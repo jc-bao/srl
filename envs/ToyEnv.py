@@ -300,6 +300,7 @@ class HandoverToyEnv(gym.Env):
                           self.torch_space1.low, self.torch_space1.high)
     # move obj with agent
     if self.use_gripper:
+      print('real', self.attached0)
       old_pos = self.obj[both_attached]
       self.obj[self.attached0] = self.pos0[self.attached0]
       self.obj[self.attached1] = self.pos1[self.attached1]
@@ -350,7 +351,7 @@ class HandoverToyEnv(gym.Env):
     else:
       self.data.append([self.pos0.clone(), self.pos1.clone(), self.obj.clone()])
     if self.num_step[0] == self._max_episode_steps:
-      fig, ax = plt.subplots(self.env_num)
+      fig, ax = plt.subplots(1, self.env_num)
       if self.dim == 2:
         for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
           # object
@@ -378,7 +379,7 @@ class HandoverToyEnv(gym.Env):
                           1, 1, 0, 1], markersize=10)
         plt.show()
       elif self.dim == 3:
-        fig, ax = plt.subplots(1, self.env_num)
+        fig, ax = plt.subplots(self.env_num, 1)
         for i in range(self.env_num):
           for i, d in enumerate(self.data[i]):
             ax[i].scatter(d[0], d[1], d[2], 'o', color=[0, 0, 1, i/50])
@@ -397,15 +398,16 @@ class HandoverToyEnv(gym.Env):
     obj_pos = obs[..., 2*self.dim+2:3*self.dim+2]
     goal = obs[..., 3*self.dim+2:] 
     goal_side = goal[..., 0] > 0
-    pos0 = obs[..., :self.dim]
+    pos0 = obs[..., :self.dim] + self.torch_space0_mean
     grip0 = obs[..., self.dim]
-    pos1 = obs[..., self.dim+1:self.dim*2+1]
+    pos1 = obs[..., self.dim+1:self.dim*2+1] + self.torch_space1_mean
     grip1 = obs[..., self.dim*2+1]
     attached0 = torch.logical_and((torch.norm(obj_pos - pos0, dim=-1) < self.err), 
     (grip0 < 0))
     attached1 = torch.logical_and((torch.norm(obj_pos - pos1, dim=-1) < self.err), 
     (grip1 < 0))
     # move 0
+    print('get', attached0)
     delta0 = - pos0 + obj_pos
     delta0[attached0] =  (- pos0 + goal)[attached0]
     vel0 = -torch.ones((self.env_num, self.dim+1), device = self.device)

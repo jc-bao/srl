@@ -92,7 +92,8 @@ if __name__ == '__main__':
 		'state_dim': 10, # obs+goal
 		'goal_dim': 2, 
 		'info_dim': 4+4,
-		'action_dim': 6,
+		'action_dim': 6
+		,
 		'if_discrete': False,
 		'target_return': 0, 
 		'err': 0.2,
