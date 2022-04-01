@@ -243,9 +243,182 @@ class PNPToyEnv(gym.Env):
     achieved_goal = info[..., 2:self.dim+2]
     return is_success, step, achieved_goal
 
+class HandoverToyEnv(gym.Env):
+  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2):
+    self.device = torch.device(f"cuda:{gpu_id}" if (
+      torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
+    self.dim = dim
+    self.env_num = env_num
+    self._max_episode_steps = max_step
+    self.err = err
+    self.vel = vel
+    self.auto_reset = auto_reset
+    self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
+    self.reach_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
+    self.goal = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
+    self.pos0 = torch.empty((self.env_num, self.dim+1), dtype=torch.float32, device=self.device)
+    self.pos1 = torch.empty((self.env_num, self.dim+1), dtype=torch.float32, device=self.device)
+    self.obj = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
+    self.attached0 = torch.empty((self.env_num, ), dtype=torch.bool, device=self.device)
+    self.attached1 = torch.empty((self.env_num, ), dtype=torch.bool, device=self.device)
+
+    # torch space for vec env
+    self.torch_space0 = Uniform(
+      low=torch.tensor([-2.0,-1.0,-1.0], device=self.device), high=torch.tensor([0.,1.,1.], device=self.device))
+    self.torch_space0_mean = (self.torch_space0.low + self.torch_space0.high)/2
+    self.torch_space1 = Uniform(
+      low=torch.tensor([0.,-1.,-1.], device=self.device), high=torch.tensor([2.,1.,1.], device=self.device))
+    self.torch_space1_mean = (self.torch_space1.low + self.torch_space1.high)/2
+    self.torch_action_space = Uniform(
+      low=-torch.ones(self.dim*2+2, device = self.device), high=torch.ones(self.dim*2+2, device = self.device))
+    self.torch_goal_space = Uniform(
+      low=torch.tensor([-2.0,-1.0], device=self.device), high=torch.tensor([2.0,1.0], device=self.device))
+    
+    self.reset()
+
+  def step(self, action):
+    # check if obj is attached
+    self.attached0 = (torch.norm(self.obj - self.pos0[...,:self.dim], dim=-1) < self.err) \
+      & (self.pos0[..., self.dim] < 0)
+    self.attached1 = (torch.norm(self.obj - self.pos1[...,:self.dim], dim=-1) < self.err) \
+      & (self.pos1[..., self.dim] < 0)   
+    both_attached = self.attached0 & self.attached1   
+    # move agent
+    self.num_step += 1
+    action = torch.clamp(action, self.torch_action_space.low,
+                        self.torch_action_space.high)
+    # self.pos0[~both_attached] = torch.clamp(self.pos0 + action[..., :self.dim+1]*self.vel,
+    #                       self.torch_space0.low, self.torch_space0.high)[~both_attached]
+    self.pos0[..., -1] = torch.clamp(action[..., self.dim],
+                          self.torch_space0.low[-1], self.torch_space0.high[-1]) 
+    self.pos0[..., :-1] = torch.clamp(self.pos0[..., :-1] + action[..., :self.dim]*self.vel,
+                          self.torch_space0.low[:-1], self.torch_space0.high[:-1])
+    # self.pos1[~both_attached] = torch.clamp(self.pos1 + action[..., :self.dim+1]*self.vel,
+    #                       self.torch_space1.low, self.torch_space1.high)[~both_attached]
+    self.pos1[..., -1] = torch.clamp(action[..., self.dim*2+1],
+                          self.torch_space1.low[-1], self.torch_space1.high[-1]) 
+    self.pos1[..., :-1] = torch.clamp(self.pos1[..., :-1] + action[..., self.dim+1:self.dim*2+1]*self.vel,
+                          self.torch_space1.low[:-1], self.torch_space1.high[:-1])
+    # self.pos1[~both_attached] = torch.clamp(self.pos1 + action[..., self.dim+1:]*self.vel,
+    #                       self.torch_space1.low, self.torch_space1.high)[~both_attached]
+    # move obj with agent
+    old_pos = self.obj[both_attached]
+    self.obj[self.attached0] = self.pos0[self.attached0, :self.dim]
+    self.obj[self.attached1] = self.pos1[self.attached1, :self.dim]
+    self.obj[both_attached] = old_pos
+    # compute states
+    d = torch.norm(self.obj - self.goal, dim=-1)
+    if_reach = (d < self.err)
+    # if reached, not update reach step
+    self.reach_step[~if_reach] = self.num_step[~if_reach]
+    reward = self.compute_reward(self.obj, self.goal, None)
+    info = torch.cat((
+      if_reach.type(torch.float32).unsqueeze(-1),  # success
+      self.num_step.type(torch.float32).unsqueeze(-1),  # step
+      self.obj),  # achieved goal
+      dim=-1)
+    done = torch.logical_or(
+      (self.num_step >= self._max_episode_steps), (self.num_step - self.reach_step) > 4).type(torch.float32)
+    if self.auto_reset:
+      env_idx = torch.where(done > 1-1e-3)[0] # to avoid nan
+      self.reset(env_idx)
+    return self.get_obs(), reward, done, info
+
+  def reset(self, env_idx = None):
+    if env_idx is None:
+      env_idx = torch.arange(self.env_num)
+    num_reset_env = env_idx.shape[0]
+    self.num_step[env_idx] = 0
+    self.reach_step[env_idx] = 0
+    self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
+    self.pos0[env_idx] = self.torch_space0.sample((num_reset_env,))
+    self.pos1[env_idx] = self.torch_space1.sample((num_reset_env,))
+    self.obj[env_idx] = self.torch_goal_space.sample((num_reset_env,))
+    self.attached0[env_idx] = False
+    self.attached1[env_idx] = False
+    return self.get_obs()
+
+  def render(self):
+    if self.num_step[0] == 1:
+      self.data = [[self.pos0.clone(), self.pos1.clone(), self.obj.clone()]]
+    else:
+      self.data.append([self.pos0.clone(), self.pos1.clone(), self.obj.clone()])
+    if self.num_step[0] == self._max_episode_steps:
+      fig, ax = plt.subplots(self.env_num)
+      if self.dim == 2:
+        for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
+          # object
+          o_x = self.data[t][2][env_id][0].detach().cpu()
+          o_y = self.data[t][2][env_id][1].detach().cpu()
+          ax[env_id].plot(o_x, o_y, 'o', color=[
+                          0, 1, 0, t/self._max_episode_steps], markersize=10)
+          # agent
+          a_x = self.data[t][0][env_id][0].detach().cpu()
+          a_y = self.data[t][0][env_id][1].detach().cpu()
+          ax[env_id].plot(a_x, a_y, 'o', color=[
+                          0, 0, 1, t/self._max_episode_steps])
+          # agent
+          a_x = self.data[t][1][env_id][0].detach().cpu()
+          a_y = self.data[t][1][env_id][1].detach().cpu()
+          ax[env_id].plot(a_x, a_y, 'o', color=[
+                          1, 0, 0, t/self._max_episode_steps])
+        for env_id in range(self.env_num):
+          x = self.goal[env_id][0].detach().cpu()
+          y = self.goal[env_id][1].detach().cpu()
+          ax[env_id].plot(x, y, 'rx')
+          o_x = self.data[0][2][env_id][0].detach().cpu()
+          o_y = self.data[0][2][env_id][1].detach().cpu()
+          ax[env_id].plot(o_x, o_y, 'o', color=[
+                          1, 1, 0, 1], markersize=10)
+        plt.show()
+      elif self.dim == 3:
+        fig, ax = plt.subplots(1, self.env_num)
+        for i in range(self.env_num):
+          for i, d in enumerate(self.data[i]):
+            ax[i].scatter(d[0], d[1], d[2], 'o', color=[0, 0, 1, i/50])
+        plt.show()
+
+  def get_obs(self):
+    return torch.cat((self.pos0-self.torch_space0_mean, self.pos1-self.torch_space1_mean, self.obj, self.goal), dim=-1)
+
+  def compute_reward(self, ag, dg, info):
+    return -(torch.norm(ag-dg,dim=-1) > self.err).type(torch.float32)
+
+  def ezpolicy(self, obs):
+    obj_pos = obs[..., 2*self.dim+2:3*self.dim+2]
+    goal = obs[..., 3*self.dim+2:] 
+    goal_side = goal[..., 0] > 0
+    pos0 = obs[..., :self.dim+1]
+    pos1 = obs[..., self.dim+1:self.dim*2+2]
+    attached0 = torch.logical_and((torch.norm(obj_pos - pos0[..., :self.dim], dim=-1) < self.err), 
+    (pos0[..., self.dim] < 0))
+    attached1 = torch.logical_and((torch.norm(self.obj - self.pos1[...,:self.dim], dim=-1) < self.err), 
+    (pos1[..., self.dim] < 0))
+    both_attached = torch.logical_and(attached0, attached1)
+    delta0 = - pos0[..., :self.dim] + obj_pos
+    delta0[attached0] =  (- pos0[..., :self.dim] + goal)[attached0]
+    vel0 = -torch.ones_like(pos0, device = self.device)
+    vel0[..., :self.dim] = (delta0 / torch.norm(delta0, dim=-1, keepdim=True))
+    need_handover0 = torch.logical_and((goal_side), pos0[..., 0] > -0.005)
+    vel0[need_handover0, -1] = 1 
+    delta1 = - pos1[..., :self.dim] + obj_pos
+    delta1[attached1] =  (- pos1[..., :self.dim] + goal)[attached1]
+    vel1 = -torch.ones_like(pos1, device = self.device)
+    vel1[..., :self.dim] = (delta1 / torch.norm(delta1, dim=-1, keepdim=True))
+    need_handover1 = torch.logical_and((~goal_side), pos1[..., 0] < 0.005)
+    vel1[need_handover1, -1] = 1 
+    reached = (torch.norm(obj_pos-goal, dim=-1) < self.err).unsqueeze(-1)
+    return torch.cat((vel0, vel1), dim=-1) * (~reached)
+
+  def parse_info(self, info):
+    is_success = info[..., 0:1]
+    step = info[..., 1:2]
+    achieved_goal = info[..., 2:self.dim+2]
+    return is_success, step, achieved_goal
+
 
 if __name__ == '__main__':
-  env = PNPToyEnv(gpu_id=-1, err=0.2, auto_reset=False)
+  env = HandoverToyEnv(gpu_id=-1, err=0.2, auto_reset=False)
   obs = env.reset()
   for _ in range(env._max_episode_steps):
     act = env.ezpolicy(obs)
