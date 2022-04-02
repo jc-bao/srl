@@ -59,17 +59,17 @@ class Arguments:
       'target_return')  # target average episode return
 
     self.agent = agent  # DRL algorithm
-    # self.net_dim = 2 ** 7  # the network width
-    self.net_dim = 2 ** 9  # the network width
+    self.net_dim = 2 ** 7  # the network width
+    # self.net_dim = 2 ** 9  # the network width
     # layer number of MLP (Multi-layer perception, `assert layer_num>=2`)
-    # self.layer_num = 2
-    self.layer_num = 3
+    self.layer_num = 2
+    # self.layer_num = 3
     self.if_off_policy = self.get_if_off_policy()  # agent is on-policy or off-policy
     # save old data to splice and get a complete trajectory (for vector env)
     self.if_use_old_traj = False
     if self.if_off_policy:  # off-policy
       self.num_rollout_per_update = 1
-      self.reuse = 0.1
+      self.reuse = 5
       self.max_memo = 2 ** 20  # capacity of replay buffer
       # self.target_steps_per_env = 2 ** 10  # repeatedly update network to keep critic's loss small
       # self.target_steps = self.env_num * self.max_step * self.num_rollout_per_update
@@ -86,12 +86,12 @@ class Arguments:
     else:  # on-policy
       self.max_memo = 2 ** 12  # capacity of replay buffer
       # repeatedly update network to keep critic's loss small
-      self.target_steps_per_env = self.max_memo
+      self.target_steps = 1024
       # num of transitions sampled from replay buffer.
-      self.batch_size = self.net_dim * 2
+      self.batch_size = 8192
       self.repeat_times = 2 ** 4  # collect target_steps_per_env, then update network
       # use PER: GAE (Generalized Advantage Estimation) for sparse reward
-      self.if_use_gae = False
+      self.if_use_gae = True
 
     '''Arguments for training'''
     self.gamma = 0.99  # discount factor of future rewards

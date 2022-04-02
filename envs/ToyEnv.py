@@ -119,10 +119,11 @@ class ReachToyEnv(gym.Env):
 
 
 class PNPToyEnv(gym.Env):
-  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2):
+  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, rew_type='sparse'):
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
     self.dim = dim
+    self.reward_type = reward_type
     self.env_num = env_num
     self._max_episode_steps = max_step
     self.err = err
@@ -228,7 +229,10 @@ class PNPToyEnv(gym.Env):
     return torch.cat((self.pos, self.obj, self.goal), dim=-1)
 
   def compute_reward(self, ag, dg, info):
-    return -(torch.norm(ag-dg,dim=-1) > self.err).type(torch.float32)
+    if self.rew_type == 'sparse':
+      return -(torch.norm(ag-dg,dim=-1) > self.err).type(torch.float32)
+    elif self.rew_type == 'dense':
+      return -torch.norm(ag-dg,dim=-1)/2 + 1
 
   def ezpolicy(self, obs):
     attached = torch.norm(obs[..., :self.dim] - obs[..., self.dim:self.dim*2], dim=-1) < self.err
@@ -344,11 +348,9 @@ class HandoverToyEnv(gym.Env):
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
     self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-    self.goal[env_idx, 0] = abs(self.goal[env_idx, 0])
     self.pos0[env_idx] = self.torch_space0.sample((num_reset_env,))
     self.pos1[env_idx] = self.torch_space1.sample((num_reset_env,))
     self.obj[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-    self.obj[env_idx, 0] = abs(self.obj[env_idx, 0])
     self.attached0[env_idx] = False
     self.attached1[env_idx] = False
     return self.get_obs()

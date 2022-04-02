@@ -3,7 +3,7 @@ import torch
 import numpy as np
 
 from config import build_env, Arguments
-from agent import AgentSAC, AgentModSAC, AgentREDqSAC, AgentDDPG, AgentREDQSAC
+from agent import AgentSAC, AgentModSAC, AgentREDqSAC, AgentDDPG, AgentREDQSAC, AgentPPO
 from replay_buffer import ReplayBuffer, ReplayBufferList
 from envs import ReachToyEnv, PNPToyEnv, HandoverToyEnv
 
@@ -103,4 +103,5 @@ if __name__ == '__main__':
 		'gpu_id': 0,
 	}
 	args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
+	# args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
 	train(args)
