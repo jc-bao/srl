@@ -183,7 +183,7 @@ class AgentBase:
             ag_end = self.traj_list[i, end_point][self.state_dim +
                                                   2+self.info_dim:self.state_dim+4+self.info_dim]
             # dropout unmoved exp
-            if torch.norm(ag_start - ag_end) < 1e-2 and ~eval_mode:
+            if torch.max(abs(ag_start - ag_end)) < 5e-2 and ~eval_mode:
               self.useless_step += traj_lens[i]
               pass
             if start_point < end_point:
