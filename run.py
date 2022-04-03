@@ -94,16 +94,16 @@ if __name__ == '__main__':
 		'dim': 2, 
 		'env_name': 'PNPToy-v0',
 		# 'state_dim': 10, # obs+goal
-		'state_dim': 10, # shared+seperate+goal
+		'state_dim': 6,# shared+seperate+goal
 		'other_dims': AttrDict(
 			shared_dim=2, 
-			seperate_dim=4, 
-			goal_dim=4, 
-			num_goals=2, 
+			seperate_dim=2, 
+			goal_dim=2, 
+			num_goals=1, 
 		), 
-		'num_goals': 2, 
-		'goal_dim': 4, 
-		'info_dim': 4+2+4,
+		'num_goals': 1, 
+		'goal_dim': 2, 
+		'info_dim': 4+2+2,
 		# 'action_dim': 6,
 		'action_dim': 2,
 		'if_discrete': False,
@@ -112,6 +112,6 @@ if __name__ == '__main__':
 		'vel': 0.2,
 		'gpu_id': 0,
 	}
-	args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
-	# args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
+	# args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
+	args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
 	train(args)

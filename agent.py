@@ -656,13 +656,13 @@ class AgentDDPG(AgentBase):
 
 
 class AgentPPO(AgentBase):
-  def __init__(self, net_dim: int, state_dim: int, action_dim: int, max_env_step = None, goal_dim = None, info_dim = None, gpu_id=0, args=None):
+  def __init__(self, net_dim: int, state_dim: int, action_dim: int, max_env_step = None, goal_dim = None, info_dim = None, gpu_id=0, net_type ='mlp', args=None):
     self.if_off_policy = False
     self.act_class = getattr(self, 'act_class', ActorPPO)
     self.cri_class = getattr(self, 'cri_class', CriticPPO)
     self.if_cri_target = getattr(args, 'if_cri_target', False)
     super().__init__(net_dim, state_dim, action_dim, max_env_step=max_env_step,
-                     goal_dim=goal_dim, info_dim=info_dim, gpu_id=gpu_id, args=args) 
+                     goal_dim=goal_dim, info_dim=info_dim, gpu_id=gpu_id, net_type=net_type, args=args) 
 
     # could be 0.00 ~ 0.50 `ratio.clamp(1 - clip, 1 + clip)`
     self.ratio_clip = getattr(args, 'ratio_clip', 0.25)

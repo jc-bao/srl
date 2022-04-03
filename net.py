@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 
 class ActorSAC(nn.Module):
-  def __init__(self, mid_dim, state_dim, action_dim):
+  def __init__(self, mid_dim, state_dim, action_dim, net_type='mlp', other_dims=None):
     super().__init__()
     self.net_state = nn.Sequential(nn.Linear(state_dim, mid_dim), nn.ReLU(),
                                    nn.Linear(mid_dim, mid_dim), nn.ReLU(), )
@@ -132,7 +132,7 @@ class ActorFixSAC(nn.Module):
 
 
 class ActorPPO(nn.Module):
-  def __init__(self, mid_dim, state_dim, action_dim):
+  def __init__(self, mid_dim, state_dim, action_dim, net_type='mlp', other_dims=None):
     super().__init__()
     self.net = nn.Sequential(nn.Linear(state_dim, mid_dim), nn.ReLU(),
                              nn.Linear(mid_dim, mid_dim), nn.ReLU(),
@@ -280,7 +280,7 @@ class CriticREDQ(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-lear
 
 
 class CriticPPO(nn.Module):
-  def __init__(self, mid_dim, state_dim, _action_dim):
+  def __init__(self, mid_dim, state_dim, _action_dim, net_type='mlp', other_dims=None):
     super().__init__()
     self.net = nn.Sequential(nn.Linear(state_dim, mid_dim), nn.ReLU(),
                              nn.Linear(mid_dim, mid_dim), nn.ReLU(),

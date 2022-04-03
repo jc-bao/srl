@@ -90,8 +90,8 @@ class Arguments:
       # repeatedly update network to keep critic's loss small
       self.target_steps = 100 
       # num of transitions sampled from replay buffer.
-      self.batch_size = 8192
       self.repeat_times = 2 ** 4  # collect target_steps_per_env, then update network
+      self.batch_size = self.env_num * self.target_steps // self.repeat_times
       # use PER: GAE (Generalized Advantage Estimation) for sparse reward
       self.if_use_gae = True
 
