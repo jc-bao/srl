@@ -119,10 +119,12 @@ class ReachToyEnv(gym.Env):
 
 
 class PNPToyEnv(gym.Env):
-  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2):
+  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, reward_type='sparse', num_goals = 1):
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
     self.dim = dim
+    self.num_goals = num_goals
+    self.reward_type = reward_type
     self.env_num = env_num
     self._max_episode_steps = max_step
     self.err = err
@@ -130,10 +132,11 @@ class PNPToyEnv(gym.Env):
     self.auto_reset = auto_reset
     self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
     self.reach_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
-    self.goal = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.pos = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.obj = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.attached = torch.empty((self.env_num,), dtype=torch.bool, device=self.device)
+    self.goal = torch.empty((self.env_num, self.num_goals, self.dim), dtype=torch.float32, device=self.device)
+    self.pos = torch.empty((self.env_num, 1, self.dim), dtype=torch.float32, device=self.device)
+    self.obj = torch.empty((self.env_num, self.num_goals, self.dim), dtype=torch.float32, device=self.device)
+    self.attached = torch.empty((self.env_num, self.num_goals), dtype=torch.bool, device=self.device)
+    self.reached = torch.empty((self.env_num, self.num_goals), dtype=torch.bool, device=self.device)
 
     # gym space
     self.space = spaces.Box(low=-np.ones(self.dim), high=np.ones(self.dim))
@@ -148,31 +151,36 @@ class PNPToyEnv(gym.Env):
     self.torch_space = Uniform(
       low=-torch.ones(self.dim, device=self.device), high=torch.ones(self.dim, device=self.device))
     self.torch_action_space = self.torch_space
-    self.torch_goal_space = self.torch_space
+    self.torch_pos_space = Uniform(
+      low=-torch.ones((1, self.dim), device=self.device), high=torch.ones((1, self.dim), device=self.device))
+    self.torch_goal_space = Uniform(
+      low=-torch.ones((self.num_goals, self.dim), device=self.device), high=torch.ones((self.num_goals, self.dim), device=self.device))
     
     self.reset()
 
   def step(self, action):
     # check if obj is attached
     self.attached = torch.norm(self.obj - self.pos, dim=-1) < self.err
+    self.reached = torch.norm(self.goal - self.pos, dim=-1) < self.err
     # move agent
     self.num_step += 1
     action = torch.clamp(action, self.torch_action_space.low,
                         self.torch_action_space.high)
-    self.pos = torch.clamp(self.pos + action*self.vel,
-                          self.torch_space.low, self.torch_space.high)
+    self.pos = torch.clamp(self.pos + action.unsqueeze
+    (1)*self.vel,
+                          self.torch_pos_space.low, self.torch_pos_space.high)
     # move obj with agent
-    self.obj[self.attached] = self.pos[self.attached]
-    # compute states
-    d = torch.norm(self.obj - self.goal, dim=-1)
-    if_reach = (d < self.err)
+    self.obj[self.attached] = self.pos.repeat(1, self.num_goals, 1)[self.attached]
+    # fix obj if reached
+    self.obj[self.reached] = self.goal[self.reached]
     # if reached, not update reach step
+    if_reach = self.reached.all(dim=-1)
     self.reach_step[~if_reach] = self.num_step[~if_reach]
     reward = self.compute_reward(self.obj, self.goal, None)
     info = torch.cat((
       if_reach.type(torch.float32).unsqueeze(-1),  # success
       self.num_step.type(torch.float32).unsqueeze(-1),  # step
-      self.obj),  # achieved goal
+      self.obj.reshape(self.env_num, -1)),  # achieved goal
       dim=-1)
     done = torch.logical_or(
       (self.num_step >= self._max_episode_steps), (self.num_step - self.reach_step) > 4).type(torch.float32)
@@ -188,9 +196,10 @@ class PNPToyEnv(gym.Env):
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
     self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-    self.pos[env_idx] = self.torch_goal_space.sample((num_reset_env,))
+    self.pos[env_idx] = self.torch_pos_space.sample((num_reset_env,))
     self.obj[env_idx] = self.torch_goal_space.sample((num_reset_env,))
     self.attached[env_idx] = False
+    self.reached[env_idx] = False
     return self.get_obs()
 
   def render(self):
@@ -225,10 +234,13 @@ class PNPToyEnv(gym.Env):
         plt.show()
 
   def get_obs(self):
-    return torch.cat((self.pos, self.obj, self.goal), dim=-1)
+    return torch.cat((self.pos.reshape(self.env_num, -1), self.obj.reshape(self.env_num, -1), self.goal.reshape(self.env_num, -1)), dim=-1)
 
   def compute_reward(self, ag, dg, info):
-    return -(torch.norm(ag-dg,dim=-1) > self.err).type(torch.float32)
+    if self.reward_type == 'sparse':
+      return -torch.mean((torch.norm(ag.reshape(-1, self.num_goals, self.dim)-dg.reshape(-1, self.num_goals, self.dim),dim=-1) > self.err).type(torch.float32), dim=-1)
+    elif self.reward_type == 'dense':
+      return -torch.norm(ag-dg,dim=-1)/2 + 1
 
   def ezpolicy(self, obs):
     attached = torch.norm(obs[..., :self.dim] - obs[..., self.dim:self.dim*2], dim=-1) < self.err
@@ -344,11 +356,9 @@ class HandoverToyEnv(gym.Env):
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
     self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-    self.goal[env_idx, 0] = abs(self.goal[env_idx, 0])
     self.pos0[env_idx] = self.torch_space0.sample((num_reset_env,))
     self.pos1[env_idx] = self.torch_space1.sample((num_reset_env,))
     self.obj[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-    self.obj[env_idx, 0] = abs(self.obj[env_idx, 0])
     self.attached0[env_idx] = False
     self.attached1[env_idx] = False
     return self.get_obs()

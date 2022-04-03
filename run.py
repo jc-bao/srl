@@ -1,9 +1,10 @@
 import isaacgym
 import torch
 import numpy as np
+from attrdict import AttrDict
 
 from config import build_env, Arguments
-from agent import AgentSAC, AgentModSAC, AgentREDqSAC, AgentDDPG, AgentREDQSAC
+from agent import AgentSAC, AgentModSAC, AgentREDqSAC, AgentDDPG, AgentREDQSAC, AgentPPO
 from replay_buffer import ReplayBuffer, ReplayBufferList
 from envs import ReachToyEnv, PNPToyEnv, HandoverToyEnv
 
@@ -49,7 +50,7 @@ def train(args):
 def init_agent(args, gpu_id, env=None):
 	agent = args.agent(args.net_dim, args.state_dim,
 										 args.action_dim, max_env_step = args.max_env_step, goal_dim = args.goal_dim,
-										 info_dim=args.info_dim, gpu_id=gpu_id, args=args)
+										 info_dim=args.info_dim, gpu_id=gpu_id, net_type=args.net_type, args=args)
 	agent.save_or_load_agent(args.cwd, if_save=False)
 
 	if env is not None:
@@ -57,11 +58,11 @@ def init_agent(args, gpu_id, env=None):
 		if args.env_num == 1:
 			states = [env.reset(), ]
 			assert isinstance(states[0], np.ndarray)
-			assert states[0].shape in {(args.state_dim,), args.state_dim}
+			# assert states[0].shape in {(args.state_dim,), args.state_dim}
 		else:
 			states = env.reset()
 			assert isinstance(states, torch.Tensor)
-			assert states.shape == (args.env_num, args.state_dim)
+			# assert states.shape == (args.env_num, args.state_dim)
 		agent.states = states
 	return agent
 
@@ -83,19 +84,28 @@ def init_buffer(args, gpu_id):
 
 
 if __name__ == '__main__':
-	env_func = HandoverToyEnv 
-	# env_func = PNPToyEnv 
+	# env_func = HandoverToyEnv 
+	env_func = PNPToyEnv 
 	env_args = {
 		# 'env_num': 2**8, 
 		'env_num': 2**10, 
 		'max_step': 100, 
+		'use_gripper': True, 
+		'dim': 2, 
 		'env_name': 'PNPToy-v0',
-		'state_dim': 10, # obs+goal
-		# 'state_dim': 6, # obs+goal
-		'goal_dim': 2, 
-		'info_dim': 4+4,
-		'action_dim': 6,
-		# 'action_dim': 2,
+		# 'state_dim': 10, # obs+goal
+		'state_dim': 10, # shared+seperate+goal
+		'other_dims': AttrDict(
+			shared_dim=2, 
+			seperate_dim=4, 
+			goal_dim=4, 
+			num_goals=2, 
+		), 
+		'num_goals': 2, 
+		'goal_dim': 4, 
+		'info_dim': 4+2+4,
+		# 'action_dim': 6,
+		'action_dim': 2,
 		'if_discrete': False,
 		'target_return': 0, 
 		'err': 0.2,
@@ -103,4 +113,5 @@ if __name__ == '__main__':
 		'gpu_id': 0,
 	}
 	args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
+	# args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
 	train(args)
