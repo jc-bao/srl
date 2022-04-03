@@ -177,8 +177,7 @@ class PNPToyEnv(gym.Env):
     distance = torch.norm(self.obj - self.pos, dim=-1)
     min_dis = distance.min(dim=-1)[0]
     # only consider the most close point
-    self.attached = (distance <= torch.min(self.err, min_dis))
-    print(self.attached)
+    self.attached = (distance <= torch.min(self.err, min_dis).unsqueeze(-1))
     self.reached = torch.norm(self.goal - self.obj, dim=-1) < self.err
     reward = self.compute_reward(self.obj, self.goal, None)
     info = torch.cat((
