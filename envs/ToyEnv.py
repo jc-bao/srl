@@ -245,7 +245,7 @@ class PNPToyEnv(gym.Env):
     if self.reward_type == 'sparse':
       return -torch.mean((torch.norm(ag.reshape(-1, self.num_goals, self.dim)-dg.reshape(-1, self.num_goals, self.dim),dim=-1) > self.err).type(torch.float32), dim=-1)
     elif self.reward_type == 'dense':
-      return -torch.norm(ag-dg,dim=-1)/2 + 1
+      return 1-torch.mean(torch.norm(ag.reshape(-1, self.num_goals, self.dim)-dg.reshape(-1, self.num_goals, self.dim),dim=-1), dim=-1)
 
   def ezpolicy(self, obs):
     pos = obs[..., :self.dim]

@@ -24,7 +24,7 @@ def train(args):
 	if args.if_off_policy:
 		print('explore...')
 		total_steps, useless_steps = agent.explore_env(env, args.target_steps, buffer = buffer)
-		print(useless_steps/total_steps)
+		print(useless_steps/total_steps, useless_steps, total_steps)
 		# buffer.update_buffer((trajectory,))
 
 	'''start training'''
@@ -32,18 +32,18 @@ def train(args):
 	del args
 
 	for _ in range(10000):  # TODO fix it
-		# print('explore...')
+		print('explore...')
 		total_steps, useless_steps = agent.explore_env(env, target_steps, buffer = buffer)
 		print(useless_steps/total_steps)
 
-		# print('update...')
+		print('update...')
 		torch.set_grad_enabled(True)
 		logging_tuple = agent.update_net(buffer)
 		torch.set_grad_enabled(False)
 
 		print(logging_tuple)
 
-		# print('eval...')
+		print('eval...')
 		print(agent.evaluate_save(env))
 
 
@@ -88,7 +88,7 @@ if __name__ == '__main__':
 	env_func = PNPToyEnv 
 	env_args = {
 		# 'env_num': 2**8, 
-		'env_num': 2**10, 
+		'env_num': 2**12, 
 		'max_step': 100, 
 		'use_gripper': True, 
 		'dim': 2, 
@@ -111,7 +111,8 @@ if __name__ == '__main__':
 		'err': 0.2,
 		'vel': 0.2,
 		'gpu_id': 0,
+		'reward_type': 'dense', 
 	}
-	args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
-	# args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
+	# args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
+	args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
 	train(args)

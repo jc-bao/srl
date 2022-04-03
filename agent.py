@@ -110,6 +110,8 @@ class AgentBase:
     ten_s = self.states
 
     step_i = 0
+    epoch_useless_steps = 0
+    epoch_total_steps = 0
     ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
     traj_lens = torch.zeros(self.env_num, dtype=torch.long, device=self.device)
     traj_start_ptr = torch.zeros(
@@ -183,8 +185,10 @@ class AgentBase:
             ag_end = self.traj_list[i, end_point][self.state_dim +
                                                   2+self.info_dim:self.state_dim+4+self.info_dim]
             # dropout unmoved exp
+            epoch_total_steps += traj_lens[i]
             if torch.max(abs(ag_start - ag_end)) < 5e-2 and ~eval_mode:
               self.useless_step += traj_lens[i]
+              epoch_useless_steps += traj_lens[i]
               pass
             if start_point < end_point:
               state_traj.append(
@@ -219,7 +223,7 @@ class AgentBase:
       ep_step /= num_ep
       return torch.mean(ep_rew), torch.mean(final_rew), torch.mean(ep_step)
     else:
-      return self.total_step, self.useless_step
+      return epoch_total_steps, epoch_useless_steps
 
   def evaluate_save(self, env) -> (bool, bool):
 
@@ -700,7 +704,13 @@ class AgentPPO(AgentBase):
     last_done[0] = step_i
     return self.convert_trajectory(traj_list, last_done)  # traj_list
 
-  def explore_vec_env(self, env, target_step, buffer = None) -> list:
+  # TODO merge this method into off policy method
+  def explore_vec_env(self, env, target_step, eval_mode = False, buffer = None) -> list:
+    if eval_mode:
+      num_ep = torch.zeros(self.env_num, device=self.device)
+      ep_rew = torch.zeros(self.env_num, device=self.device)
+      ep_step = torch.zeros(self.env_num, device=self.device)
+      final_rew = torch.zeros(self.env_num, device=self.device)
     traj_list = list()
     last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
     ten_s = env.reset()
@@ -710,18 +720,35 @@ class AgentPPO(AgentBase):
     get_action = self.act.get_action
     get_a_to_e = self.act.get_a_to_e
     while step_i < target_step:
-      ten_a, ten_n = get_action(ten_s)  # different
+      if eval_mode:
+        ten_a = self.act(ten_s).detach()
+        ten_n = None
+      else:
+        ten_a, ten_n = get_action(ten_s)  # different
       ten_s_next, ten_rewards, ten_dones, _ = env.step(get_a_to_e(ten_a))
 
       traj_list.append((ten_s.clone(), ten_rewards.clone(),
                        ten_dones.clone(), ten_a, ten_n))  # different
 
-      step_i += 1
+      step_i += self.env_num
       last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
       ten_s = ten_s_next
 
+      if eval_mode:
+        done_idx = torch.where(ten_dones)[0]
+        num_ep[done_idx] += 1
+        ep_rew += ten_rewards
+        ep_step += 1
+        final_rew[done_idx] += ten_rewards[done_idx]
+    self.total_step += self.env_num * step_i
     self.states = ten_s
-    return buffer.update_buffer((self.convert_trajectory(traj_list, last_done),))  # traj_list
+    if eval_mode:
+      ep_rew /= num_ep
+      final_rew /= num_ep
+      ep_step /= num_ep
+      return torch.mean(ep_rew), torch.mean(final_rew), torch.mean(ep_step)
+    else:
+      return buffer.update_buffer((self.convert_trajectory(traj_list, last_done),))  # traj_list
 
   def update_net(self, buffer):
     with torch.no_grad():
@@ -745,7 +772,7 @@ class AgentPPO(AgentBase):
     '''update network'''
     obj_critic = None
     obj_actor = None
-    assert buf_len >= self.batch_size
+    assert buf_len >= self.batch_size, f'buf_len {buf_len}, self.batch_size {self.batch_size}'
     for _ in range(int(1 + buf_len * self.repeat_times / self.batch_size)):
       indices = torch.randint(buf_len, size=(
         self.batch_size,), requires_grad=False, device=self.device)

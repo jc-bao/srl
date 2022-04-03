@@ -88,12 +88,12 @@ class Arguments:
     else:  # on-policy
       self.max_memo = 2 ** 12  # capacity of replay buffer
       # repeatedly update network to keep critic's loss small
-      self.target_steps = 100 
+      self.target_steps = 100*self.env_num 
       # num of transitions sampled from replay buffer.
-      self.repeat_times = 2 ** 4  # collect target_steps_per_env, then update network
-      self.batch_size = self.env_num * self.target_steps // self.repeat_times
+      self.repeat_times = 2 ** 5  # collect target_steps_per_env, then update network
+      self.batch_size = self.target_steps // self.repeat_times
       # use PER: GAE (Generalized Advantage Estimation) for sparse reward
-      self.if_use_gae = True
+      self.if_use_gae = False
 
     '''Arguments for training'''
     self.gamma = 0.99  # discount factor of future rewards
