@@ -405,6 +405,8 @@ class HandoverToyEnv(gym.Env):
 
   def get_obs(self):
     return torch.cat((
+      # self.pos0, self.grip0.unsqueeze(-1), 
+      # self.pos1, self.grip1.unsqueeze(-1), 
       self.pos0-self.torch_space0_mean, self.grip0.unsqueeze(-1), 
       self.pos1-self.torch_space1_mean, self.grip1.unsqueeze(-1), 
       self.obj, self.goal), dim=-1)
