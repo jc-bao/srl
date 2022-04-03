@@ -212,18 +212,18 @@ class PNPToyEnv(gym.Env):
       if self.dim == 2:
         for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
           # object
-          o_x = self.data[t][1][env_id][0].detach().cpu()
-          o_y = self.data[t][1][env_id][1].detach().cpu()
+          o_x = self.data[t][1][env_id,0,0].detach().cpu()
+          o_y = self.data[t][1][env_id,0,1].detach().cpu()
           ax[env_id].plot(o_x, o_y, 'o', color=[
                           0, 1, 0, t/self._max_episode_steps], markersize=10)
           # agent
-          a_x = self.data[t][0][env_id][0].detach().cpu()
-          a_y = self.data[t][0][env_id][1].detach().cpu()
+          a_x = self.data[t][0][env_id,0,0].detach().cpu()
+          a_y = self.data[t][0][env_id,0,1].detach().cpu()
           ax[env_id].plot(a_x, a_y, 'o', color=[
                           0, 0, 1, t/self._max_episode_steps])
         for env_id in range(self.env_num):
-          x = self.goal[env_id][0].detach().cpu()
-          y = self.goal[env_id][1].detach().cpu()
+          x = self.goal[env_id,0,0].detach().cpu()
+          y = self.goal[env_id,0,1].detach().cpu()
           ax[env_id].plot(x, y, 'rx')
         plt.show()
       elif self.dim == 3:
@@ -451,7 +451,7 @@ class HandoverToyEnv(gym.Env):
 
 
 if __name__ == '__main__':
-  env = HandoverToyEnv(gpu_id=-1, err=0.2, auto_reset=False, use_gripper=False)
+  env = PNPToyEnv(gpu_id=-1, err=0.2, auto_reset=False)
   obs = env.reset()
   for _ in range(env._max_episode_steps):
     act = env.ezpolicy(obs)
