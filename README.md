@@ -10,8 +10,8 @@
   - [-] add trajectory extra info (traj_len, ag_pool) to HER
 - [ ] Toy Env
   - [x] reach
-  - [ ] pnp
-  - [ ] handover
+  - [x] pnp
+  - [x] handover
 - [x] Eval Func (in agent)
 - [ ] Normalizer
 - [x] logger
@@ -41,4 +41,4 @@
 
 ## check
 
-- [ ] use mask to change final state obs to solve boundary issue (if correct )
+- [x] use mask to change final state obs to solve boundary issue (if correct )

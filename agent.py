@@ -10,7 +10,7 @@ from net import ActorSAC, ActorFixSAC, ActorPPO, CriticTwin, CriticREDq, CriticR
 
 
 class AgentBase:
-  def __init__(self, net_dim: int, state_dim: int, action_dim: int, max_env_step: int, info_dim: int, goal_dim: int = 0, gpu_id=0, args=None):
+  def __init__(self, net_dim: int, state_dim: int, action_dim: int, max_env_step: int, info_dim: int, goal_dim: int = 0, gpu_id=0, net_type = 'mlp', args=None):
     self.gamma = getattr(args, 'gamma', 0.99)
     self.env_num = getattr(args, 'env_num', 1)
     self.batch_size = getattr(args, 'batch_size', 128)
@@ -39,8 +39,8 @@ class AgentBase:
 
     act_class = getattr(self, 'act_class', None)
     cri_class = getattr(self, 'cri_class', None)
-    self.act = act_class(net_dim, state_dim, action_dim).to(self.device)
-    self.cri = cri_class(net_dim, state_dim, action_dim).to(
+    self.act = act_class(net_dim, state_dim, action_dim, net_type, args.other_dims).to(self.device)
+    self.cri = cri_class(net_dim, state_dim, action_dim, net_type, args.other_dims).to(
       self.device) if cri_class else self.act
     self.act_target = deepcopy(self.act) if if_act_target else self.act
     self.cri_target = deepcopy(self.cri) if if_cri_target else self.cri
@@ -298,15 +298,14 @@ class AgentBase:
       for env_i in range(self.env_num):
         last_step = last_done[env_i]
 
-        pre_item = self.traj_list[env_i][j]
-        if len(pre_item):
-          cur_item.append(pre_item)
+        # pre_item = self.traj_list[env_i][j]
+        # if len(pre_item):
+        #   cur_item.append(pre_item)
 
         cur_item.append(buf_item[:last_step, env_i])
 
         if self.if_use_old_traj:
           self.traj_list[env_i][j] = buf_item[last_step:, env_i]
-
       buf_items[j] = torch.vstack(cur_item)
 
     # on-policy:  buf_item = [states, rewards, dones, actions, noises]
@@ -389,12 +388,12 @@ class AgentBase:
 
 
 class AgentSAC(AgentBase):
-  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
+  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, net_type='mlp', args=None):
     self.if_off_policy = True
     self.act_class = getattr(self, 'act_class', ActorSAC)
     self.cri_class = getattr(self, 'cri_class', CriticTwin)
     super().__init__(net_dim, state_dim, action_dim, max_env_step=max_env_step,
-                     goal_dim=goal_dim, info_dim=info_dim, gpu_id=gpu_id, args=args)
+                     goal_dim=goal_dim, info_dim=info_dim, gpu_id=gpu_id, net_type=net_type, args=args)
 
     self.alpha_log = torch.tensor((-np.log(action_dim) * np.e,), dtype=torch.float32,
                                   requires_grad=True, device=self.device)  # trainable parameter
@@ -535,11 +534,11 @@ class AgentModSAC(AgentSAC):
 
 # Modified SAC using reliable_lambda and TTUR (Two Time-scale Update Rule)
 class AgentREDqSAC(AgentSAC):
-  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
+  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0,net_type='mlp' , args=None):
     self.act_class = getattr(self, 'act_class', ActorFixSAC)
     self.cri_class = getattr(self, 'cri_class', CriticREDq)
     super().__init__(net_dim, state_dim, action_dim,
-                     max_env_step, goal_dim, info_dim, gpu_id, args)
+                     max_env_step, goal_dim, info_dim, gpu_id, net_type, args)
     self.obj_c = (-np.log(0.5)) ** 0.5  # for reliable_lambda
 
   def get_obj_critic_raw(self, buffer, batch_size):
