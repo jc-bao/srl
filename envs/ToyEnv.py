@@ -127,7 +127,7 @@ class PNPToyEnv(gym.Env):
     self.reward_type = reward_type
     self.env_num = env_num
     self._max_episode_steps = max_step
-    self.err = err
+    self.err = torch.tensor(err, device=self.device)
     self.vel = vel
     self.auto_reset = auto_reset
     self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
@@ -159,9 +159,6 @@ class PNPToyEnv(gym.Env):
     self.reset()
 
   def step(self, action):
-    # check if obj is attached
-    self.attached = torch.norm(self.obj - self.pos, dim=-1) < self.err
-    self.reached = torch.norm(self.goal - self.pos, dim=-1) < self.err
     # move agent
     self.num_step += 1
     action = torch.clamp(action, self.torch_action_space.low,
@@ -176,6 +173,13 @@ class PNPToyEnv(gym.Env):
     # if reached, not update reach step
     if_reach = self.reached.all(dim=-1)
     self.reach_step[~if_reach] = self.num_step[~if_reach]
+    # check if obj is attached (make it when every thing is over)
+    distance = torch.norm(self.obj - self.pos, dim=-1)
+    min_dis = distance.min(dim=-1)[0]
+    # only consider the most close point
+    self.attached = (distance <= torch.min(self.err, min_dis))
+    print(self.attached)
+    self.reached = torch.norm(self.goal - self.obj, dim=-1) < self.err
     reward = self.compute_reward(self.obj, self.goal, None)
     info = torch.cat((
       if_reach.type(torch.float32).unsqueeze(-1),  # success
@@ -208,23 +212,25 @@ class PNPToyEnv(gym.Env):
     else:
       self.data.append([self.pos.clone(), self.obj.clone()])
     if self.num_step[0] == self._max_episode_steps:
-      fig, ax = plt.subplots(self.env_num)
+      fig, ax = plt.subplots(1, self.env_num)
       if self.dim == 2:
         for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
-          # object
-          o_x = self.data[t][1][env_id,0,0].detach().cpu()
-          o_y = self.data[t][1][env_id,0,1].detach().cpu()
-          ax[env_id].plot(o_x, o_y, 'o', color=[
-                          0, 1, 0, t/self._max_episode_steps], markersize=10)
+          for goal_id in range(self.num_goals):
+            # object
+            o_x = self.data[t][1][env_id,goal_id,0].detach().cpu()
+            o_y = self.data[t][1][env_id,goal_id,1].detach().cpu()
+            ax[env_id].plot(o_x, o_y, 'o', color=[
+                            0, 1, goal_id/self.num_goals, t/self._max_episode_steps], markersize=10)
           # agent
           a_x = self.data[t][0][env_id,0,0].detach().cpu()
           a_y = self.data[t][0][env_id,0,1].detach().cpu()
           ax[env_id].plot(a_x, a_y, 'o', color=[
                           0, 0, 1, t/self._max_episode_steps])
         for env_id in range(self.env_num):
-          x = self.goal[env_id,0,0].detach().cpu()
-          y = self.goal[env_id,0,1].detach().cpu()
-          ax[env_id].plot(x, y, 'rx')
+          for goal_id in range(self.num_goals):
+            x = self.goal[env_id,goal_id,0].detach().cpu()
+            y = self.goal[env_id,goal_id,1].detach().cpu()
+            ax[env_id].plot(x, y, 'x', color=[0.2,1,goal_id/self.num_goals,1], markersize=20)
         plt.show()
       elif self.dim == 3:
         fig, ax = plt.subplots(1, self.env_num)
@@ -243,10 +249,24 @@ class PNPToyEnv(gym.Env):
       return -torch.norm(ag-dg,dim=-1)/2 + 1
 
   def ezpolicy(self, obs):
-    attached = torch.norm(obs[..., :self.dim] - obs[..., self.dim:self.dim*2], dim=-1) < self.err
-    delta = - obs[..., :self.dim] + obs[..., self.dim:self.dim*2]
-    delta[attached] =  (- obs[..., :self.dim] + obs[..., -self.dim:])[attached]
-    return (delta / torch.norm(delta, dim=-1, keepdim=True))
+    pos = obs[..., :self.dim]
+    obj = obs[..., self.dim:(self.num_goals+1)*self.dim].reshape(self.env_num, self.num_goals, self.dim)
+    goal = obs[..., (self.num_goals+1)*self.dim:].reshape(self.env_num, self.num_goals, self.dim)
+    action = torch.zeros(self.env_num, self.dim)
+    for env_id in range(self.env_num):
+      pos_now = pos[env_id]
+      for goal_id in range(self.num_goals):
+        obj_now = obj[env_id, goal_id] 
+        goal_now = goal[env_id, goal_id]
+        reached = torch.norm(obj_now-goal_now) < self.err
+        attached = torch.norm(pos_now - obj_now) < self.err
+        if reached:
+          pass
+        elif attached:
+          action[env_id] = goal_now - pos_now
+        else:
+          action[env_id] = obj_now - pos_now
+    return action
 
   def parse_info(self, info):
     is_success = info[..., 0:1]
@@ -451,10 +471,9 @@ class HandoverToyEnv(gym.Env):
 
 
 if __name__ == '__main__':
-  env = PNPToyEnv(gpu_id=-1, err=0.2, auto_reset=False)
+  env = PNPToyEnv(gpu_id=-1, err=0.2, auto_reset=False, num_goals=2)
   obs = env.reset()
   for _ in range(env._max_episode_steps):
     act = env.ezpolicy(obs)
     obs, reward, done, info = env.step(act)
     env.render()
-    # print('[obs, reward, done]', obs, reward, done)
