@@ -112,6 +112,6 @@ if __name__ == '__main__':
 		'vel': 0.2,
 		'gpu_id': 0,
 	}
-	# args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
-	args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
+	args = Arguments(agent=AgentREDqSAC, env_func=env_func, env_args = env_args)
+	# args = Arguments(agent=AgentPPO, env_func=env_func, env_args = env_args)
 	train(args)
