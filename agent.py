@@ -5,9 +5,10 @@ import os
 import logging
 from attrdict import AttrDict
 import gym
+import wandb
 
 import net
-from replay_buffer import ReplayBuffer
+from replay_buffer import ReplayBuffer, ReplayBufferList
 
 
 class AgentBase:
@@ -21,7 +22,10 @@ class AgentBase:
     if self.cfg.eval_steps is None:
       self.cfg.update(eval_steps=cfg.steps_per_rollout)
     # dir
-    self.cfg.update(cwd=f'./{cfg.cwd}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
+    if cfg.wandb:
+      self.cfg.update(cwd=f'{wandb.run.dir}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
+    else:
+      self.cfg.update(cwd=f'./{cfg.cwd}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
     os.makedirs(self.cfg.cwd, exist_ok=True)
     # update times
     if self.cfg.updates_per_rollout is None:
@@ -76,7 +80,7 @@ class AgentBase:
     # tmp bufffer
     self.traj_list = torch.empty((self.EP.env_num, self.EP.max_env_step, self.EP.state_dim +
                                  2+self.EP.action_dim+self.EP.info_dim+cfg.extra_info_dim), device=self.cfg.device, dtype=torch.float32)
-    self.buffer = ReplayBuffer(cfg)
+    self.buffer = ReplayBufferList(cfg) if 'PPO' in cfg.agent_name else ReplayBuffer(cfg)
 
   def eval_vec_env(self, target_steps=None):
     # auto set target steps
@@ -111,13 +115,13 @@ class AgentBase:
       ten_s = ten_s_next
     # return
     return AttrDict(
-      steps=self.total_step,
-      ep_rew=torch.mean(ep_rew/num_ep),
-      final_rew=torch.mean(final_rew/num_ep),
-      ep_steps=torch.mean(ep_step/num_ep),
+      steps=self.total_step.item(),
+      ep_rew=torch.mean(ep_rew/num_ep).item(),
+      final_rew=torch.mean(final_rew/num_ep).item(),
+      ep_steps=torch.mean(ep_step/num_ep).item(),
     )
 
-  def explore_vec_env(self, target_steps=None, random_mode=False):
+  def explore_vec_env(self, target_steps=None):
     # auto set target steps
     if target_steps is None:
       target_steps = self.cfg.steps_per_rollout
@@ -136,6 +140,8 @@ class AgentBase:
     ten_s = self.env.reset()
     while collected_steps < target_steps:
       ten_a = self.act.get_action(ten_s).detach()  # different
+      if isinstance(ten_a, tuple):
+        ten_a, ten_n = ten_a # record noise for no-policy
       ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
       # preprocess info, add [1]done, [2]trajectory index, [3]traj len, [4]to left
@@ -182,7 +188,7 @@ class AgentBase:
         ten_s = ten_s_next
 
     return AttrDict(
-      steps=self.total_step,
+      steps=self.total_step.item(),
       collected_steps=collected_steps,
       useless_steps=useless_steps,
     )
@@ -237,7 +243,7 @@ class AgentBase:
     if self.EP.env_num > 1:
       # rew
       buf_items[1] = (torch.stack(buf_items[1]) *
-                      self.reward_scale).unsqueeze(2)
+                      self.cfg.reward_scale).unsqueeze(2)
       # mask
       buf_items[2] = ((1 - torch.stack(buf_items[2]))
                       * self.cfg.gamma).unsqueeze(2)
@@ -253,8 +259,6 @@ class AgentBase:
       for env_i in range(self.EP.env_num):
         last_step = last_done[env_i]
         cur_item.append(buf_item[:last_step, env_i])
-        if self.if_use_old_traj:
-          self.traj_list[env_i][j] = buf_item[last_step:, env_i]
       buf_items[j] = torch.vstack(cur_item)
     return buf_items
 
@@ -313,7 +317,9 @@ class AgentBase:
     for tar, cur in zip(target_net.parameters(), current_net.parameters()):
       tar.data.copy_(cur.data * tau + tar.data * (1.0 - tau))
 
-  def save_or_load_agent(self, cwd, if_save):
+  def save_or_load_agent(self, file_tag = '', cwd=None, if_save=True):
+    if cwd is None:
+      cwd = self.cfg.cwd
     def load_torch_file(model_or_optim, _path):
       state_dict = torch.load(_path, map_location=lambda storage, loc: storage)
       model_or_optim.load_state_dict(state_dict)
@@ -324,11 +330,11 @@ class AgentBase:
                      for name, obj in name_obj_list if obj is not None]
     if if_save:
       for name, obj in name_obj_list:
-        save_path = f"{cwd}/{name}.pth"
+        save_path = f"{cwd}/{file_tag+name}.pth"
         torch.save(obj.state_dict(), save_path)
     else:
       for name, obj in name_obj_list:
-        save_path = f"{cwd}/{name}.pth"
+        save_path = f"{cwd}/{file_tag+name}.pth"
         load_torch_file(obj, save_path) if os.path.isfile(save_path) else None
 
 
@@ -595,77 +601,56 @@ class AgentDDPG(AgentBase):
 class AgentPPO(AgentBase):
   def __init__(self, cfg):
     super().__init__(cfg=cfg)
-
-    # could be 0.00 ~ 0.50 `ratio.clamp(1 - clip, 1 + clip)`
-    self.ratio_clip = getattr(cfg, 'ratio_clip', 0.25)
-    self.lambda_entropy = getattr(
-      cfg, 'lambda_entropy', 0.02)  # could be 0.00~0.10
-    # could be 0.95~0.99, GAE (ICLR.2016.)
-    self.cfg.lambda_gae_adv = getattr(cfg, 'lambda_entropy', 0.98)
-
-    # GAE (Generalized Advantage Estimation) for sparse reward
-    if getattr(cfg, 'if_use_gae', False):
+    if cfg.if_use_gae: 
       self.get_reward_sum = self.get_reward_sum_gae
     else:
       self.get_reward_sum = self.get_reward_sum_raw
 
-  # TODO merge this method into off policy method
-  def explore_vec_env(self, target_step) -> list:
-    eval_mode=False
-    if eval_mode:
-      num_ep = torch.zeros(self.EP.env_num,
-                           device=self.cfg.device)
-      ep_rew = torch.zeros(self.EP.env_num,
-                           device=self.cfg.device)
-      ep_step = torch.zeros(self.EP.env_num,
-                            device=self.cfg.device)
-      final_rew = torch.zeros(
-        self.EP.env_num, device=self.cfg.device)
+  def explore_vec_env(self, target_steps=None) -> list:
+    # auto set target steps
+    if target_steps is None:
+      target_steps = self.cfg.steps_per_rollout
+    else:
+      logging.warn(
+        f'explore: target_steps is not None, forced to {target_steps}')
+    # TODO merge into base class explore fn
     traj_list = list()
-    last_done = torch.zeros(self.EP.env_num,
-                            dtype=torch.int, device=self.cfg.device)
+    last_done = torch.zeros(self.EP.env_num, dtype=torch.int, device=self.cfg.device)
     ten_s = self.env.reset()
-
     step_i = 0
-    ten_dones = torch.zeros(self.EP.env_num,
-                            dtype=torch.int, device=self.cfg.device)
+    ten_dones = torch.zeros(self.EP.env_num, dtype=torch.int, device=self.cfg.device)
     get_action = self.act.get_action
     get_a_to_e = self.act.get_a_to_e
-    while step_i < target_step:
-      if eval_mode:
-        ten_a = self.act(ten_s).detach()
-        ten_n = None
-      else:
-        ten_a, ten_n = get_action(ten_s)  # different
+    while step_i < target_steps:
+      ten_a, ten_n = get_action(ten_s)  # different
       ten_s_next, ten_rewards, ten_dones, _ = self.env.step(get_a_to_e(ten_a))
-
       traj_list.append((ten_s.clone(), ten_rewards.clone(),
                        ten_dones.clone(), ten_a, ten_n))  # different
-
       step_i += self.EP.env_num
       last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
       ten_s = ten_s_next
-
-      if eval_mode:
-        done_idx = torch.where(ten_dones)[0]
-        num_ep[done_idx] += 1
-        ep_rew += ten_rewards
-        ep_step += 1
-        final_rew[done_idx] += ten_rewards[done_idx]
     self.total_step += self.EP.env_num * step_i
-    return self.buffer.update_buffer((self.convert_trajectory(traj_list, last_done),))
+    buf_items = self.convert_trajectory(traj_list, last_done)
+    steps, mean_rew =  self.buffer.update_buffer((buf_items,))  # traj_list
+    return AttrDict(
+      steps=self.total_step.item(),
+      mean_rew=mean_rew.item(),
+    )
 
-  def update_net(self, buffer):
-    with torch.no_grad():
+
+  def update_net(self):
+    print('update: preprocess...')
+    with torch.no_grad(): 
       buf_state, buf_reward, buf_mask, buf_action, buf_noise = [
-        ten.to(self.cfg.device) for ten in buffer]
+        ten.to(self.cfg.device) for ten in self.buffer]
       buf_len = buf_state.shape[0]
 
       '''get buf_r_sum, buf_logprob'''
-      bs = 2 ** 10  # set a smaller 'BatchSize' when out of GPU memory.
-      buf_value = [self.cri_target(buf_state[i:i + bs])
-                   for i in range(0, buf_len, bs)]
-      buf_value = torch.cat(buf_value, dim=0)
+      # bs = 2 ** 10  # set a smaller 'BatchSize' when out of GPU memory.
+      # buf_value = [self.cri_target(buf_state[i:i + bs])
+      #              for i in range(0, buf_len, bs)]
+      buf_value = self.cri_target(buf_state)
+      # buf_value = torch.cat(buf_value, dim=0)
       buf_logprob = self.act.get_old_logprob(buf_action, buf_noise)
 
       buf_r_sum, buf_adv_v = self.get_reward_sum(
@@ -678,7 +663,8 @@ class AgentPPO(AgentBase):
     obj_critic = None
     obj_actor = None
     assert buf_len >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
-    for _ in range(int(1 + buf_len * self.cfg.repeat_times / self.cfg.batch_size)):
+    print('update: backprop...')
+    for _ in range(self.cfg.updates_per_rollout):
       indices = torch.randint(buf_len, size=(
         self.cfg.batch_size,), requires_grad=False, device=self.cfg.device)
 
@@ -694,32 +680,27 @@ class AgentPPO(AgentBase):
       ratio = (new_logprob - logprob.detach()).exp()
       surrogate1 = adv_v * ratio
       surrogate2 = adv_v * \
-        ratio.clamp(1 - self.ratio_clip, 1 + self.ratio_clip)
+        ratio.clamp(1 - self.cfg.ratio_clip, 1 + self.cfg.ratio_clip)
       obj_surrogate = -torch.min(surrogate1, surrogate2).mean()
-      obj_actor = obj_surrogate + obj_entropy * self.lambda_entropy
+      obj_actor = obj_surrogate + obj_entropy * self.cfg.lambda_entropy
       self.optimizer_update(self.act_optimizer, obj_actor)
 
       # critic network predicts the reward_sum (Q value) of state
       value = self.cri(state).squeeze(1)
       obj_critic = self.criterion(value, r_sum)
       self.optimizer_update(self.cri_optimizer, obj_critic)
-      if self.cfg.self.cfg.if_cri_target:
+      if self.cfg.if_cri_target:
         self.soft_update(self.cri_target, self.cri,
                          self.cfg.soft_update_tau)
 
     a_std_log = getattr(self.act, 'a_std_log', torch.zeros(1)).mean()
-    return obj_critic.item(), -obj_actor.item(), a_std_log.item()  # logging_tuple
+    return AttrDict(
+      critic_loss = obj_critic.item(), 
+      actor_loss = -obj_actor.item(),
+      a_std_log = a_std_log.item() 
+    )
 
-  def get_reward_sum_raw(self, buf_len, buf_reward, buf_mask, buf_value) -> (torch.Tensor, torch.Tensor):
-    """
-    Calculate the **reward-to-go** and **advantage estimation**.
-
-    :param buf_len: the length of the ``ReplayBuffer``.
-    :param buf_reward: a list of rewards for the state-action pairs.
-    :param buf_mask: a list of masks computed by the product of done signal and discount factor.
-    :param buf_value: a list of state values estimated by the ``Critic`` network.
-    :return: the reward-to-go and advantage estimation.
-    """
+  def get_reward_sum_raw(self, buf_len, buf_reward, buf_mask, buf_value):
     buf_r_sum = torch.empty(buf_len, dtype=torch.float32,
                             device=self.cfg.device)  # reward sum
 
@@ -730,16 +711,7 @@ class AgentPPO(AgentBase):
     buf_adv_v = buf_r_sum - buf_value[:, 0]
     return buf_r_sum, buf_adv_v
 
-  def get_reward_sum_gae(self, buf_len, ten_reward, ten_mask, ten_value) -> (torch.Tensor, torch.Tensor):
-    """
-    Calculate the **reward-to-go** and **advantage estimation** using GAE.
-
-    :param buf_len: the length of the ``ReplayBuffer``.
-    :param ten_reward: a list of rewards for the state-action pairs.
-    :param ten_mask: a list of masks computed by the product of done signal and discount factor.
-    :param ten_value: a list of state values estimated by the ``Critic`` network.
-    :return: the reward-to-go and advantage estimation.
-    """
+  def get_reward_sum_gae(self, buf_len, ten_reward, ten_mask, ten_value):
     buf_r_sum = torch.empty(buf_len, dtype=torch.float32,
                             device=self.cfg.device)  # old policy value
     buf_adv_v = torch.empty(buf_len, dtype=torch.float32,
@@ -753,7 +725,6 @@ class AgentPPO(AgentBase):
 
       buf_adv_v[i] = ten_reward[i] + ten_mask[i] * pre_adv_v - ten_value[i]
       pre_adv_v = ten_value[i] + buf_adv_v[i] * self.cfg.lambda_gae_adv
-      # ten_mask[i] * pre_adv_v == (1-done) * gamma * pre_adv_v
     return buf_r_sum, buf_adv_v
 
 

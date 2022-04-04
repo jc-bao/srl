@@ -62,13 +62,6 @@ class ReplayBuffer:  # for off-policy
       indices = torch.randint(self.now_len - 1, size=(batch_size,), dtype=torch.long, device=self.device)
     else:
       batch_size = indices.shape[0] 
-      
-    # r_m_a = self.buf_other[indices]
-    # return (r_m_a[:, 0:1],
-    #         r_m_a[:, 1:2],
-    #         r_m_a[:, 2:],
-    #         self.buf_state[indices],
-    #         self.buf_state[indices + 1])
     # filter done state
     other =self.buf_other[indices] 
     filtered_local_indices = other[..., 1] > 1e-3
@@ -83,13 +76,7 @@ class ReplayBuffer:  # for off-policy
     mask = other[..., 1:2]
     action = other[..., 2:2+self.action_dim]
     if her_rate > 0:
-      # get indices (filter final state)
       indices_her_local_bool = torch.rand(size=indices.shape, device=self.device) < her_rate
-      # indices_her_local = torch.randint(batch_size, size=(replace_size,), dtype=torch.long, device=self.device)
-      # indices_her_local = indices_her_local[done < 0.5] # filter out final state
-      # print(indices_her_local)
-      # local variables 
-      # replace_size = indices_her_local.shape[0] 
       tleft = info[indices_her_local_bool, -1].long()
       indices_her_global = indices[indices_her_local_bool]
       # get local variables
@@ -168,7 +155,7 @@ class ReplayBuffer:  # for off-policy
 
 
 class ReplayBufferList(list):  # for on-policy
-  def __init__(self):
+  def __init__(self, cfg=None):
     list.__init__(self)
 
   def update_buffer(self, traj_list):

@@ -1,5 +1,4 @@
 # wandb
-wandb: true
 project: debug 
 name: hello
 
@@ -7,26 +6,30 @@ name: hello
 random_seed: 0
 
 # replay
-her_rate: 0.8
+her_rate: 0.0
 if_use_per: False
-buffer_size: 1000000
+buffer_size: null 
+lambda_entropy: 0.02
+lambda_gae_adv: 0.98 
+ratio_clip: 0.25
+if_use_gae: true
 
 # env_params
 env_name: 'PNPToy-v0'
 env_params: null
 env_kwargs:
   env_num: 1024 
-  max_step: 300
+  max_step: 100
   dim: 2
   vel: 0.2 
   err: 0.2
-  num_goals: 3
+  num_goals: 1
 reward_scale: 1
 extra_info_dim: 4 # extra info get from agent
 
 # network
-act_net: ActorFixSAC
-critic_net: CriticREDq
+act_net: ActorPPO
+critic_net: CriticPPO
 net_dim: 128
 net_type: 'deepset'
 if_act_target: false
@@ -34,12 +37,12 @@ if_cri_target: false
 gpu_id: 0
 
 # algorithm
-agent_name: AgentREDqSAC
+agent_name: AgentPPO
 max_collect_steps: !!float 1e9
-resue: 20
-steps_per_rollout: 307200
+resue: 1 
+steps_per_rollout: 102400
 updates_per_rollout: null # calulate with resue
-batch_size: 8192
+batch_size: 25600
 gamma: 0.99
 lr: 0.00024
 soft_update_tau: 0.0039
@@ -50,4 +53,3 @@ eval_steps: null # set with steps per rollout
 
 # save
 cwd: results
-rollout_per_save: 0.1

@@ -12,40 +12,53 @@ import envs
 
 
 def train(config):
-	torch.set_grad_enabled(False)
 
 	'''init'''
+	if config.wandb:
+		wandb.init(name=config.name, project=config.project, config=config)
 	exp_agent:agent.AgentBase = getattr(agent, config.agent_name)(config)
+	def log(msg):
+		print(msg)
+		if config.wandb:
+			wandb.log(msg, step=exp_agent.total_step)
+	torch.set_grad_enabled(False)
+
+	# warmup
 	print('explore...')
 	result = exp_agent.explore_vec_env()
-	print(result)
+	log(result)
 
 	'''start training'''
-	num_rollouts = config.max_collect_steps//config.steps_per_rollout
-	for _ in range(num_rollouts):  # TODO fix it
-		print('explore...')
+	best_rew = -1000
+	num_rollouts = int(config.max_collect_steps//config.steps_per_rollout)
+	for i in range(num_rollouts):  # TODO fix it
+		print('========explore...')
 		result = exp_agent.explore_vec_env()
-		print(result)
+		log(result)
 
-		print('update...')
+		print('========update...')
 		torch.set_grad_enabled(True)
 		result = exp_agent.update_net()
 		torch.set_grad_enabled(False)
-		print(result)
+		log(result)
 
-		print('eval...')
+		print('========eval...')
 		result = exp_agent.eval_vec_env()
-		print(result)
+		log(result)
 
-
+		if result.final_rew > best_rew and (i%config.rollout_per_save)==0:
+			best_rew = result.final_rew 
+			exp_agent.save_or_load_agent(file_tag = f'rew{best_rew:.2f}', if_save=True)
+			exp_agent.save_or_load_agent(file_tag = 'best', if_save=True)
+			print('=========saved!')
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--config-file', type=str,
+	parser.add_argument('-f', '--file', type=str,
 											default='sac', help='config file')
-	parser.add_argument('--kwargs', type=json.loads, default={})
+	parser.add_argument('-k', '--kwargs', type=json.loads, default={})
 	args = parser.parse_args()
-	with open(f'configs/{args.config_file}.yaml', "r") as stream:
+	with open(f'configs/{args.file}.yaml', "r") as stream:
 		try:
 			config = AttrDict(yaml.safe_load(stream))
 			config.update(args.kwargs)
@@ -53,6 +66,4 @@ if __name__ == '__main__':
 			print(exc)
 
 	# start run
-	# wandb.init(project='debug', config=config)
 	train(config)
-	# wandb.join()
