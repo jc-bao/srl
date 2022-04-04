@@ -245,7 +245,7 @@ class PNPToyEnv(gym.Env):
     if self.reward_type == 'sparse':
       return -torch.mean((torch.norm(ag.reshape(-1, self.num_goals, self.dim)-dg.reshape(-1, self.num_goals, self.dim),dim=-1) > self.err).type(torch.float32), dim=-1)
     elif self.reward_type == 'dense':
-      return 1-torch.mean(torch.norm(ag.reshape(-1, self.num_goals, self.dim)-dg.reshape(-1, self.num_goals, self.dim),dim=-1), dim=-1)
+      return 1-torch.mean(torch.norm(ag.reshape(-1, self.num_goals, self.dim)-dg.reshape(-1, self.num_goals, self.dim),dim=-1), dim=-1)/self.num_goals
 
   def ezpolicy(self, obs):
     pos = obs[..., :self.dim]
@@ -272,6 +272,23 @@ class PNPToyEnv(gym.Env):
     step = info[..., 1:2]
     achieved_goal = info[..., 2:self.dim+2]
     return is_success, step, achieved_goal
+  
+  def env_params(self):
+    return AttrDict(
+      # dims
+      action_dim = self.dim, 
+      state_dim = self.dim*(2*self.num_goals+1), 
+      shared_dim = self.dim, 
+      seperate_dim = self.dim*self.num_goals,
+      goal_dim = self.dim*self.num_goals, 
+      info_dim = 2 + self.num_goals*self.dim, # is_success, step, achieved_goal
+      # numbers
+      num_goals = self.num_goals, 
+      env_num = self.env_num,
+      max_env_step = self._max_episode_steps,
+      # functions
+      reward_fn = self.compute_reward,
+    )
 
 class HandoverToyEnv(gym.Env):
   """handover topy env
@@ -468,6 +485,9 @@ class HandoverToyEnv(gym.Env):
     achieved_goal = info[..., 2:self.dim+2]
     return is_success, step, achieved_goal
 
+gym.register(id='ReachToy-v0', entry_point=ReachToyEnv)
+gym.register(id='PNPToy-v0', entry_point=PNPToyEnv)
+gym.register(id='HandoverToy-v0', entry_point=HandoverToyEnv)
 
 if __name__ == '__main__':
   env = PNPToyEnv(gpu_id=-1, err=0.2, auto_reset=False, num_goals=2)

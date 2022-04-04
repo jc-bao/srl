@@ -4,7 +4,7 @@ from isaacgym import gymutil, gymtorch, gymapi
 from isaacgym.torch_utils import *
 import torch
 
-from .base.vec_task import VecTask
+from base.vec_task import VecTask
 
 
 class FrankaCabinet(VecTask):

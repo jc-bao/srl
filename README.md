@@ -42,3 +42,4 @@
 ## check
 
 - [x] use mask to change final state obs to solve boundary issue (if correct )
+- [ ] use of target network

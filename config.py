@@ -71,7 +71,7 @@ class Arguments:
     self.if_use_old_traj = False
     if self.if_off_policy:  # off-policy
       self.num_rollout_per_update = 1
-      self.reuse = 1
+      self.reuse = 5
       self.max_memo = 2 ** 20  # capacity of replay buffer
       # self.target_steps_per_env = 2 ** 10  # repeatedly update network to keep critic's loss small
       # self.target_steps = self.env_num * self.max_step * self.num_rollout_per_update

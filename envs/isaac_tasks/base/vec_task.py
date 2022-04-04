@@ -230,7 +230,11 @@ class VecTask(Env):
     # if running with a viewer, set up keyboard shortcuts and camera
     if self.headless == False:
       # subscribe to keyboard shortcuts
-      self.viewer = self.gym.create_viewer(self.sim, gymapi.CameraProperties())
+      camera_setting = gymapi.CameraProperties()
+      self.viewer = self.gym.create_viewer(self.sim, camera_setting)
+      cam_pos = gymapi.Vec3(1.5, 1.5, 0)
+      look_at = gymapi.Vec3(0.5, 1, 0)
+      self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, look_at)
       self.gym.subscribe_viewer_keyboard_event(
         self.viewer, gymapi.KEY_ESCAPE, "QUIT"
       )
@@ -352,11 +356,9 @@ class VecTask(Env):
             Observations, rewards, resets, info
             Observations are dict of observations (currently only one member called 'obs')
     """
-
     # randomize actions
     if self.dr_randomizations.get("actions", None):
       actions = self.dr_randomizations["actions"]["noise_lambda"](actions)
-
     action_tensor = torch.clamp(actions, -self.clip_actions, self.clip_actions)
     # apply actions
 

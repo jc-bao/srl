@@ -6,25 +6,27 @@ import torch
 
 
 class ReplayBuffer:  # for off-policy
-  def __init__(self, max_len, state_dim, action_dim, goal_dim, info_dim, reward_fn=None, gpu_id=0):
+  def __init__(self, cfg):
     self.now_len = 0
     self.next_idx = 0
     self.prev_idx = 0
     self.if_full = False
-    self.max_len = max_len
-    self.action_dim = action_dim
-    self.info_dim = info_dim
-    self.goal_dim = goal_dim
-    self.reward_fn = reward_fn
-    self.device = torch.device(f"cuda:{gpu_id}" if (
-      torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
+    self.max_len = cfg.buffer_size
+    EP = cfg.env_params
+    self.state_dim = EP.state_dim
+    self.action_dim = EP.action_dim
+    self.info_dim = EP.info_dim
+    self.extra_info_dim = cfg.extra_info_dim
+    self.goal_dim = EP.goal_dim
+    self.reward_fn = EP.reward_fn
+    self.device = cfg.device
 
-    other_dim = 1 + 1 + self.action_dim + self.info_dim  # reward_dim + mask_dim + action_dim + info
+    other_dim = 1 + 1 + self.action_dim + self.info_dim + self.extra_info_dim  # reward_dim + mask_dim + action_dim + info + extra info
     self.buf_other = torch.empty(
-      (max_len, other_dim), dtype=torch.float32, device=self.device)
+      (self.max_len, other_dim), dtype=torch.float32, device=self.device)
 
-    buf_state_size = (max_len, state_dim) if isinstance(
-      state_dim, int) else (max_len, *state_dim)
+    buf_state_size = (self.max_len, self.state_dim) if isinstance(
+      self.state_dim, int) else (self.max_len, *self.state_dim)
     self.buf_state = torch.empty(
       buf_state_size, dtype=torch.float32, device=self.device)
 
@@ -56,12 +58,10 @@ class ReplayBuffer:  # for off-policy
     return steps, r_exp / len(traj_lists)
 
   def sample_batch(self, batch_size, her_rate=0, indices = None) -> tuple:
-    
     if indices is None:
       indices = torch.randint(self.now_len - 1, size=(batch_size,), dtype=torch.long, device=self.device)
     else:
-      batch_size = indices.shape[0]
-
+      batch_size = indices.shape[0] 
       
     # r_m_a = self.buf_other[indices]
     # return (r_m_a[:, 0:1],

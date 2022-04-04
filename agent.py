@@ -2,61 +2,62 @@ import torch
 import numpy as np
 from copy import deepcopy
 import os
-import time
+import logging
 from attrdict import AttrDict
+import gym
 
-from net import ActorSAC, ActorFixSAC, ActorPPO, CriticTwin, CriticREDq, CriticREDQ, CriticPPO
+import net
+from replay_buffer import ReplayBuffer
 
 
 class AgentBase:
-  def __init__(self, net_dim: int, state_dim: int, action_dim: int, max_env_step: int, info_dim: int, goal_dim: int = 0, gpu_id=0, net_type = 'mlp', args=None):
-    self.gamma = getattr(args, 'gamma', 0.99)
-    self.env_num = getattr(args, 'env_num', 1)
-    self.batch_size = getattr(args, 'batch_size', 128)
-    self.repeat_times = getattr(args, 'repeat_times', 1.)
-    self.reward_scale = getattr(args, 'reward_scale', 1.)
-    self.lambda_gae_adv = getattr(args, 'lambda_entropy', 0.98)
-    self.if_use_old_traj = getattr(args, 'if_use_old_traj', False)  # ?
-    self.soft_update_tau = getattr(args, 'soft_update_tau', 2 ** -8)
-    self.her_rate = getattr(args, 'her_rate', 0)
-    self.state_dim = state_dim
-    self.action_dim = action_dim
-    self.goal_dim = goal_dim
-    self.max_env_step = max_env_step
-    self.info_dim = info_dim
+  def __init__(self, cfg=None):
+    '''set up params'''
+    self.cfg = cfg
+    # device
+    self.cfg.update(device=torch.device(f"cuda:{cfg.gpu_id}" if (
+      torch.cuda.is_available() and (cfg.gpu_id >= 0)) else "cpu"))
+    # eval steps
+    if self.cfg.eval_steps is None:
+      self.cfg.update(eval_steps=cfg.steps_per_rollout)
+    # dir
+    self.cfg.update(cwd=f'./{cfg.cwd}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
+    os.makedirs(self.cfg.cwd, exist_ok=True)
+    # update times
+    if self.cfg.updates_per_rollout is None:
+      self.cfg.update(updates_per_rollout = cfg.resue*cfg.steps_per_rollout//cfg.batch_size)
 
-    if_act_target = getattr(args, 'if_act_target', False)
-    if_cri_target = getattr(args, 'if_cri_target', False)
-    if_off_policy = getattr(args, 'if_off_policy', True)
-    learning_rate = getattr(args, 'learning_rate', 2 ** -12)
+    '''seed '''
+    np.random.seed(cfg.random_seed)
+    torch.manual_seed(cfg.random_seed)
+    torch.set_default_dtype(torch.float32)
 
-    self.states = None
-    self.device = torch.device(f"cuda:{gpu_id}" if (
-      torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
-    # self.traj_list = [[list() for _ in range(5 if if_off_policy else 6)]
-    #                   for _ in range(self.env_num)]  # for `self.explore_vec_env()`
+    '''env setup'''
+    self.env = gym.make(cfg.env_name, **cfg.env_kwargs)
+    self.cfg.update(env_params=self.env.env_params())
+    # alias for env_params
+    self.EP = self.cfg.env_params
 
-    act_class = getattr(self, 'act_class', None)
-    cri_class = getattr(self, 'cri_class', None)
-    self.act = act_class(net_dim, state_dim, action_dim, net_type, args.other_dims).to(self.device)
-    self.cri = cri_class(net_dim, state_dim, action_dim, net_type, args.other_dims).to(
-      self.device) if cri_class else self.act
-    self.act_target = deepcopy(self.act) if if_act_target else self.act
-    self.cri_target = deepcopy(self.cri) if if_cri_target else self.cri
+    '''set up actor critic'''
+    act_class = getattr(net, cfg.act_net, None)
+    cri_class = getattr(net, cfg.critic_net, None)
+    self.act = act_class(cfg).to(self.cfg.device)
+    self.cri = cri_class(cfg).to(
+      self.cfg.device) if cri_class else self.act
+    self.act_target = deepcopy(
+      self.act) if self.cfg.if_act_target else self.act
+    self.cri_target = deepcopy(
+      self.cri) if self.cfg.if_cri_target else self.cri
 
-    self.act_optimizer = torch.optim.Adam(self.act.parameters(), learning_rate)
+    self.act_optimizer = torch.optim.Adam(
+      self.act.parameters(), self.cfg.lr)
     self.cri_optimizer = torch.optim.Adam(
-      self.cri.parameters(), learning_rate) if cri_class else self.act_optimizer
+      self.cri.parameters(), self.cfg.lr) if cri_class else self.act_optimizer
 
     '''function'''
     self.criterion = torch.nn.SmoothL1Loss()
-
-    if self.env_num == 1:
-      self.explore_env = self.explore_one_env
-    else:
-      self.explore_env = self.explore_vec_env
-
-    if getattr(args, 'if_use_per', False):  # PER (Prioritized Experience Replay) for sparse reward
+    # PER (Prioritized Experience Replay) for sparse reward
+    if getattr(cfg, 'if_use_per', False):
       self.criterion = torch.nn.SmoothL1Loss(reduction='none')
       self.get_obj_critic = self.get_obj_critic_per
     else:
@@ -65,255 +66,196 @@ class AgentBase:
 
     '''record params'''
     self.total_step = 0
-    self.last_eval_step = -1
-    self.eval_gap = args.eval_gap
-    self.eval_steps = args.eval_steps
-    self.cwd = args.cwd
-    self.start_time = time.time()
     self.r_max = -np.inf
-    self.traj_idx = torch.arange(self.env_num, device=self.device)
-    self.num_traj = self.env_num
-    self.traj_list = torch.empty((self.env_num, self.max_env_step, state_dim +
-                                 2+action_dim+info_dim), device=self.device, dtype=torch.float32)
-    self.useless_step = 0
+    # params for tmp buffer to record traj info
+    self.traj_idx = torch.arange(
+      self.EP.env_num, device=self.cfg.device)
+    self.num_traj = self.EP.env_num
 
-  def explore_one_env(self, env, target_steps_per_env) -> list:
-    traj_list = list()
-    last_done = [0, ]
-    state = self.states[0]
+    ''' data '''
+    # tmp bufffer
+    self.traj_list = torch.empty((self.EP.env_num, self.EP.max_env_step, self.EP.state_dim +
+                                 2+self.EP.action_dim+self.EP.info_dim+cfg.extra_info_dim), device=self.cfg.device, dtype=torch.float32)
+    self.buffer = ReplayBuffer(cfg)
 
-    step_i = 0
-    done = False
-    while step_i < target_steps_per_env or not done:
-      ten_s = torch.as_tensor(state, dtype=torch.float32).unsqueeze(0)
-      ten_a = self.act.get_action(
-        ten_s.to(self.device)).detach().cpu()  # different
-      next_s, reward, done, _ = env.step(ten_a[0].numpy())  # different
-
-      traj_list.append((ten_s, reward, done, ten_a))  # different
-
-      step_i += 1
-      state = env.reset() if done else next_s
-
-    self.states[0] = state
-    last_done[0] = step_i
-    return self.convert_trajectory(traj_list, last_done)  # traj_list
-
-  def explore_vec_env(self, env, target_steps, eval_mode=False, random_mode=False, buffer=None) -> list:
-    if eval_mode:
-      num_ep = torch.zeros(self.env_num, device=self.device)
-      ep_rew = torch.zeros(self.env_num, device=self.device)
-      ep_step = torch.zeros(self.env_num, device=self.device)
-      final_rew = torch.zeros(self.env_num, device=self.device)
-    last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
-    self.states = env.reset()
-    ten_s = self.states
-
-    step_i = 0
-    epoch_useless_steps = 0
-    epoch_total_steps = 0
-    ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
-    traj_lens = torch.zeros(self.env_num, dtype=torch.long, device=self.device)
-    traj_start_ptr = torch.zeros(
-      self.env_num, dtype=torch.long, device=self.device)
-    data_ptr = 0
+  def eval_vec_env(self, target_steps=None):
+    # auto set target steps
+    if target_steps is None:
+      target_steps = self.cfg.eval_steps
+    else:
+      logging.warn(
+        f'eval_env: target_steps is not None, forced to {target_steps}')
+    # log data
+    num_ep = torch.zeros(self.EP.env_num,
+                         device=self.cfg.device)
+    ep_rew = torch.zeros(self.EP.env_num,
+                         device=self.cfg.device)
+    ep_step = torch.zeros(self.EP.env_num,
+                          device=self.cfg.device)
+    final_rew = torch.zeros(
+      self.EP.env_num, device=self.cfg.device)
+    # reset
+    ten_s = self.env.reset()
+    # loop
     collected_steps = 0
     while collected_steps < target_steps:
-      step_i += 1
-      if random_mode:
-        ten_a = torch.randn(self.env_num, self.action_dim, device=self.device)
-      elif eval_mode:
-        ten_a = self.act(ten_s).detach()
-      else:
-        ten_a = self.act.get_action(ten_s).detach()  # different
-      ten_s_next, ten_rewards, ten_dones, ten_info = env.step(
+      ten_a = self.act(ten_s).detach()
+      ten_s_next, ten_rewards, ten_dones, _ = self.env.step(
         ten_a)  # different
-      if eval_mode:
-        done_idx = torch.where(ten_dones)[0]
-        num_ep[done_idx] += 1
-        ep_rew += ten_rewards
-        ep_step += 1
-        final_rew[done_idx] += ten_rewards[done_idx]
-        collected_steps = (ep_step).sum()
-      else:
-        # preprocess info, add done, trajectory index, traj len, to left
-        ten_info = torch.cat((ten_info, ten_dones.unsqueeze(1), self.traj_idx.unsqueeze(1),
-                              torch.zeros((self.env_num, 2), device=self.device)), dim=-1)
-        self.traj_list[:, data_ptr, :] = torch.cat((
-          ten_s, ten_rewards.unsqueeze(
-            1)*self.reward_scale, ((1-ten_dones)*self.gamma).unsqueeze(1),
-          ten_a, ten_info), dim=-1)
-        data_ptr = (data_ptr+1) % self.max_env_step
-
-        traj_lens += 1
-
-        # handle done
-        done_idx = torch.where(ten_dones)[0]
-        last_done[done_idx] = step_i  # behind `step_i+=1`
-        done_env_num = torch.sum(ten_dones).type(torch.int32)
-        self.traj_idx[done_idx] = (
-          self.num_traj+torch.arange(done_env_num, device=self.device))
-        self.num_traj += done_env_num  # do it after update traj_idx
-        assert torch.max(
-          self.traj_idx)+1 == self.num_traj, f'traj index {self.traj_idx} and num traj {self.num_traj} not match'
-        # reset traj recorder
-        if done_idx.shape[0] > 0:
-          # add traj len, to left to info
-          # traj len
-          tiled_traj_len = traj_lens[done_idx].unsqueeze(
-            1).tile(1, self.max_env_step).float()
-          self.traj_list[done_idx, :, -2] = tiled_traj_len
-          # to left = len - step
-          self.traj_list[done_idx, :, -
-                         1] = (tiled_traj_len - self.traj_list[done_idx, :, -self.info_dim+1])
-          # mask
-
-          # for env_idx in done_idx:
-          #   for env_step in range(traj_lens[env_idx]):
-          #     traj_list_idx = len(traj_list) + env_step - traj_lens[env_idx]
-          #     # number of transitions, not equals to last index
-          #     traj_list[traj_list_idx][-1][env_idx, -2] = traj_lens[env_idx]
-          #     # to left length e.g. [3,2,1]. use randint(1,3) to get sample idx
-          #     traj_list[traj_list_idx][-1][..., -1] = traj_lens[env_idx] - env_step
-          state_traj = []
-          other_traj = []
-          for i in done_idx:  # TODO fix the one by one add traj process
-            start_point = traj_start_ptr[i]
-            end_point = (start_point + traj_lens[i]) % self.max_env_step
-            ag_start = self.traj_list[i, start_point][self.state_dim +
-                                                      2+self.info_dim:self.state_dim+4+self.info_dim]
-            ag_end = self.traj_list[i, end_point][self.state_dim +
-                                                  2+self.info_dim:self.state_dim+4+self.info_dim]
-            # dropout unmoved exp
-            epoch_total_steps += traj_lens[i]
-            if torch.max(abs(ag_start - ag_end)) < 5e-2 and ~eval_mode:
-              self.useless_step += traj_lens[i]
-              epoch_useless_steps += traj_lens[i]
-              pass
-            if start_point < end_point:
-              state_traj.append(
-                self.traj_list[i, start_point:end_point, :self.state_dim])
-              other_traj.append(
-                self.traj_list[i, start_point:end_point, self.state_dim:])
-            # elif end_point == 0:
-            #   state_traj.append(self.traj_list[i, start_point:, :self.state_dim])
-            #   other_traj.append(self.traj_list[i, start_point:, self.state_dim:])
-            else:
-              state_traj.append(torch.cat((
-                self.traj_list[i, start_point:, :self.state_dim],
-                self.traj_list[i, :end_point, :self.state_dim]
-              ), dim=0))
-              other_traj.append(torch.cat((
-                self.traj_list[i, start_point:, self.state_dim:],
-                self.traj_list[i, :end_point, self.state_dim:]
-              ), dim=0))
-          state_traj = torch.cat(state_traj, dim=0)
-          other_traj = torch.cat(other_traj, dim=0)
-          buffer.extend_buffer(state_traj, other_traj)
-          self.total_step += state_traj.shape[0]
-          collected_steps += state_traj.shape[0]
-          traj_start_ptr[done_idx] = (data_ptr+1) % self.max_env_step
-          traj_lens[done_idx] = 0
-
+      ten_dones = ten_dones.type(torch.bool)
+      num_ep[ten_dones] += 1
+      ep_rew += ten_rewards
+      ep_step += 1
+      final_rew[ten_dones] += ten_rewards[ten_dones]
+      collected_steps = (ep_step).sum()
       ten_s = ten_s_next
+    # return
+    return AttrDict(
+      steps=self.total_step,
+      ep_rew=torch.mean(ep_rew/num_ep),
+      final_rew=torch.mean(final_rew/num_ep),
+      ep_steps=torch.mean(ep_step/num_ep),
+    )
 
-    if eval_mode:
-      ep_rew /= num_ep
-      final_rew /= num_ep
-      ep_step /= num_ep
-      return torch.mean(ep_rew), torch.mean(final_rew), torch.mean(ep_step)
+  def explore_vec_env(self, target_steps=None, random_mode=False):
+    # auto set target steps
+    if target_steps is None:
+      target_steps = self.cfg.steps_per_rollout
     else:
-      return epoch_total_steps, epoch_useless_steps
-
-  def evaluate_save(self, env) -> (bool, bool):
-
-    if self.total_step - self.last_eval_step < self.eval_gap:
-      return None
-    else:
-      self.last_eval_step = self.total_step
-
-      '''evaluate first time'''
-      r_avg, r_final, s_avg = self.explore_vec_env(
-        env, self.eval_steps, eval_mode=True)
-      r_avg = r_avg.detach().cpu().numpy()
-      s_avg = s_avg.detach().cpu().numpy()
-      r_final = r_final.detach().cpu().numpy()
-
-      '''save the policy network'''
-      if_save = r_avg > self.r_max
-      if if_save:  # save checkpoint with highest episode return
-        self.r_max = r_avg  # update max reward (episode return)
-
-        act_path = f"{self.cwd}/actor_{self.total_step:08}_{self.r_max:09.3f}.pth"
-        # save policy and print
-        # save policy network in *.pth
-        torch.save(self.act.state_dict(), act_path)
-        print(f"{self.total_step:8.2e}{self.r_max:8.2f} |")
+      logging.warn(
+        f'explore: target_steps is not None, forced to {target_steps}')
+    # reset tmp buffer status
+    traj_start_ptr = torch.zeros(
+      self.EP.env_num, dtype=torch.long, device=self.cfg.device)
+    traj_lens = torch.zeros(self.EP.env_num,
+                            dtype=torch.long, device=self.cfg.device)
+    data_ptr = 0  # where to store data
+    collected_steps = 0  # data added to buffer
+    useless_steps = 0  # data explored but dropped
+    # loop
+    ten_s = self.env.reset()
+    while collected_steps < target_steps:
+      ten_a = self.act.get_action(ten_s).detach()  # different
+      ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
+        ten_a)  # different
+      # preprocess info, add [1]done, [2]trajectory index, [3]traj len, [4]to left
+      ten_info = torch.cat((ten_info, ten_dones.unsqueeze(1), self.traj_idx.unsqueeze(1),
+                            torch.zeros((self.EP.env_num, 2), device=self.cfg.device)), dim=-1)
+      # add data to tmp buffer
+      self.traj_list[:, data_ptr, :] = torch.cat((
+        ten_s,  # state
+        ten_rewards.unsqueeze(1)*self.cfg.reward_scale,  # reward
+        ((1-ten_dones)*self.cfg.gamma).unsqueeze(1),  # mask
+        ten_a,  # action
+        ten_info  # info
+      ), dim=-1)
+      # update ptr for tmp buffer
+      data_ptr = (data_ptr+1) % self.EP.max_env_step
+      # update trajectory info
+      traj_lens += 1
+      done_idx = torch.where(ten_dones)[0]
+      done_env_num = torch.sum(ten_dones).type(torch.int32)
+      # update traj index
+      self.traj_idx[done_idx] = (
+        self.num_traj+torch.arange(done_env_num, device=self.cfg.device))
+      self.num_traj += done_env_num
+      assert torch.max(self.traj_idx) + 1 == self.num_traj, \
+        f'traj index {self.traj_idx} and num traj {self.num_traj} not match'
+      # reset traj recorder and add extra traj info
+      if done_idx.shape[0] > 0:
+        # tile traj len for later use
+        tiled_traj_len = traj_lens[done_idx].unsqueeze(1)\
+          .tile(1, self.EP.max_env_step).float()
+        # record traj len
+        self.traj_list[done_idx, :, -2] = tiled_traj_len
+        # calculate to left distance
+        self.traj_list[done_idx, :, -1] = \
+          (tiled_traj_len - self.traj_list[done_idx, :, -self.EP.info_dim+1])
+        # add to big buffer
+        results = self.save_to_buffer(done_idx, traj_start_ptr, traj_lens)
+        self.total_step += (results.collected_steps + results.useless_steps)
+        collected_steps += results.collected_steps
+        useless_steps += results.useless_steps
+        # reset record params
+        traj_start_ptr[done_idx] = (data_ptr+1) % self.EP.max_env_step
+        traj_lens[done_idx] = 0
+        ten_s = ten_s_next
 
     return AttrDict(
-      step=self.total_step,
-      r_avg=r_avg,
-      r_final=r_final,
-      s_avg=s_avg,
-      used_time=time.time()-self.start_time
+      steps=self.total_step,
+      collected_steps=collected_steps,
+      useless_steps=useless_steps,
+    )
+
+  def save_to_buffer(self, done_idx, traj_start_ptr, traj_lens):
+    state_traj = []
+    other_traj = []
+    useless_steps = 0
+    for i in done_idx:  # TODO fix the one by one add traj process
+      start_point = traj_start_ptr[i]
+      end_point = (start_point + traj_lens[i]) % self.EP.max_env_step
+      ag_start = self.traj_list[i, start_point][self.EP.state_dim +
+                                                2+self.EP.info_dim:self.EP.state_dim+4+self.EP.info_dim]
+      ag_end = self.traj_list[i, end_point][self.EP.state_dim +
+                                            2+self.EP.info_dim:self.EP.state_dim+4+self.EP.info_dim]
+      # dropout unmoved exp
+      if torch.max(abs(ag_start - ag_end)) < 5e-2:
+        useless_steps += traj_lens[i]
+        pass
+      if start_point < end_point:
+        state_traj.append(
+          self.traj_list[i, start_point:end_point, :self.EP.state_dim])
+        other_traj.append(
+          self.traj_list[i, start_point:end_point, self.EP.state_dim:])
+      else:
+        state_traj.append(torch.cat((
+          self.traj_list[i, start_point:, :self.EP.state_dim],
+          self.traj_list[i, :end_point, :self.EP.state_dim]
+        ), dim=0))
+        other_traj.append(torch.cat((
+          self.traj_list[i, start_point:, self.EP.state_dim:],
+          self.traj_list[i, :end_point, self.EP.state_dim:]
+        ), dim=0))
+    state_traj = torch.cat(state_traj, dim=0)
+    other_traj = torch.cat(other_traj, dim=0)
+    self.buffer.extend_buffer(state_traj, other_traj)
+    return AttrDict(
+      collected_steps=state_traj.shape[0],
+      useless_steps=useless_steps
     )
 
   def convert_trajectory(self, buf_items, last_done):  # [ElegantRL.2022.01.01]
-    # assert len(buf_items) == step_i
-    # assert len(buf_items[0]) in {4, 5}
-    # assert len(buf_items[0][0]) == self.env_num
-    # state, reward, done, action, noise
     buf_items = list(map(list, zip(*buf_items)))
-    # assert len(buf_items) == {4, 5}
-    # assert len(buf_items[0]) == step
-    # assert len(buf_items[0][0]) == self.env_num
-
     '''stack items'''
     buf_items[0] = torch.stack(buf_items[0])
     # action, info
     buf_items[3:] = [torch.stack(item) for item in buf_items[3:]]
-
     # action
     if len(buf_items[3].shape) == 2:
       buf_items[3] = buf_items[3].unsqueeze(2)
-
     # info
-
-    if self.env_num > 1:
+    if self.EP.env_num > 1:
       # rew
       buf_items[1] = (torch.stack(buf_items[1]) *
                       self.reward_scale).unsqueeze(2)
       # mask
       buf_items[2] = ((1 - torch.stack(buf_items[2]))
-                      * self.gamma).unsqueeze(2)
+                      * self.cfg.gamma).unsqueeze(2)
     else:
       buf_items[1] = (torch.tensor(buf_items[1], dtype=torch.float32) * self.reward_scale
                       ).unsqueeze(1).unsqueeze(2)
-      buf_items[2] = ((1 - torch.tensor(buf_items[2], dtype=torch.float32)) * self.gamma
+      buf_items[2] = ((1 - torch.tensor(buf_items[2], dtype=torch.float32)) * self.cfg.gamma
                       ).unsqueeze(1).unsqueeze(2)
-    # assert all([buf_item.shape[:2] == (step, self.env_num) for buf_item in buf_items])
-
     '''splice items'''
     for j in range(len(buf_items)):
       cur_item = list()
       buf_item = buf_items[j]
-
-      for env_i in range(self.env_num):
+      for env_i in range(self.EP.env_num):
         last_step = last_done[env_i]
-
-        # pre_item = self.traj_list[env_i][j]
-        # if len(pre_item):
-        #   cur_item.append(pre_item)
-
         cur_item.append(buf_item[:last_step, env_i])
-
         if self.if_use_old_traj:
           self.traj_list[env_i][j] = buf_item[last_step:, env_i]
       buf_items[j] = torch.vstack(cur_item)
-
-    # on-policy:  buf_item = [states, rewards, dones, actions, noises]
-    # off-policy: buf_item = [states, rewards, dones, actions, info]
-    # buf_items = [buf_item, ...]
     return buf_items
 
   def get_obj_critic_raw(self, buffer, batch_size):
@@ -326,7 +268,7 @@ class AgentBase:
     """
     with torch.no_grad():
       reward, mask, action, state, next_s, info = buffer.sample_batch(
-        batch_size, her_rate=self.her_rate)
+        batch_size, her_rate=self.cfg.her_rate)
       next_a = self.act_target(next_s)
       critic_targets: torch.Tensor = self.cri_target(next_s, next_a)
       (next_q, min_indices) = torch.min(critic_targets, dim=1, keepdim=True)
@@ -391,28 +333,24 @@ class AgentBase:
 
 
 class AgentSAC(AgentBase):
-  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, net_type='mlp', args=None):
-    self.if_off_policy = True
-    self.act_class = getattr(self, 'act_class', ActorSAC)
-    self.cri_class = getattr(self, 'cri_class', CriticTwin)
-    super().__init__(net_dim, state_dim, action_dim, max_env_step=max_env_step,
-                     goal_dim=goal_dim, info_dim=info_dim, gpu_id=gpu_id, net_type=net_type, args=args)
+  def __init__(self, cfg):
+    super().__init__(cfg=cfg)
 
-    self.alpha_log = torch.tensor((-np.log(action_dim) * np.e,), dtype=torch.float32,
-                                  requires_grad=True, device=self.device)  # trainable parameter
+    self.alpha_log = torch.tensor((-np.log(self.EP.action_dim) * np.e,), dtype=torch.float32,
+                                  requires_grad=True, device=cfg.device)  # trainable parameter
     self.alpha_optim = torch.optim.Adam(
-      (self.alpha_log,), lr=args.learning_rate)
-    self.target_entropy = np.log(action_dim)
+      (self.alpha_log,), lr=cfg.lr)
+    self.target_entropy = np.log(self.EP.action_dim)
 
-  def update_net(self, buffer):
-    buffer.update_now_len()
+  def update_net(self):
+    self.buffer.update_now_len()
 
     obj_critic = obj_actor = None
-    for _ in range(int(1 + buffer.now_len * self.repeat_times / self.batch_size)):
+    for _ in range(1+int(self.buffer.now_len / self.buffer.max_len * self.cfg.updates_per_rollout)):
       '''objective of critic (loss function of critic)'''
-      obj_critic, state = self.get_obj_critic(buffer, self.batch_size)
+      obj_critic, state = self.get_obj_critic(self.buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
-      self.soft_update(self.cri_target, self.cri, self.soft_update_tau)
+      self.soft_update(self.cri_target, self.cri, self.cfg.soft_update_tau)
 
       '''objective of alpha (temperature parameter automatic adjustment)'''
       a_noise_pg, log_prob = self.act.get_action_logprob(
@@ -429,14 +367,18 @@ class AgentSAC(AgentBase):
       q_value_pg = self.cri(state, a_noise_pg)
       obj_actor = -(q_value_pg + log_prob * alpha).mean()
       self.optimizer_update(self.act_optimizer, obj_actor)
-      # self.soft_update(self.act_target, self.act, self.soft_update_tau) # SAC don't use act_target network
+      # self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau) # SAC don't use act_target network
 
-    return obj_critic.item(), -obj_actor.item(), self.alpha_log.exp().detach().item()
+    return AttrDict(
+      critic_loss = obj_critic.item(), 
+      actor_loss = -obj_actor.item(),
+      alpha_log = self.alpha_log.exp().detach().item()
+    )
 
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
       reward, mask, action, state, next_s, info = buffer.sample_batch(
-        batch_size, her_rate=self.her_rate)
+        batch_size, her_rate=self.cfg.her_rate)
 
       next_a, next_log_prob = self.act_target.get_action_logprob(
         next_s)  # stochastic policy
@@ -470,14 +412,11 @@ class AgentSAC(AgentBase):
 
 # Modified SAC using reliable_lambda and TTUR (Two Time-scale Update Rule)
 class AgentModSAC(AgentSAC):
-  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
-    self.act_class = getattr(self, 'act_class', ActorFixSAC)
-    self.cri_class = getattr(self, 'cri_class', CriticTwin)
-    super().__init__(net_dim, state_dim, action_dim,
-                     max_env_step, goal_dim, info_dim, gpu_id, args)
+  def __init__(self, cfg):
+    super().__init__(cfg)
     self.obj_c = (-np.log(0.5)) ** 0.5  # for reliable_lambda
 
-    self.lambda_a_log_std = getattr(args, 'lambda_a_log_std', 2 ** -4)
+    self.lambda_a_log_std = getattr(cfg, 'lambda_a_log_std', 2 ** -4)
 
   def update_net(self, buffer):
     buffer.update_now_len()
@@ -494,17 +433,17 @@ class AgentModSAC(AgentSAC):
       avg_a_log_std = self.act.get_a_log_std(
         buf_state).mean(dim=0, keepdim=True)
       avg_a_log_std = avg_a_log_std * \
-        torch.ones((self.batch_size, 1), device=self.device)
+        torch.ones((self.cfg.batch_size, 1), device=self.cfg.device)
       del buf_state
 
     alpha = self.alpha_log.exp().detach()
     update_a = 0
     obj_actor = torch.zeros(1)
-    for update_c in range(1, int(2 + buffer.now_len * self.repeat_times / self.batch_size)):
+    for update_c in range(1, int(2 + buffer.now_len * self.cfg.repeat_times / self.cfg.batch_size)):
       '''objective of critic (loss function of critic)'''
-      obj_critic, state = self.get_obj_critic(buffer, self.batch_size)
+      obj_critic, state = self.get_obj_critic(buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
-      self.soft_update(self.cri_target, self.cri, self.soft_update_tau)
+      self.soft_update(self.cri_target, self.cri, self.cfg.soft_update_tau)
       self.obj_c = 0.995 * self.obj_c + 0.005 * \
         obj_critic.item()  # for reliable_lambda
 
@@ -531,23 +470,21 @@ class AgentModSAC(AgentSAC):
         obj_actor = -(q_value_pg + logprob * alpha).mean() + obj_a_std
 
         self.optimizer_update(self.act_optimizer, obj_actor)
-        self.soft_update(self.act_target, self.act, self.soft_update_tau)
+        self.soft_update(self.act_target, self.act,
+                         self.cfg.soft_update_tau)
     return self.obj_c, -obj_actor.item(), alpha.item()
 
 
 # Modified SAC using reliable_lambda and TTUR (Two Time-scale Update Rule)
 class AgentREDqSAC(AgentSAC):
-  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0,net_type='mlp' , args=None):
-    self.act_class = getattr(self, 'act_class', ActorFixSAC)
-    self.cri_class = getattr(self, 'cri_class', CriticREDq)
-    super().__init__(net_dim, state_dim, action_dim,
-                     max_env_step, goal_dim, info_dim, gpu_id, net_type, args)
+  def __init__(self, cfg):
+    super().__init__(cfg)
     self.obj_c = (-np.log(0.5)) ** 0.5  # for reliable_lambda
 
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
       reward, mask, action, state, next_s, info = buffer.sample_batch(
-        batch_size, her_rate=self.her_rate)
+        batch_size, her_rate=self.cfg.her_rate)
 
       next_a, next_log_prob = self.act_target.get_action_logprob(
         next_s)  # stochastic policy
@@ -581,12 +518,11 @@ class AgentREDqSAC(AgentSAC):
 
 
 class AgentREDQSAC(AgentSAC):
-  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
+  def __init__(self, cfg):
     self.act_class = getattr(self, 'act_class', ActorFixSAC)
     self.cri_class = getattr(self, 'cri_class', CriticREDQ)
     self.repeat_q_times = 1
-    super().__init__(net_dim, state_dim, action_dim,
-                     max_env_step, goal_dim, info_dim, gpu_id, args)
+    super().__init__(cfg)
     self.obj_c = (-np.log(0.5)) ** 0.5  # for reliable_lambda
 
   def get_obj_critic_raw(self, buffer, batch_size):
@@ -608,12 +544,13 @@ class AgentREDQSAC(AgentSAC):
     buffer.update_now_len()
 
     obj_critic = obj_actor = None
-    for _ in range(int(1 + buffer.now_len * self.repeat_times / self.batch_size)):
+    for _ in range(int(1 + buffer.now_len * self.cfg.repeat_times / self.cfg.batch_size)):
       for _ in range(self.repeat_q_times):
         '''objective of critic (loss function of critic)'''
-        obj_critic, state = self.get_obj_critic(buffer, self.batch_size)
+        obj_critic, state = self.get_obj_critic(buffer, self.cfg.batch_size)
         self.optimizer_update(self.cri_optimizer, obj_critic)
-        self.soft_update(self.cri_target, self.cri, self.soft_update_tau)
+        self.soft_update(self.cri_target, self.cri,
+                         self.cfg.soft_update_tau)
 
       '''objective of alpha (temperature parameter automatic adjustment)'''
       a_noise_pg, log_prob = self.act.get_action_logprob(
@@ -635,88 +572,63 @@ class AgentREDQSAC(AgentSAC):
 
 
 class AgentDDPG(AgentBase):
-  def __init__(self, net_dim, state_dim, action_dim, max_env_step, goal_dim=0, info_dim=0, gpu_id=0, args=None):
-    self.if_off_policy = True
-    self.act_class = getattr(self, 'act_class', ActorSAC)
-    self.cri_class = getattr(self, 'cri_class', CriticTwin)
-    super().__init__(net_dim, state_dim, action_dim, max_env_step=max_env_step,
-                     goal_dim=goal_dim, info_dim=info_dim, gpu_id=gpu_id, args=args)
+  def __init__(self, cfg):
+    super().__init__(cfg=cfg)
     self.act.explore_noise = getattr(
-      args, 'explore_noise', 0.1)  # set for `get_action()`
+      cfg, 'explore_noise', 0.1)  # set for `get_action()`
 
   def update_net(self, buffer):
     buffer.update_now_len()
     obj_critic = obj_actor = None
-    for _ in range(int(1 + buffer.now_len * self.repeat_times / self.batch_size)):
-      obj_critic, state = self.get_obj_critic(buffer, self.batch_size)
+    for _ in range(int(1 + buffer.now_len * self.cfg.repeat_times / self.cfg.batch_size)):
+      obj_critic, state = self.get_obj_critic(buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
-      self.soft_update(self.cri_target, self.cri, self.soft_update_tau)
+      self.soft_update(self.cri_target, self.cri, self.cfg.soft_update_tau)
 
       action_pg = self.act(state)  # policy gradient
       obj_actor = -self.cri(state, action_pg).mean()
       self.optimizer_update(self.act_optimizer, obj_actor)
-      self.soft_update(self.act_target, self.act, self.soft_update_tau)
+      self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau)
     return obj_critic.item(), -obj_actor.item()
 
 
 class AgentPPO(AgentBase):
-  def __init__(self, net_dim: int, state_dim: int, action_dim: int, max_env_step = None, goal_dim = None, info_dim = None, gpu_id=0, net_type ='mlp', args=None):
-    self.if_off_policy = False
-    self.act_class = getattr(self, 'act_class', ActorPPO)
-    self.cri_class = getattr(self, 'cri_class', CriticPPO)
-    self.if_cri_target = getattr(args, 'if_cri_target', False)
-    super().__init__(net_dim, state_dim, action_dim, max_env_step=max_env_step,
-                     goal_dim=goal_dim, info_dim=info_dim, gpu_id=gpu_id, net_type=net_type, args=args) 
+  def __init__(self, cfg):
+    super().__init__(cfg=cfg)
 
     # could be 0.00 ~ 0.50 `ratio.clamp(1 - clip, 1 + clip)`
-    self.ratio_clip = getattr(args, 'ratio_clip', 0.25)
+    self.ratio_clip = getattr(cfg, 'ratio_clip', 0.25)
     self.lambda_entropy = getattr(
-      args, 'lambda_entropy', 0.02)  # could be 0.00~0.10
+      cfg, 'lambda_entropy', 0.02)  # could be 0.00~0.10
     # could be 0.95~0.99, GAE (ICLR.2016.)
-    self.lambda_gae_adv = getattr(args, 'lambda_entropy', 0.98)
+    self.cfg.lambda_gae_adv = getattr(cfg, 'lambda_entropy', 0.98)
 
     # GAE (Generalized Advantage Estimation) for sparse reward
-    if getattr(args, 'if_use_gae', False):
+    if getattr(cfg, 'if_use_gae', False):
       self.get_reward_sum = self.get_reward_sum_gae
     else:
       self.get_reward_sum = self.get_reward_sum_raw
 
-  def explore_one_env(self, env, target_step) -> list:
-    traj_list = list()
-    last_done = [0, ]
-    state = self.states[0]
-
-    step_i = 0
-    done = False
-    get_action = self.act.get_action
-    get_a_to_e = self.act.get_a_to_e
-    while step_i < target_step or not done:
-      ten_s = torch.as_tensor(state, dtype=torch.float32).unsqueeze(0)
-      ten_a, ten_n = [ten.cpu() for ten in get_action(
-        ten_s.to(self.device))]  # different
-      next_s, reward, done, _ = env.step(get_a_to_e(ten_a)[0].numpy())
-
-      traj_list.append((ten_s, reward, done, ten_a, ten_n))  # different
-
-      step_i += 1
-      state = env.reset() if done else next_s
-    self.states[0] = state
-    last_done[0] = step_i
-    return self.convert_trajectory(traj_list, last_done)  # traj_list
-
   # TODO merge this method into off policy method
-  def explore_vec_env(self, env, target_step, eval_mode = False, buffer = None) -> list:
+  def explore_vec_env(self, target_step) -> list:
+    eval_mode=False
     if eval_mode:
-      num_ep = torch.zeros(self.env_num, device=self.device)
-      ep_rew = torch.zeros(self.env_num, device=self.device)
-      ep_step = torch.zeros(self.env_num, device=self.device)
-      final_rew = torch.zeros(self.env_num, device=self.device)
+      num_ep = torch.zeros(self.EP.env_num,
+                           device=self.cfg.device)
+      ep_rew = torch.zeros(self.EP.env_num,
+                           device=self.cfg.device)
+      ep_step = torch.zeros(self.EP.env_num,
+                            device=self.cfg.device)
+      final_rew = torch.zeros(
+        self.EP.env_num, device=self.cfg.device)
     traj_list = list()
-    last_done = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
-    ten_s = env.reset()
+    last_done = torch.zeros(self.EP.env_num,
+                            dtype=torch.int, device=self.cfg.device)
+    ten_s = self.env.reset()
 
     step_i = 0
-    ten_dones = torch.zeros(self.env_num, dtype=torch.int, device=self.device)
+    ten_dones = torch.zeros(self.EP.env_num,
+                            dtype=torch.int, device=self.cfg.device)
     get_action = self.act.get_action
     get_a_to_e = self.act.get_a_to_e
     while step_i < target_step:
@@ -725,12 +637,12 @@ class AgentPPO(AgentBase):
         ten_n = None
       else:
         ten_a, ten_n = get_action(ten_s)  # different
-      ten_s_next, ten_rewards, ten_dones, _ = env.step(get_a_to_e(ten_a))
+      ten_s_next, ten_rewards, ten_dones, _ = self.env.step(get_a_to_e(ten_a))
 
       traj_list.append((ten_s.clone(), ten_rewards.clone(),
                        ten_dones.clone(), ten_a, ten_n))  # different
 
-      step_i += self.env_num
+      step_i += self.EP.env_num
       last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
       ten_s = ten_s_next
 
@@ -740,20 +652,13 @@ class AgentPPO(AgentBase):
         ep_rew += ten_rewards
         ep_step += 1
         final_rew[done_idx] += ten_rewards[done_idx]
-    self.total_step += self.env_num * step_i
-    self.states = ten_s
-    if eval_mode:
-      ep_rew /= num_ep
-      final_rew /= num_ep
-      ep_step /= num_ep
-      return torch.mean(ep_rew), torch.mean(final_rew), torch.mean(ep_step)
-    else:
-      return buffer.update_buffer((self.convert_trajectory(traj_list, last_done),))  # traj_list
+    self.total_step += self.EP.env_num * step_i
+    return self.buffer.update_buffer((self.convert_trajectory(traj_list, last_done),))
 
   def update_net(self, buffer):
     with torch.no_grad():
       buf_state, buf_reward, buf_mask, buf_action, buf_noise = [
-        ten.to(self.device) for ten in buffer]
+        ten.to(self.cfg.device) for ten in buffer]
       buf_len = buf_state.shape[0]
 
       '''get buf_r_sum, buf_logprob'''
@@ -772,10 +677,10 @@ class AgentPPO(AgentBase):
     '''update network'''
     obj_critic = None
     obj_actor = None
-    assert buf_len >= self.batch_size, f'buf_len {buf_len}, self.batch_size {self.batch_size}'
-    for _ in range(int(1 + buf_len * self.repeat_times / self.batch_size)):
+    assert buf_len >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
+    for _ in range(int(1 + buf_len * self.cfg.repeat_times / self.cfg.batch_size)):
       indices = torch.randint(buf_len, size=(
-        self.batch_size,), requires_grad=False, device=self.device)
+        self.cfg.batch_size,), requires_grad=False, device=self.cfg.device)
 
       state = buf_state[indices]
       r_sum = buf_r_sum[indices]
@@ -798,8 +703,9 @@ class AgentPPO(AgentBase):
       value = self.cri(state).squeeze(1)
       obj_critic = self.criterion(value, r_sum)
       self.optimizer_update(self.cri_optimizer, obj_critic)
-      if self.if_cri_target:
-        self.soft_update(self.cri_target, self.cri, self.soft_update_tau)
+      if self.cfg.self.cfg.if_cri_target:
+        self.soft_update(self.cri_target, self.cri,
+                         self.cfg.soft_update_tau)
 
     a_std_log = getattr(self.act, 'a_std_log', torch.zeros(1)).mean()
     return obj_critic.item(), -obj_actor.item(), a_std_log.item()  # logging_tuple
@@ -815,7 +721,7 @@ class AgentPPO(AgentBase):
     :return: the reward-to-go and advantage estimation.
     """
     buf_r_sum = torch.empty(buf_len, dtype=torch.float32,
-                            device=self.device)  # reward sum
+                            device=self.cfg.device)  # reward sum
 
     pre_r_sum = 0
     for i in range(buf_len - 1, -1, -1):
@@ -835,9 +741,9 @@ class AgentPPO(AgentBase):
     :return: the reward-to-go and advantage estimation.
     """
     buf_r_sum = torch.empty(buf_len, dtype=torch.float32,
-                            device=self.device)  # old policy value
+                            device=self.cfg.device)  # old policy value
     buf_adv_v = torch.empty(buf_len, dtype=torch.float32,
-                            device=self.device)  # advantage value
+                            device=self.cfg.device)  # advantage value
 
     pre_r_sum = 0
     pre_adv_v = 0  # advantage value of previous step
@@ -846,12 +752,12 @@ class AgentPPO(AgentBase):
       pre_r_sum = buf_r_sum[i]
 
       buf_adv_v[i] = ten_reward[i] + ten_mask[i] * pre_adv_v - ten_value[i]
-      pre_adv_v = ten_value[i] + buf_adv_v[i] * self.lambda_gae_adv
+      pre_adv_v = ten_value[i] + buf_adv_v[i] * self.cfg.lambda_gae_adv
       # ten_mask[i] * pre_adv_v == (1-done) * gamma * pre_adv_v
     return buf_r_sum, buf_adv_v
 
 
 '''test bench'''
 if __name__ == '__main__':
-  agent_base = AgentDDPG(1, 1, 1, 1, args=AttrDict(
+  agent_base = AgentDDPG(1, 1, 1, 1, cfg=AttrDict(
     eval_gap=0, eval_steps_per_env=1, cwd=None))

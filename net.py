@@ -1,3 +1,4 @@
+from calendar import c
 import torch
 import numpy as np
 import torch.nn as nn
@@ -5,14 +6,16 @@ import torch.nn.functional as F
 
 
 class ActorSAC(nn.Module):
-  def __init__(self, mid_dim, state_dim, action_dim, net_type='mlp', other_dims=None):
+  def __init__(self, cfg):
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    self.net_state = nn.Sequential(nn.Linear(state_dim, mid_dim), nn.ReLU(),
-                                   nn.Linear(mid_dim, mid_dim), nn.ReLU(), )
-    self.net_a_avg = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                                   nn.Linear(mid_dim, action_dim))  # the average of action
-    self.net_a_std = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                                   nn.Linear(mid_dim, action_dim))  # the log_std of action
+    self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+                                   nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(), )
+    self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
+    self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
     self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
 
   def forward(self, state):
@@ -42,19 +45,21 @@ class ActorSAC(nn.Module):
 
 
 class ActorFixSAC(nn.Module):
-  def __init__(self, mid_dim, state_dim, action_dim, net_type='mlp', other_dims = None):
+  def __init__(self, cfg):
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    if net_type == 'deepset': 
-      self.net_state = ActorDeepsetBlock(mid_dim, other_dims.shared_dim, other_dims.seperate_dim, other_dims.goal_dim, other_dims.num_goals)
-    elif net_type == 'mlp':
-      self.net_state = nn.Sequential(nn.Linear(state_dim, mid_dim), nn.ReLU(),
-      nn.Linear(mid_dim, mid_dim), nn.ReLU())
+    if cfg.net_type == 'deepset': 
+      self.net_state = ActorDeepsetBlock(cfg)
+    elif cfg.net_type == 'mlp':
+      self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+      nn.Linear(cfg.net_dim, EP.net_dim), nn.ReLU())
     else:
       raise NotImplementedError
-    self.net_a_avg = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                                   nn.Linear(mid_dim, action_dim))  # the average of action
-    self.net_a_std = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                                   nn.Linear(mid_dim, action_dim))  # the log_std of action
+    self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
+    self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
     self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
     self.soft_plus = nn.Softplus()
 
@@ -132,15 +137,17 @@ class ActorFixSAC(nn.Module):
 
 
 class ActorPPO(nn.Module):
-  def __init__(self, mid_dim, state_dim, action_dim, net_type='mlp', other_dims=None):
+  def __init__(self, cfg):
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    self.net = nn.Sequential(nn.Linear(state_dim, mid_dim), nn.ReLU(),
-                             nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                             nn.Linear(mid_dim, action_dim))
+    self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                             nn.Linear(cfg.net_dim, EP.action_dim))
 
     # the logarithm (log) of standard deviation (std) of action, it is a trainable parameter
     self.a_std_log = nn.Parameter(torch.zeros(
-      (1, action_dim)) - 0.5, requires_grad=True)
+      (1, EP.action_dim)) - 0.5, requires_grad=True)
     self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
 
   def forward(self, state):
@@ -184,26 +191,30 @@ class ActorPPO(nn.Module):
 
 
 class Critic(nn.Module):
-  def __init__(self, mid_dim, state_dim, action_dim):
+  def __init__(self, cfg):
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    self.net = nn.Sequential(nn.Linear(state_dim + action_dim, mid_dim), nn.ReLU(),
-                             nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                             nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                             nn.Linear(mid_dim, 1))
+    self.net = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                             nn.Linear(cfg.net_dim, 1))
 
   def forward(self, state, action):
     return self.net(torch.cat((state, action), dim=1))  # q value
 
 
 class CriticTwin(nn.Module):  # shared parameter
-  def __init__(self, mid_dim, state_dim, action_dim):
+  def __init__(self, cfg):
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    self.net_sa = nn.Sequential(nn.Linear(state_dim + action_dim, mid_dim), nn.ReLU(),
-                                nn.Linear(mid_dim, mid_dim), nn.ReLU())  # concat(state, action)
-    self.net_q1 = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                                nn.Linear(mid_dim, 1))  # q1 value
-    self.net_q2 = nn.Sequential(nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                                nn.Linear(mid_dim, 1))  # q2 value
+    self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+                                nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
+    self.net_q1 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                                nn.Linear(cfg.net_dim, 1))  # q1 value
+    self.net_q2 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                                nn.Linear(cfg.net_dim, 1))  # q2 value
 
   def forward(self, state, action):
     return torch.add(*self.get_q1_q2(state, action)) / 2.  # mean Q value
@@ -217,15 +228,15 @@ class CriticTwin(nn.Module):  # shared parameter
 
 
 class CriticREDq(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-learning)
-  def __init__(self, mid_dim, state_dim, action_dim, net_type = 'mlp', other_dims = None):
+  def __init__(self, cfg):
     super().__init__()
     self.critic_num = 8
     self.critic_list = list()
     for critic_id in range(self.critic_num):
-      if net_type == 'deepset': 
-        child_cri_net = CriticDeepset(mid_dim, action_dim, other_dims.shared_dim, other_dims.seperate_dim, other_dims.goal_dim, other_dims.num_goals)
-      elif net_type == 'mlp':
-        child_cri_net = Critic(mid_dim, state_dim, action_dim).net
+      if cfg.net_type == 'deepset': 
+        child_cri_net = CriticDeepset(cfg)
+      elif cfg.net_type == 'mlp':
+        child_cri_net = Critic(cfg).net
       else:
         raise NotImplementedError
       setattr(self, f'critic{critic_id:02}', child_cri_net)
@@ -249,42 +260,14 @@ class CriticREDq(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-lear
     return tensor_qs  # multiple Q values
 
 
-class CriticREDQ(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-learning)
-  def __init__(self, mid_dim, state_dim, action_dim):
-    super().__init__()
-    self.critic_num = 8
-    self.sample_num = 2
-    self.critic_list = list()
-    for critic_id in range(self.critic_num):
-      child_cri_net = Critic(mid_dim, state_dim, action_dim).net
-      setattr(self, f'critic{critic_id:02}', child_cri_net)
-      self.critic_list.append(child_cri_net)
-
-  def forward(self, state, action):
-    # mean Q value
-    return self.get_q_values(state, action).mean(dim=1, keepdim=True)
-
-  def get_q_min(self, state, action):
-    tensor_qs = self.get_q_values(state, action, self.sample_num)
-    q_min = torch.min(tensor_qs, dim=1, keepdim=True)[0]  # min Q value
-    return q_min
-
-  def get_q_values(self, state, action, num=None):
-    if num is None:
-      num = self.critic_num
-    tensor_sa = torch.cat((state, action), dim=1)
-    idx = np.random.choice(self.critic_num, num, replace=False)
-    tensor_qs = [self.critic_list[i](tensor_sa) for i in idx]
-    tensor_qs = torch.cat(tensor_qs, dim=1)
-    return tensor_qs  # multiple Q values
-
-
 class CriticPPO(nn.Module):
-  def __init__(self, mid_dim, state_dim, _action_dim, net_type='mlp', other_dims=None):
+  def __init__(self, cfg):
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    self.net = nn.Sequential(nn.Linear(state_dim, mid_dim), nn.ReLU(),
-                             nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-                             nn.Linear(mid_dim, 1))
+    self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+                             nn.Linear(cfg.net_dim, 1))
 
   def forward(self, state):
     return self.net(state)  # advantage value
@@ -292,19 +275,21 @@ class CriticPPO(nn.Module):
 
 # TODO make it sequential 
 class ActorDeepsetBlock(nn.Module):
-  def __init__(self, mid_dim, shared_dim, seperate_dim, goal_dim, num_goals):
+  def __init__(self, cfg):
     # state_dim=[shared_dim, seperate_dim, goal_dim, num_goals]
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    self.shared_dim = shared_dim
-    self.seperate_dim = seperate_dim
-    self.goal_dim = goal_dim
-    self.num_goals = num_goals
+    self.shared_dim = EP.shared_dim
+    self.seperate_dim = EP.seperate_dim
+    self.goal_dim = EP.goal_dim
+    self.num_goals = EP.num_goals
     assert self.goal_dim % self.num_goals ==0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
     self.single_goal_dim = self.goal_dim // self.num_goals
     assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
     self.single_seperate_dim = self.seperate_dim // self.num_goals
-    self.fc1 = nn.Linear(self.shared_dim+self.single_seperate_dim+self.single_goal_dim, mid_dim)
-    self.fc2 = nn.Linear(mid_dim, mid_dim)
+    self.fc1 = nn.Linear(self.shared_dim+self.single_seperate_dim+self.single_goal_dim, cfg.net_dim)
+    self.fc2 = nn.Linear(cfg.net_dim, cfg.net_dim)
 
   def forward(self, state):
     grip = state[..., :self.shared_dim]
@@ -318,23 +303,25 @@ class ActorDeepsetBlock(nn.Module):
 
 
 class CriticDeepset(nn.Module):
-  def __init__(self, mid_dim, action_dim, shared_dim, seperate_dim, goal_dim, num_goals):
+  def __init__(self, cfg):
+    self.cfg = cfg
+    EP = cfg.env_params
     super().__init__()
-    self.shared_dim = shared_dim
-    self.seperate_dim = seperate_dim
-    self.goal_dim = goal_dim
-    self.num_goals = num_goals
-    self.action_dim = action_dim
+    self.shared_dim = EP.shared_dim
+    self.seperate_dim = EP.seperate_dim
+    self.goal_dim = EP.goal_dim
+    self.num_goals = EP.num_goals
+    self.action_dim = EP.action_dim
     assert self.goal_dim % self.num_goals ==0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
     self.single_goal_dim = self.goal_dim // self.num_goals
     assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
     self.single_seperate_dim = self.seperate_dim // self.num_goals
     self.net_in = nn.Sequential(
-      nn.Linear(self.shared_dim+self.single_seperate_dim+self.single_goal_dim+action_dim, mid_dim), nn.ReLU(),
-      nn.Linear(mid_dim, mid_dim), nn.ReLU(),)
+      nn.Linear(self.shared_dim+self.single_seperate_dim+self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU(),
+      nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),)
     self.net_out = nn.Sequential(
-      nn.Linear(mid_dim, mid_dim), nn.ReLU(),
-      nn.Linear(mid_dim, 1)
+      nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+      nn.Linear(cfg.net_dim, 1)
     )
 
   def forward(self, state, action=None):
