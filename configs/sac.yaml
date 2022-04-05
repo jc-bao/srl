@@ -8,7 +8,7 @@ random_seed: 0
 
 # replay
 her_rate: 0.8
-if_use_per: False
+if_use_per: false
 buffer_size: 1000000
 
 # env_params
@@ -16,11 +16,11 @@ env_name: 'PNPToy-v0'
 env_params: null
 env_kwargs:
   env_num: 1024 
-  max_step: 300
+  max_step: 200
   dim: 2
   vel: 0.2 
   err: 0.2
-  num_goals: 3
+  num_goals: 2
 reward_scale: 1
 extra_info_dim: 4 # extra info get from agent
 
@@ -28,7 +28,7 @@ extra_info_dim: 4 # extra info get from agent
 act_net: ActorFixSAC
 critic_net: CriticREDq
 net_dim: 128
-net_type: 'deepset'
+net_type: deepset
 if_act_target: false
 if_cri_target: false
 gpu_id: 0
@@ -36,8 +36,8 @@ gpu_id: 0
 # algorithm
 agent_name: AgentREDqSAC
 max_collect_steps: !!float 1e9
-resue: 20
-steps_per_rollout: 307200
+resue: 10
+steps_per_rollout: 204800
 updates_per_rollout: null # calulate with resue
 batch_size: 8192
 gamma: 0.99

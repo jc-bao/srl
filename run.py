@@ -20,7 +20,7 @@ def train(config):
 	def log(msg):
 		print(msg)
 		if config.wandb:
-			wandb.log(msg, step=exp_agent.total_step)
+			wandb.log(msg, step=exp_agent.total_step.item())
 	torch.set_grad_enabled(False)
 
 	# warmup
@@ -48,8 +48,8 @@ def train(config):
 
 		if result.final_rew > best_rew and (i%config.rollout_per_save)==0:
 			best_rew = result.final_rew 
-			exp_agent.save_or_load_agent(file_tag = f'rew{best_rew:.2f}', if_save=True)
-			exp_agent.save_or_load_agent(file_tag = 'best', if_save=True)
+			exp_agent.save_or_load_agent(file_tag = f'rew{best_rew:.2f}_', if_save=True)
+			exp_agent.save_or_load_agent(file_tag = 'best_', if_save=True)
 			print('=========saved!')
 
 if __name__ == '__main__':
