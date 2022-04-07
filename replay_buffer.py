@@ -81,7 +81,7 @@ class ReplayBuffer:  # for off-policy
       indices_her_global = indices[indices_her_local_bool]
       # get local variables
       idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft)).long()
-      future_goal = self.buf_other[(indices_her_global+idx_shift)%self.max_len, 2+self.action_dim+2:2+self.action_dim+2+self.goal_dim] # NOTE: to sample next state
+      future_goal = self.buf_other[(indices_her_global+idx_shift)%self.max_len, 2+self.action_dim+self.info_dim-self.goal_dim:2+self.action_dim+self.info_dim] # NOTE: to sample next state
       # relabel
       state[indices_her_local_bool, -self.goal_dim:] = future_goal 
       next_state[indices_her_local_bool, -self.goal_dim:] = future_goal 

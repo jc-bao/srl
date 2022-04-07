@@ -7,7 +7,7 @@ from isaacgym import gymapi
 from isaacgym.gymtorch import *
 
 from ..utils.torch_jit_utils import *
-from .base.vec_task import VecTask
+from ..vec_task import VecTask
 
 
 class Ant(VecTask):

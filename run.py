@@ -31,7 +31,7 @@ def train(config):
 	'''start training'''
 	best_rew = -1000
 	num_rollouts = int(config.max_collect_steps//config.steps_per_rollout)
-	for i in range(num_rollouts):  # TODO fix it
+	for i in range(num_rollouts):
 		print('========explore...')
 		result = exp_agent.explore_vec_env()
 		log(result)
@@ -42,15 +42,16 @@ def train(config):
 		torch.set_grad_enabled(False)
 		log(result)
 
-		print('========eval...')
-		result = exp_agent.eval_vec_env()
-		log(result)
+		if i % int(1/config.eval_per_rollout) == 0:
+			print('========eval...')
+			result = exp_agent.eval_vec_env()
+			log(result)
 
-		if result.final_rew > best_rew and (i%config.rollout_per_save)==0:
-			best_rew = result.final_rew 
-			exp_agent.save_or_load_agent(file_tag = f'rew{best_rew:.2f}', if_save=True)
-			exp_agent.save_or_load_agent(file_tag = 'best', if_save=True)
-			print('=========saved!')
+			if result.final_rew > best_rew and (i%config.rollout_per_save)==0:
+				best_rew = result.final_rew 
+				exp_agent.save_or_load_agent(file_tag = f'rew{best_rew:.2f}', if_save=True)
+				exp_agent.save_or_load_agent(file_tag = 'best', if_save=True)
+				print('=========saved!')
 
 if __name__ == '__main__':
 	parser = argparse.ArgumentParser()

@@ -2,7 +2,7 @@ import isaacgym
 import numpy as np
 import torch
 from .isaac_tasks import isaacgym_task_map
-from .isaac_tasks.base.vec_task import VecTask
+from .isaac_tasks.vec_task import VecTask
 from .utils.utils import set_seed
 from .utils.config_utils import load_task_config, get_max_step_from_config
 from pprint import pprint

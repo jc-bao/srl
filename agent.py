@@ -73,12 +73,12 @@ class AgentBase:
     self.r_max = -np.inf
     # params for tmp buffer to record traj info
     self.traj_idx = torch.arange(
-      self.EP.env_num, device=self.cfg.device)
-    self.num_traj = self.EP.env_num
+      self.EP.num_envs, device=self.cfg.device)
+    self.num_traj = self.EP.num_envs
 
     ''' data '''
-    # tmp bufffer
-    self.traj_list = torch.empty((self.EP.env_num, self.EP.max_env_step, self.EP.state_dim +
+    # tmp buffer
+    self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step, self.EP.state_dim +
                                  2+self.EP.action_dim+self.EP.info_dim+cfg.extra_info_dim), device=self.cfg.device, dtype=torch.float32)
     self.buffer = ReplayBufferList(cfg) if 'PPO' in cfg.agent_name else ReplayBuffer(cfg)
 
@@ -90,14 +90,14 @@ class AgentBase:
       logging.warn(
         f'eval_env: target_steps is not None, forced to {target_steps}')
     # log data
-    num_ep = torch.zeros(self.EP.env_num,
+    num_ep = torch.zeros(self.EP.num_envs,
                          device=self.cfg.device)
-    ep_rew = torch.zeros(self.EP.env_num,
+    ep_rew = torch.zeros(self.EP.num_envs,
                          device=self.cfg.device)
-    ep_step = torch.zeros(self.EP.env_num,
+    ep_step = torch.zeros(self.EP.num_envs,
                           device=self.cfg.device)
     final_rew = torch.zeros(
-      self.EP.env_num, device=self.cfg.device)
+      self.EP.num_envs, device=self.cfg.device)
     # reset
     ten_s = self.env.reset()
     # loop
@@ -115,7 +115,7 @@ class AgentBase:
       ten_s = ten_s_next
     # return
     return AttrDict(
-      steps=self.total_step.item(),
+      steps=self.total_step,
       ep_rew=torch.mean(ep_rew/num_ep).item(),
       final_rew=torch.mean(final_rew/num_ep).item(),
       ep_steps=torch.mean(ep_step/num_ep).item(),
@@ -130,8 +130,8 @@ class AgentBase:
         f'explore: target_steps is not None, forced to {target_steps}')
     # reset tmp buffer status
     traj_start_ptr = torch.zeros(
-      self.EP.env_num, dtype=torch.long, device=self.cfg.device)
-    traj_lens = torch.zeros(self.EP.env_num,
+      self.EP.num_envs, dtype=torch.long, device=self.cfg.device)
+    traj_lens = torch.zeros(self.EP.num_envs,
                             dtype=torch.long, device=self.cfg.device)
     data_ptr = 0  # where to store data
     collected_steps = 0  # data added to buffer
@@ -146,7 +146,7 @@ class AgentBase:
         ten_a)  # different
       # preprocess info, add [1]done, [2]trajectory index, [3]traj len, [4]to left
       ten_info = torch.cat((ten_info, ten_dones.unsqueeze(1), self.traj_idx.unsqueeze(1),
-                            torch.zeros((self.EP.env_num, 2), device=self.cfg.device)), dim=-1)
+                            torch.zeros((self.EP.num_envs, 2), device=self.cfg.device)), dim=-1)
       # add data to tmp buffer
       self.traj_list[:, data_ptr, :] = torch.cat((
         ten_s,  # state
@@ -160,11 +160,11 @@ class AgentBase:
       # update trajectory info
       traj_lens += 1
       done_idx = torch.where(ten_dones)[0]
-      done_env_num = torch.sum(ten_dones).type(torch.int32)
+      done_num_envs = torch.sum(ten_dones).type(torch.int32)
       # update traj index
       self.traj_idx[done_idx] = (
-        self.num_traj+torch.arange(done_env_num, device=self.cfg.device))
-      self.num_traj += done_env_num
+        self.num_traj+torch.arange(done_num_envs, device=self.cfg.device))
+      self.num_traj += done_num_envs
       assert torch.max(self.traj_idx) + 1 == self.num_traj, \
         f'traj index {self.traj_idx} and num traj {self.num_traj} not match'
       # reset traj recorder and add extra traj info
@@ -188,7 +188,7 @@ class AgentBase:
         ten_s = ten_s_next
 
     return AttrDict(
-      steps=self.total_step.item(),
+      steps=self.total_step,
       collected_steps=collected_steps,
       useless_steps=useless_steps,
     )
@@ -201,9 +201,10 @@ class AgentBase:
       start_point = traj_start_ptr[i]
       end_point = (start_point + traj_lens[i]) % self.EP.max_env_step
       ag_start = self.traj_list[i, start_point][self.EP.state_dim +
-                                                2+self.EP.info_dim:self.EP.state_dim+4+self.EP.info_dim]
-      ag_end = self.traj_list[i, end_point][self.EP.state_dim +
-                                            2+self.EP.info_dim:self.EP.state_dim+4+self.EP.info_dim]
+                                                2+self.EP.action_dim+self.EP.info_dim-self.EP.goal_dim:self.EP.state_dim+2+self.EP.action_dim+self.EP.info_dim]
+      # Note: -1 to avoid final state error (next state is reset)
+      ag_end = self.traj_list[i, end_point-1][self.EP.state_dim +
+                                                2+self.EP.action_dim+self.EP.info_dim-self.EP.goal_dim:self.EP.state_dim+2+self.EP.action_dim+self.EP.info_dim]
       # dropout unmoved exp
       if torch.max(abs(ag_start - ag_end)) < 5e-2:
         useless_steps += traj_lens[i]
@@ -240,7 +241,7 @@ class AgentBase:
     if len(buf_items[3].shape) == 2:
       buf_items[3] = buf_items[3].unsqueeze(2)
     # info
-    if self.EP.env_num > 1:
+    if self.EP.num_envs > 1:
       # rew
       buf_items[1] = (torch.stack(buf_items[1]) *
                       self.cfg.reward_scale).unsqueeze(2)
@@ -256,7 +257,7 @@ class AgentBase:
     for j in range(len(buf_items)):
       cur_item = list()
       buf_item = buf_items[j]
-      for env_i in range(self.EP.env_num):
+      for env_i in range(self.EP.num_envs):
         last_step = last_done[env_i]
         cur_item.append(buf_item[:last_step, env_i])
       buf_items[j] = torch.vstack(cur_item)
@@ -615,10 +616,10 @@ class AgentPPO(AgentBase):
         f'explore: target_steps is not None, forced to {target_steps}')
     # TODO merge into base class explore fn
     traj_list = list()
-    last_done = torch.zeros(self.EP.env_num, dtype=torch.int, device=self.cfg.device)
+    last_done = torch.zeros(self.EP.num_envs, dtype=torch.int, device=self.cfg.device)
     ten_s = self.env.reset()
     step_i = 0
-    ten_dones = torch.zeros(self.EP.env_num, dtype=torch.int, device=self.cfg.device)
+    ten_dones = torch.zeros(self.EP.num_envs, dtype=torch.int, device=self.cfg.device)
     get_action = self.act.get_action
     get_a_to_e = self.act.get_a_to_e
     while step_i < target_steps:
@@ -626,14 +627,14 @@ class AgentPPO(AgentBase):
       ten_s_next, ten_rewards, ten_dones, _ = self.env.step(get_a_to_e(ten_a))
       traj_list.append((ten_s.clone(), ten_rewards.clone(),
                        ten_dones.clone(), ten_a, ten_n))  # different
-      step_i += self.EP.env_num
+      step_i += self.EP.num_envs
       last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
       ten_s = ten_s_next
-    self.total_step += self.EP.env_num * step_i
+    self.total_step += self.EP.num_envs * step_i
     buf_items = self.convert_trajectory(traj_list, last_done)
     steps, mean_rew =  self.buffer.update_buffer((buf_items,))  # traj_list
     return AttrDict(
-      steps=self.total_step.item(),
+      steps=self.total_step,
       mean_rew=mean_rew.item(),
     )
 

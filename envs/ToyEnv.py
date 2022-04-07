@@ -9,19 +9,19 @@ from attrdict import AttrDict
 
 
 class ReachToyEnv(gym.Env):
-  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=20, auto_reset=True, err=0.05, vel=0.2):
+  def __init__(self, dim: int = 2, num_envs: int = 2, gpu_id=0, max_step=20, auto_reset=True, err=0.05, vel=0.2):
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
     self.dim = dim
-    self.env_num = env_num
+    self.num_envs = num_envs
     self._max_episode_steps = max_step
     self.err = err
     self.vel = vel
     self.auto_reset = auto_reset
-    self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
-    self.reach_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
-    self.goal = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.pos = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
+    self.num_step = torch.empty(self.num_envs, dtype=torch.int, device=self.device)
+    self.reach_step = torch.empty(self.num_envs, dtype=torch.int, device=self.device)
+    self.goal = torch.empty((self.num_envs, self.dim), dtype=torch.float32, device=self.device)
+    self.pos = torch.empty((self.num_envs, self.dim), dtype=torch.float32, device=self.device)
 
     # gym space
     self.space = spaces.Box(low=-np.ones(self.dim), high=np.ones(self.dim))
@@ -68,7 +68,7 @@ class ReachToyEnv(gym.Env):
 
   def reset(self, env_idx = None):
     if env_idx is None:
-      env_idx = torch.arange(self.env_num)
+      env_idx = torch.arange(self.num_envs)
     num_reset_env = env_idx.shape[0]
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
@@ -82,21 +82,21 @@ class ReachToyEnv(gym.Env):
     else:
       self.data.append(self.pos)
     if self.num_step[0] == self._max_episode_steps:
-      fig, ax = plt.subplots(self.env_num)
+      fig, ax = plt.subplots(self.num_envs)
       if self.dim == 2:
-        for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
+        for t, env_id in itertools.product(range(self._max_episode_steps), range(self.num_envs)):
           x = self.data[t][env_id][0].detach().cpu()
           y = self.data[t][env_id][1].detach().cpu()
           ax[env_id].plot(x, y, 'o', color=[
                           0, 0, 1, t/self._max_episode_steps])
-        for env_id in range(self.env_num):
+        for env_id in range(self.num_envs):
           x = self.goal[env_id][0].detach().cpu()
           y = self.goal[env_id][1].detach().cpu()
           ax[env_id].plot(x, y, 'rx')
         plt.show()
       elif self.dim == 3:
-        fig, ax = plt.subplots(1, self.env_num)
-        for i in range(self.env_num):
+        fig, ax = plt.subplots(1, self.num_envs)
+        for i in range(self.num_envs):
           for i, d in enumerate(self.data[i]):
             ax[i].scatter(d[0], d[1], d[2], 'o', color=[0, 0, 1, i/50])
         plt.show()
@@ -119,24 +119,24 @@ class ReachToyEnv(gym.Env):
 
 
 class PNPToyEnv(gym.Env):
-  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, reward_type='sparse', num_goals = 1):
+  def __init__(self, dim: int = 2, num_envs: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, reward_type='sparse', num_goals = 1):
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
     self.dim = dim
     self.num_goals = num_goals
     self.reward_type = reward_type
-    self.env_num = env_num
+    self.num_envs = num_envs
     self._max_episode_steps = max_step
     self.err = torch.tensor(err, device=self.device)
     self.vel = vel
     self.auto_reset = auto_reset
-    self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
-    self.reach_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
-    self.goal = torch.empty((self.env_num, self.num_goals, self.dim), dtype=torch.float32, device=self.device)
-    self.pos = torch.empty((self.env_num, 1, self.dim), dtype=torch.float32, device=self.device)
-    self.obj = torch.empty((self.env_num, self.num_goals, self.dim), dtype=torch.float32, device=self.device)
-    self.attached = torch.empty((self.env_num, self.num_goals), dtype=torch.bool, device=self.device)
-    self.reached = torch.empty((self.env_num, self.num_goals), dtype=torch.bool, device=self.device)
+    self.num_step = torch.empty(self.num_envs, dtype=torch.int, device=self.device)
+    self.reach_step = torch.empty(self.num_envs, dtype=torch.int, device=self.device)
+    self.goal = torch.empty((self.num_envs, self.num_goals, self.dim), dtype=torch.float32, device=self.device)
+    self.pos = torch.empty((self.num_envs, 1, self.dim), dtype=torch.float32, device=self.device)
+    self.obj = torch.empty((self.num_envs, self.num_goals, self.dim), dtype=torch.float32, device=self.device)
+    self.attached = torch.empty((self.num_envs, self.num_goals), dtype=torch.bool, device=self.device)
+    self.reached = torch.empty((self.num_envs, self.num_goals), dtype=torch.bool, device=self.device)
 
     # gym space
     self.space = spaces.Box(low=-np.ones(self.dim), high=np.ones(self.dim))
@@ -183,7 +183,7 @@ class PNPToyEnv(gym.Env):
     info = torch.cat((
       if_reach.type(torch.float32).unsqueeze(-1),  # success
       self.num_step.type(torch.float32).unsqueeze(-1),  # step
-      self.obj.reshape(self.env_num, -1)),  # achieved goal
+      self.obj.reshape(self.num_envs, -1)),  # achieved goal
       dim=-1)
     done = torch.logical_or(
       (self.num_step >= self._max_episode_steps), (self.num_step - self.reach_step) > 4).type(torch.float32)
@@ -194,7 +194,7 @@ class PNPToyEnv(gym.Env):
 
   def reset(self, env_idx = None):
     if env_idx is None:
-      env_idx = torch.arange(self.env_num)
+      env_idx = torch.arange(self.num_envs)
     num_reset_env = env_idx.shape[0]
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
@@ -211,9 +211,9 @@ class PNPToyEnv(gym.Env):
     else:
       self.data.append([self.pos.clone(), self.obj.clone()])
     if self.num_step[0] == self._max_episode_steps:
-      fig, ax = plt.subplots(1, self.env_num)
+      fig, ax = plt.subplots(1, self.num_envs)
       if self.dim == 2:
-        for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
+        for t, env_id in itertools.product(range(self._max_episode_steps), range(self.num_envs)):
           for goal_id in range(self.num_goals):
             # object
             o_x = self.data[t][1][env_id,goal_id,0].detach().cpu()
@@ -225,21 +225,21 @@ class PNPToyEnv(gym.Env):
           a_y = self.data[t][0][env_id,0,1].detach().cpu()
           ax[env_id].plot(a_x, a_y, 'o', color=[
                           0, 0, 1, t/self._max_episode_steps])
-        for env_id in range(self.env_num):
+        for env_id in range(self.num_envs):
           for goal_id in range(self.num_goals):
             x = self.goal[env_id,goal_id,0].detach().cpu()
             y = self.goal[env_id,goal_id,1].detach().cpu()
             ax[env_id].plot(x, y, 'x', color=[0.2,1,goal_id/self.num_goals,1], markersize=20)
         plt.show()
       elif self.dim == 3:
-        fig, ax = plt.subplots(1, self.env_num)
-        for i in range(self.env_num):
+        fig, ax = plt.subplots(1, self.num_envs)
+        for i in range(self.num_envs):
           for i, d in enumerate(self.data[i]):
             ax[i].scatter(d[0], d[1], d[2], 'o', color=[0, 0, 1, i/50])
         plt.show()
 
   def get_obs(self):
-    return torch.cat((self.pos.reshape(self.env_num, -1), self.obj.reshape(self.env_num, -1), self.goal.reshape(self.env_num, -1)), dim=-1)
+    return torch.cat((self.pos.reshape(self.num_envs, -1), self.obj.reshape(self.num_envs, -1), self.goal.reshape(self.num_envs, -1)), dim=-1)
 
   def compute_reward(self, ag, dg, info):
     if self.reward_type == 'sparse':
@@ -249,10 +249,10 @@ class PNPToyEnv(gym.Env):
 
   def ezpolicy(self, obs):
     pos = obs[..., :self.dim]
-    obj = obs[..., self.dim:(self.num_goals+1)*self.dim].reshape(self.env_num, self.num_goals, self.dim)
-    goal = obs[..., (self.num_goals+1)*self.dim:].reshape(self.env_num, self.num_goals, self.dim)
-    action = torch.zeros(self.env_num, self.dim)
-    for env_id in range(self.env_num):
+    obj = obs[..., self.dim:(self.num_goals+1)*self.dim].reshape(self.num_envs, self.num_goals, self.dim)
+    goal = obs[..., (self.num_goals+1)*self.dim:].reshape(self.num_envs, self.num_goals, self.dim)
+    action = torch.zeros(self.num_envs, self.dim)
+    for env_id in range(self.num_envs):
       pos_now = pos[env_id]
       for goal_id in range(self.num_goals):
         obj_now = obj[env_id, goal_id] 
@@ -284,7 +284,7 @@ class PNPToyEnv(gym.Env):
       info_dim = 2 + self.num_goals*self.dim, # is_success, step, achieved_goal
       # numbers
       num_goals = self.num_goals, 
-      env_num = self.env_num,
+      num_envs = self.num_envs,
       max_env_step = self._max_episode_steps,
       # functions
       reward_fn = self.compute_reward,
@@ -299,26 +299,26 @@ class HandoverToyEnv(gym.Env):
   NOTE:
     1. the obs is normalized, please parse it before use
   """
-  def __init__(self, dim: int = 2, env_num: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, use_gripper = False):
+  def __init__(self, dim: int = 2, num_envs: int = 2, gpu_id=0, max_step=40, auto_reset=True, err=0.1, vel=0.2, use_gripper = False):
     self.device = torch.device(f"cuda:{gpu_id}" if (
       torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
     self.use_gripper = use_gripper
     self.dim = dim
-    self.env_num = env_num
+    self.num_envs = num_envs
     self._max_episode_steps = max_step
     self.err = err
     self.vel = vel
     self.auto_reset = auto_reset
-    self.num_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
-    self.reach_step = torch.empty(self.env_num, dtype=torch.int, device=self.device)
-    self.goal = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.pos0 = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.grip0 = torch.empty((self.env_num,), dtype=torch.float32, device=self.device)
-    self.pos1 = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.grip1 = torch.empty((self.env_num,), dtype=torch.float32, device=self.device)
-    self.obj = torch.empty((self.env_num, self.dim), dtype=torch.float32, device=self.device)
-    self.attached0 = torch.empty((self.env_num, ), dtype=torch.bool, device=self.device)
-    self.attached1 = torch.empty((self.env_num, ), dtype=torch.bool, device=self.device)
+    self.num_step = torch.empty(self.num_envs, dtype=torch.int, device=self.device)
+    self.reach_step = torch.empty(self.num_envs, dtype=torch.int, device=self.device)
+    self.goal = torch.empty((self.num_envs, self.dim), dtype=torch.float32, device=self.device)
+    self.pos0 = torch.empty((self.num_envs, self.dim), dtype=torch.float32, device=self.device)
+    self.grip0 = torch.empty((self.num_envs,), dtype=torch.float32, device=self.device)
+    self.pos1 = torch.empty((self.num_envs, self.dim), dtype=torch.float32, device=self.device)
+    self.grip1 = torch.empty((self.num_envs,), dtype=torch.float32, device=self.device)
+    self.obj = torch.empty((self.num_envs, self.dim), dtype=torch.float32, device=self.device)
+    self.attached0 = torch.empty((self.num_envs, ), dtype=torch.bool, device=self.device)
+    self.attached1 = torch.empty((self.num_envs, ), dtype=torch.bool, device=self.device)
 
     # torch space for vec env
     self.torch_space0 = Uniform(
@@ -387,7 +387,7 @@ class HandoverToyEnv(gym.Env):
 
   def reset(self, env_idx = None):
     if env_idx is None:
-      env_idx = torch.arange(self.env_num)
+      env_idx = torch.arange(self.num_envs)
     num_reset_env = env_idx.shape[0]
     self.num_step[env_idx] = 0
     self.reach_step[env_idx] = 0
@@ -405,9 +405,9 @@ class HandoverToyEnv(gym.Env):
     else:
       self.data.append([self.pos0.clone(), self.pos1.clone(), self.obj.clone()])
     if self.num_step[0] == self._max_episode_steps:
-      fig, ax = plt.subplots(1, self.env_num)
+      fig, ax = plt.subplots(1, self.num_envs)
       if self.dim == 2:
-        for t, env_id in itertools.product(range(self._max_episode_steps), range(self.env_num)):
+        for t, env_id in itertools.product(range(self._max_episode_steps), range(self.num_envs)):
           # object
           o_x = self.data[t][2][env_id][0].detach().cpu()
           o_y = self.data[t][2][env_id][1].detach().cpu()
@@ -423,7 +423,7 @@ class HandoverToyEnv(gym.Env):
           a_y = self.data[t][1][env_id][1].detach().cpu()
           ax[env_id].plot(a_x, a_y, 'o', color=[
                           1, 0, 0, t/self._max_episode_steps])
-        for env_id in range(self.env_num):
+        for env_id in range(self.num_envs):
           x = self.goal[env_id][0].detach().cpu()
           y = self.goal[env_id][1].detach().cpu()
           ax[env_id].plot(x, y, 'rx')
@@ -433,8 +433,8 @@ class HandoverToyEnv(gym.Env):
                           1, 1, 0, 1], markersize=10)
         plt.show()
       elif self.dim == 3:
-        fig, ax = plt.subplots(self.env_num, 1)
-        for i in range(self.env_num):
+        fig, ax = plt.subplots(self.num_envs, 1)
+        for i in range(self.num_envs):
           for i, d in enumerate(self.data[i]):
             ax[i].scatter(d[0], d[1], d[2], 'o', color=[0, 0, 1, i/50])
         plt.show()
@@ -465,14 +465,14 @@ class HandoverToyEnv(gym.Env):
     # move 0
     delta0 = - pos0 + obj_pos
     delta0[attached0] =  (- pos0 + goal)[attached0]
-    vel0 = -torch.ones((self.env_num, self.dim+1), device = self.device)
+    vel0 = -torch.ones((self.num_envs, self.dim+1), device = self.device)
     vel0[..., :self.dim] = (delta0 / torch.norm(delta0, dim=-1, keepdim=True))
     need_handover0 = torch.logical_and((goal_side), pos0[..., 0] > -0.005)
     vel0[need_handover0, -1] = 1 
     # move 1
     delta1 = - pos1 + obj_pos
     delta1[attached1] =  (- pos1 + goal)[attached1]
-    vel1 = -torch.ones((self.env_num, self.dim+1), device = self.device)
+    vel1 = -torch.ones((self.num_envs, self.dim+1), device = self.device)
     vel1[..., :self.dim] = (delta1 / torch.norm(delta1, dim=-1, keepdim=True))
     need_handover1 = torch.logical_and((~goal_side), pos1[..., 0] < 0.005)
     vel1[need_handover1, -1] = 1 
