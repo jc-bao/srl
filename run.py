@@ -20,7 +20,7 @@ def train(config):
 	def log(msg):
 		print(msg)
 		if config.wandb:
-			wandb.log(msg, step=exp_agent.total_step)
+			wandb.log(msg, step=exp_agent.total_step.item())
 	torch.set_grad_enabled(False)
 
 	# warmup
