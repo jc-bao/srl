@@ -47,6 +47,7 @@ bound_robot: true
 asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
+  assetFileNameSphere: 'urdf/sphere.urdf'
 
 # sim:
 physics_engine: SIM_PHYSX 

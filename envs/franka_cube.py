@@ -50,7 +50,7 @@ class FrankaCube(gym.Env):
 
 		# indices
 		self.global_indices = torch.arange(
-			self.cfg.num_envs * (1 + self.cfg.num_goals), dtype=torch.int32, device=self.device
+			self.cfg.num_envs * (1 + self.cfg.num_goals*2), dtype=torch.int32, device=self.device
 		).view(self.cfg.num_envs, -1)
 
 		self.reset()
@@ -169,8 +169,10 @@ class FrankaCube(gym.Env):
 			self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
 		goal_opts = gymapi.AssetOptions()
 		goal_opts.density = 0
-		goal_asset = self.gym.create_capsule(
-			self.sim, self.cfg.block_size, self.cfg.block_size, goal_opts)
+		goal_opts.disable_gravity = True
+		goal_opts.fix_base_link = True
+		goal_asset = self.gym.load_asset(
+			self.sim, asset_root, self.cfg.asset.assetFileNameSphere, goal_opts)
 
 		franka_start_pose = gymapi.Transform()
 		franka_start_pose.p = gymapi.Vec3(-0.5, -0.4, 0.0)
@@ -181,10 +183,12 @@ class FrankaCube(gym.Env):
 		num_franka_shapes = self.gym.get_asset_rigid_shape_count(franka_asset)
 		num_block_bodies = self.gym.get_asset_rigid_body_count(block_asset)
 		num_block_shapes = self.gym.get_asset_rigid_shape_count(block_asset)
+		num_goal_bodies = self.gym.get_asset_rigid_body_count(goal_asset)
+		num_goal_shapes = self.gym.get_asset_rigid_shape_count(goal_asset)
 		max_agg_bodies = (
-			num_franka_bodies + self.cfg.num_goals * num_block_bodies)
+			num_franka_bodies + self.cfg.num_goals * (num_block_bodies+num_goal_bodies))
 		max_agg_shapes = (
-			num_franka_shapes + self.cfg.num_goals * num_block_shapes)
+			num_franka_shapes + self.cfg.num_goals * (num_block_shapes+num_goal_shapes))
 
 		self.cameras = []
 		self.frankas = []
@@ -232,14 +236,14 @@ class FrankaCube(gym.Env):
 						 block_state_pose.r.w, ] + [0]*6)
 				for j in range(self.cfg.num_goals):
 					goal_state_pose = gymapi.Transform()
-					goal_state_pose.p.x = xmin + j * 2 * self.cfg.goal_size
+					goal_state_pose.p.x = xmin + j * 2 * self.cfg.block_size
 					goal_state_pose.p.y = 0
 					goal_state_pose.p.z=0.2
 					goal_state_pose.r = gymapi.Quat(0, 0, 0, 1) 
 					goal_state_pose = goal_state_pose
 					handle = self.gym.create_actor(
 						env_ptr, goal_asset, goal_state_pose, "goal{}".format(j), i+self.cfg.num_envs, 0, 0,)
-					self.gym.set_rigid_body_color(env_ptr, handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, self.colors[j])
+					self.gym.set_rigid_body_color(env_ptr, handle, 0, gymapi.MESH_VISUAL, self.colors[j])
 					self.goal_handles.append(handle)
 			if self.cfg.aggregate_mode > 0:
 				self.gym.end_aggregate(env_ptr)
@@ -412,7 +416,7 @@ class FrankaCube(gym.Env):
 		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,))
 
 		# reset blocks
-		if done_env_num > 0:
+		if done_env_num > 0: 
 			block_indices = self.global_indices[reset_idx, 1:].flatten()
 			# set to default pos
 			self.block_states[reset_idx] = self.default_block_states[reset_idx]
@@ -519,14 +523,14 @@ class FrankaCube(gym.Env):
 					[p0[0], p0[1], p0[2], pz[0], pz[1], pz[2]],[0, 0, 1],)
 
 				# draw goals
-				for j in range(self.cfg.num_goals):
-					sphere_rot = gymapi.Quat.from_euler_zyx(0.5 * np.pi, 0, 0)
-					sphere_pose = gymapi.Transform(r=sphere_rot)
-					sphere_geom = gymutil.WireframeSphereGeometry(0.025, 12, 12, sphere_pose, 
-						color=(self.colors[j].x, self.colors[j].y, self.colors[j].z))
-					pos = gymapi.Transform()
-					pos.p.x, pos.p.y, pos.p.z = self.goal[i, j, 0], self.goal[i, j, 1], self.goal[i, j, 2] 
-					gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], pos)
+				# for j in range(self.cfg.num_goals):
+				# 	sphere_rot = gymapi.Quat.from_euler_zyx(0.5 * np.pi, 0, 0)
+				# 	sphere_pose = gymapi.Transform(r=sphere_rot)
+				# 	sphere_geom = gymutil.WireframeSphereGeometry(0.025, 12, 12, sphere_pose, 
+				# 		color=(self.colors[j].x, self.colors[j].y, self.colors[j].z))
+				# 	pos = gymapi.Transform()
+				# 	pos.p.x, pos.p.y, pos.p.z = self.goal[i, j, 0], self.goal[i, j, 1], self.goal[i, j, 2] 
+				# 	gymutil.draw_lines(sphere_geom, self.gym, self.viewer, self.envs[i], pos)
 					# self.gym.add_lines(self.viewer, self.envs[i], 1, sphere_geom, [0,0,0.1])
 				# draw goal space
 				low = self.torch_goal_space.low[0]
@@ -695,18 +699,18 @@ if __name__ == '__main__':
 	'''
 	run random policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=4, enable_camera_sensors=True)
+	env = gym.make('PandaPNP-v0', num_envs=4, headless=False)
 	obs = env.reset()
 	start = time.time()
-	for _ in range(1):
+	for _ in range(10000):
 		# act = torch.tensor([[1,-0.01,1,0],[1,-0.01,1,0]])
-		act = torch.rand((env.cfg.num_envs,4), device='cuda:0')*2-1
+		# act = torch.rand((env.cfg.num_envs,4), device='cuda:0')*2-1
 		# act[..., 0] += 0.5
-		# act = env.ezpolicy(obs)
+		act = env.ezpolicy(obs)
 		obs, rew, done, info = env.step(act)
-		images = env.render(mode='rgb_array')
-		print(images[0].shape)
-		Image.fromarray(images[0]).save('foo.png')
+		env.render(mode='human')
+		# print(images[0].shape)
+		# Image.fromarray(images[0]).save('foo.png')
 
 	print(time.time()-start)
 	env.close()
