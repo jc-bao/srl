@@ -100,6 +100,7 @@ class FrankaCube(gym.Env):
 			[[0.924, -0.383, 0., 0.]], device = self.device).repeat(self.cfg.num_envs,1)
 		lower = gymapi.Vec3(-self.cfg.env_spacing, -self.cfg.env_spacing, 0.0)
 		upper = gymapi.Vec3(*([self.cfg.env_spacing]*3))
+
 		asset_root = os.path.join(
 			os.path.dirname(os.path.abspath(__file__)),self.cfg.asset.assetRoot)
 		franka_asset_file = self.cfg.asset.assetFileNameFranka
@@ -166,6 +167,10 @@ class FrankaCube(gym.Env):
 		box_opts.density = 400
 		block_asset = self.gym.create_box(
 			self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
+		goal_opts = gymapi.AssetOptions()
+		goal_opts.density = 0
+		goal_asset = self.gym.create_capsule(
+			self.sim, self.cfg.block_size, self.cfg.block_size, goal_opts)
 
 		franka_start_pose = gymapi.Transform()
 		franka_start_pose.p = gymapi.Vec3(-0.5, -0.4, 0.0)
@@ -181,6 +186,7 @@ class FrankaCube(gym.Env):
 		max_agg_shapes = (
 			num_franka_shapes + self.cfg.num_goals * num_block_shapes)
 
+		self.cameras = []
 		self.frankas = []
 		self.default_block_states = []
 		self.prop_start = []
@@ -209,6 +215,7 @@ class FrankaCube(gym.Env):
 				self.prop_start.append(self.gym.get_sim_actor_count(self.sim))
 				xmin = -self.cfg.block_size * (self.cfg.num_goals - 1)
 				self.block_handles = []
+				self.goal_handles = []
 				for j in range(self.cfg.num_goals):
 					block_state_pose = gymapi.Transform()
 					block_state_pose.p.x = xmin + j * 2 * self.cfg.block_size
@@ -223,10 +230,30 @@ class FrankaCube(gym.Env):
 						[block_state_pose.p.x, block_state_pose.p.y, block_state_pose.p.z,
 						 block_state_pose.r.x, block_state_pose.r.y, block_state_pose.r.z,
 						 block_state_pose.r.w, ] + [0]*6)
+				for j in range(self.cfg.num_goals):
+					goal_state_pose = gymapi.Transform()
+					goal_state_pose.p.x = xmin + j * 2 * self.cfg.goal_size
+					goal_state_pose.p.y = 0
+					goal_state_pose.p.z=0.2
+					goal_state_pose.r = gymapi.Quat(0, 0, 0, 1) 
+					goal_state_pose = goal_state_pose
+					handle = self.gym.create_actor(
+						env_ptr, goal_asset, goal_state_pose, "goal{}".format(j), i+self.cfg.num_envs, 0, 0,)
+					self.gym.set_rigid_body_color(env_ptr, handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, self.colors[j])
+					self.goal_handles.append(handle)
 			if self.cfg.aggregate_mode > 0:
 				self.gym.end_aggregate(env_ptr)
 			self.envs.append(env_ptr)
 			self.frankas.append(franka_actor)
+			# create camera
+			camera_properties = gymapi.CameraProperties()
+			camera_properties.width = 320
+			camera_properties.height = 200
+			h1 = self.gym.create_camera_sensor(env_ptr, camera_properties)
+			camera_position = gymapi.Vec3(0, -1, 1)
+			camera_target = gymapi.Vec3(0, 0, 0)
+			self.gym.set_camera_location(h1, env_ptr, camera_position, camera_target)
+			self.cameras.append(h1)
 		# set control data
 		self.hand_handle = self.gym.find_actor_rigid_body_handle(
 			env_ptr, franka_actor, "panda_link7")
@@ -246,7 +273,6 @@ class FrankaCube(gym.Env):
 		self.progress_buf = torch.zeros(self.cfg.num_envs, device=self.device, dtype=torch.long)
 		self.reset_buf = torch.zeros(self.cfg.num_envs, device=self.device, dtype=torch.bool)
 		self.success_step_buf = torch.zeros(self.cfg.num_envs, device=self.device, dtype=torch.long)
-		self.goal = torch.zeros((self.cfg.num_envs, self.cfg.num_goals, 3), device=self.device, dtype=torch.float) 
 
 		hand = self.gym.find_actor_rigid_body_handle(
 			self.envs[0], self.frankas[0], "panda_link7")
@@ -309,7 +335,9 @@ class FrankaCube(gym.Env):
 		self.root_state_tensor = gymtorch.wrap_tensor(actor_root_state_tensor).view(
 			self.cfg.num_envs, -1, 13)
 		# object observation
-		self.block_states = self.root_state_tensor[:, 1:]
+		self.block_states = self.root_state_tensor[:, 1:1+self.cfg.num_goals]
+		# goal
+		self.goal = self.root_state_tensor[:, 1+self.cfg.num_goals:1+self.cfg.num_goals*2, :3]
 			
 		# joint pos
 		dof_state_tensor = self.gym.acquire_dof_state_tensor(
@@ -371,7 +399,6 @@ class FrankaCube(gym.Env):
 		self.pre_physics_step(actions, use_init_pos=use_init_pos)
 		# step physics and render each frame
 		for i in range(self.cfg.control_freq_inv):
-			self.render()
 			self.gym.simulate(self.sim)
 		if self.device == "cpu":
 			self.gym.fetch_results(self.sim, True)
@@ -383,6 +410,7 @@ class FrankaCube(gym.Env):
 		done_env_num = reset_idx.sum()
 		# reset goals
 		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,))
+
 		# reset blocks
 		if done_env_num > 0:
 			block_indices = self.global_indices[reset_idx, 1:].flatten()
@@ -511,9 +539,9 @@ class FrankaCube(gym.Env):
 
 		return obs, rew, done, info
 
-	def render(self):
+	def render(self, mode='rgb_array'):
 		"""Draw the frame to the viewer, and check for keyboard events."""
-		if self.viewer:
+		if self.viewer and mode == 'human':
 			# check for window closed
 			if self.gym.query_viewer_has_closed(self.viewer):
 				sys.exit()
@@ -535,6 +563,16 @@ class FrankaCube(gym.Env):
 				self.gym.sync_frame_time(self.sim)
 			else:
 				self.gym.poll_viewer_events(self.viewer)
+		elif mode == 'rgb_array':
+			if self.device != "cpu":
+				self.gym.fetch_results(self.sim, True)
+			self.gym.step_graphics(self.sim)
+			self.gym.render_all_camera_sensors(self.sim)
+			images = []
+			for idx, handle in enumerate(self.cameras):
+				image = self.gym.get_camera_image(self.sim, self.envs[idx], handle, gymapi.IMAGE_COLOR)
+				images.append(image.reshape((image.shape[0], -1, 4)))
+			return images
 
 	def control_ik(self, dpose):
 		# solve damped least squares
@@ -588,7 +626,7 @@ class FrankaCube(gym.Env):
 			goal_dim = cfg.per_goal_dim * cfg.num_goals,
 			# device
 			# when not need render, close graph device, else share with sim
-			graphics_device_id = -1 if (~cfg.enable_camera_sensors and cfg.headless) else cfg.sim_device_id,
+			graphics_device_id = -1 if ((not cfg.enable_camera_sensors) and cfg.headless) else cfg.sim_device_id,
 			sim_device = f'cuda:{cfg.sim_device_id}' if cfg.sim_device_id >= 0 else 'cpu',
 			rl_device = f'cuda:{cfg.rl_device_id}' if cfg.rl_device_id >= 0 else 'cpu',
 			# isaac 
@@ -628,6 +666,10 @@ class FrankaCube(gym.Env):
 		cfg.sim_params = sim_params
 		return cfg
 
+	def close(self):
+		self.gym.destroy_viewer(self.viewer)
+		self.gym.destroy_sim(self.sim)
+
 	def env_params(self):
 		return AttrDict(
 			# dims
@@ -648,16 +690,23 @@ class FrankaCube(gym.Env):
 gym.register(id='PandaPNP-v0', entry_point=FrankaCube)
 
 if __name__ == '__main__':
+	from PIL import Image
+	import numpy as np
 	'''
 	run random policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=16384)
+	env = gym.make('PandaPNP-v0', num_envs=4, enable_camera_sensors=True)
 	obs = env.reset()
 	start = time.time()
-	for _ in range(64):
+	for _ in range(1):
 		# act = torch.tensor([[1,-0.01,1,0],[1,-0.01,1,0]])
 		act = torch.rand((env.cfg.num_envs,4), device='cuda:0')*2-1
 		# act[..., 0] += 0.5
 		# act = env.ezpolicy(obs)
 		obs, rew, done, info = env.step(act)
+		images = env.render(mode='rgb_array')
+		print(images[0].shape)
+		Image.fromarray(images[0]).save('foo.png')
+
 	print(time.time()-start)
+	env.close()

@@ -6,7 +6,7 @@ sim_device_id: 0
 rl_device_id: 0
 headless: True 
 # set to True if you use camera sensors in the environment
-enable_camera_sensors: False
+enable_camera_sensors: False 
 
 # env
 # rew
@@ -14,7 +14,7 @@ reward_type: sparse
 success_bar: !!float -1e-3
 extra_steps: 5
 # number
-num_envs: 1024
+num_envs: 8192 
 num_goals: 1
 base_steps: 100
 max_steps: null
