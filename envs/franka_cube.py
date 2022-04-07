@@ -651,10 +651,10 @@ if __name__ == '__main__':
 	'''
 	run random policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=16384)
+	env = gym.make('PandaPNP-v0', num_envs=4096)
 	obs = env.reset()
 	start = time.time()
-	for _ in range(64):
+	for _ in range(256):
 		# act = torch.tensor([[1,-0.01,1,0],[1,-0.01,1,0]])
 		act = torch.rand((env.cfg.num_envs,4), device='cuda:0')*2-1
 		# act[..., 0] += 0.5
