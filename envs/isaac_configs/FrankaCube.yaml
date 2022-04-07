@@ -45,7 +45,7 @@ block_length: 0.04
 # robot
 bound_robot: true
 asset:
-  assetRoot: '../isaac_assets'
+  assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
   assetFileNameCabinet: 'urdf/sektion_cabinet_model/urdf/sektion_cabinet_2.urdf'
 
