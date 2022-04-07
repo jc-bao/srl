@@ -100,12 +100,19 @@ class AgentBase:
       self.EP.num_envs, device=self.cfg.device)
     # reset
     ten_s = self.env.reset()
+    if self.cfg.render:
+      images = self.env.render(mode='rgb_array')
+      videos = [[im] for im in images]
     # loop
     collected_steps = 0
     while collected_steps < target_steps:
       ten_a = self.act(ten_s).detach()
       ten_s_next, ten_rewards, ten_dones, _ = self.env.step(
         ten_a)  # different
+      if self.cfg.render:
+        images = self.env.render(mode='rgb_array')
+        for vi, im in zip(videos, images):
+          vi.append(im)
       ten_dones = ten_dones.type(torch.bool)
       num_ep[ten_dones] += 1
       ep_rew += ten_rewards
@@ -114,11 +121,19 @@ class AgentBase:
       collected_steps = (ep_step).sum()
       ten_s = ten_s_next
     # return
+    video = None
+    if self.cfg.render:
+      videos = np.array(videos)
+      video = np.concatenate(videos, axis=0)
+      video = np.moveaxis(video, -1, 1)
+    print(video.shape)
+    exit()
     return AttrDict(
       steps=self.total_step,
       ep_rew=torch.mean(ep_rew/num_ep).item(),
       final_rew=torch.mean(final_rew/num_ep).item(),
       ep_steps=torch.mean(ep_step/num_ep).item(),
+      video = video
     )
 
   def explore_vec_env(self, target_steps=None):

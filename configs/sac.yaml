@@ -42,6 +42,7 @@ soft_update_tau: 0.0039
 # eval
 eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
+render: true
 
 # save
 cwd: results

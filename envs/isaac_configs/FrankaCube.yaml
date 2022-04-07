@@ -14,7 +14,8 @@ reward_type: sparse
 success_bar: !!float -1e-3
 extra_steps: 5
 # number
-num_envs: 8192 
+num_camera: 16
+num_envs: 4096 
 num_goals: 1
 base_steps: 100
 max_steps: null

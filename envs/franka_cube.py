@@ -249,14 +249,15 @@ class FrankaCube(gym.Env):
 				self.gym.end_aggregate(env_ptr)
 			self.envs.append(env_ptr)
 			self.frankas.append(franka_actor)
+		for j in range(self.cfg.num_cameras):
 			# create camera
 			camera_properties = gymapi.CameraProperties()
 			camera_properties.width = 320
 			camera_properties.height = 200
-			h1 = self.gym.create_camera_sensor(env_ptr, camera_properties)
-			camera_position = gymapi.Vec3(0, -1, 1)
+			h1 = self.gym.create_camera_sensor(self.envs[j], camera_properties)
+			camera_position = gymapi.Vec3(0, -1, 0.3)
 			camera_target = gymapi.Vec3(0, 0, 0)
-			self.gym.set_camera_location(h1, env_ptr, camera_position, camera_target)
+			self.gym.set_camera_location(h1, self.envs[j], camera_position, camera_target)
 			self.cameras.append(h1)
 		# set control data
 		self.hand_handle = self.gym.find_actor_rigid_body_handle(
@@ -699,18 +700,17 @@ if __name__ == '__main__':
 	'''
 	run random policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=4, headless=False)
+	env = gym.make('PandaPNP-v0', num_envs=4, headless=True, enable_camera_sensors=True)
 	obs = env.reset()
 	start = time.time()
-	for _ in range(10000):
+	for _ in range(1):
 		# act = torch.tensor([[1,-0.01,1,0],[1,-0.01,1,0]])
 		# act = torch.rand((env.cfg.num_envs,4), device='cuda:0')*2-1
 		# act[..., 0] += 0.5
 		act = env.ezpolicy(obs)
 		obs, rew, done, info = env.step(act)
-		env.render(mode='human')
-		# print(images[0].shape)
-		# Image.fromarray(images[0]).save('foo.png')
+		images = env.render(mode='rgb_array')
+		Image.fromarray(images[0]).save('foo.png')
 
 	print(time.time()-start)
 	env.close()

@@ -21,6 +21,8 @@ def train(config):
 		print(msg)
 		if config.wandb:
 			wandb.log(msg, step=exp_agent.total_step.item())
+			if msg.get('video') is not None:
+				wandb.log({"video": wandb.Video(msg.video, fps=30, format="mp4")})
 	torch.set_grad_enabled(False)
 
 	# warmup
