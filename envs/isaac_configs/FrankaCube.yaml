@@ -52,7 +52,7 @@ asset:
 physics_engine: SIM_PHYSX 
 aggregate_mode: 3
 dt: 0.0833 # 1/12
-substeps: 20
+substeps: 10
 up_axis: 'z'
 use_gpu_pipeline: true 
 gravity: [0.0, 0.0, -9.81]

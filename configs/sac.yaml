@@ -15,8 +15,7 @@ buffer_size: 1000000
 env_name: 'PNPToy-v0'
 env_params: null
 env_kwargs:
-  num_envs: 2
-  headless: False 
+  num_envs: 4096 
 reward_scale: 1
 extra_info_dim: 4 # extra info get from agent
 
@@ -33,7 +32,7 @@ gpu_id: 0
 agent_name: AgentREDqSAC
 max_collect_steps: !!float 1e9
 resue: 10
-steps_per_rollout: 204800
+steps_per_rollout: 409600
 updates_per_rollout: null # calulate with resue
 batch_size: 8192
 gamma: 0.99

@@ -1,2 +1,2 @@
-from .isaac_tasks import franka_cube
 from .ToyEnv import ReachToyEnv, PNPToyEnv, HandoverToyEnv
+from .franka_cube import FrankaCube

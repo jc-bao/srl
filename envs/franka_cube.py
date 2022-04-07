@@ -1,5 +1,5 @@
 import numpy as np
-import os, sys
+import os, sys, time
 import yaml
 import gym
 from isaacgym import gymutil, gymtorch, gymapi
@@ -651,11 +651,13 @@ if __name__ == '__main__':
 	'''
 	run random policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=2, headless=False)
+	env = gym.make('PandaPNP-v0', num_envs=16384)
 	obs = env.reset()
-	while True:
+	start = time.time()
+	for _ in range(64):
 		# act = torch.tensor([[1,-0.01,1,0],[1,-0.01,1,0]])
-		# act = torch.rand((env.cfg.num_envs,4), device='cuda:0')*2-1
+		act = torch.rand((env.cfg.num_envs,4), device='cuda:0')*2-1
 		# act[..., 0] += 0.5
-		act = env.ezpolicy(obs)
+		# act = env.ezpolicy(obs)
 		obs, rew, done, info = env.step(act)
+	print(time.time()-start)
