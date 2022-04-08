@@ -623,6 +623,7 @@ class FrankaCube(gym.Env):
 		return action
 
 	def update_config(self, cfg):
+		cfg.update(enable_camera_sensors = cfg.num_cameras > 0)
 		cfg.update(
 			# dim
 			state_dim = cfg.shared_dim + cfg.per_seperate_dim * cfg.num_goals + cfg.per_goal_dim*cfg.num_goals, 
@@ -630,7 +631,7 @@ class FrankaCube(gym.Env):
 			seperate_dim = cfg.per_seperate_dim * cfg.num_goals,
 			goal_dim = cfg.per_goal_dim * cfg.num_goals,
 			# device
-			# when not need render, close graph device, else share with sim
+			# when not need render, close graph device, else share with sim 	
 			graphics_device_id = -1 if ((not cfg.enable_camera_sensors) and cfg.headless) else cfg.sim_device_id,
 			sim_device = f'cuda:{cfg.sim_device_id}' if cfg.sim_device_id >= 0 else 'cpu',
 			rl_device = f'cuda:{cfg.rl_device_id}' if cfg.rl_device_id >= 0 else 'cpu',
@@ -700,7 +701,7 @@ if __name__ == '__main__':
 	'''
 	run random policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=4, headless=True, enable_camera_sensors=True)
+	env = gym.make('PandaPNP-v0', num_envs=4)
 	obs = env.reset()
 	start = time.time()
 	for _ in range(1):

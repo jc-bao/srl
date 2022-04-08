@@ -126,8 +126,6 @@ class AgentBase:
       videos = np.array(videos)
       video = np.concatenate(videos, axis=0)
       video = np.moveaxis(video, -1, 1)
-    print(video.shape)
-    exit()
     return AttrDict(
       steps=self.total_step,
       ep_rew=torch.mean(ep_rew/num_ep).item(),

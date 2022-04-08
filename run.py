@@ -25,6 +25,10 @@ def train(config):
 				wandb.log({"video": wandb.Video(msg.video, fps=30, format="mp4")})
 	torch.set_grad_enabled(False)
 
+	result = exp_agent.eval_vec_env()
+	log(result)
+	exit()
+
 	# warmup
 	print('explore...')
 	result = exp_agent.explore_vec_env()
