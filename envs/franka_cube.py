@@ -36,21 +36,21 @@ class FrankaCube(gym.Env):
     # spaces
     # block space
     self.torch_block_space = torch.distributions.uniform.Uniform(
-      low=torch.tensor([[-0.3, -0.2, self.cfg.block_size/2]],
+      low=torch.tensor([[-0.2, -0.1, self.cfg.block_size/2]],
                        device=self.device).repeat(self.cfg.num_goals, 1),
-      high=torch.tensor([[0., 0.2, self.cfg.block_size/2+0.001]], device=self.device).repeat(self.cfg.num_goals, 1))
+      high=torch.tensor([[0., 0.1, self.cfg.block_size/2+0.001]], device=self.device).repeat(self.cfg.num_goals, 1))
     # robot space
     self.torch_robot_space = torch.distributions.uniform.Uniform(
-      low=torch.tensor([-0.35, -0.25, self.cfg.block_size/2],
+      low=torch.tensor([-0.25, -0.15, self.cfg.block_size/2],
                        device=self.device),
-      high=torch.tensor([0.05, 0.25, self.cfg.block_size/2+0.25], device=self.device))
+      high=torch.tensor([0.05, 0.15, self.cfg.block_size/2+0.12], device=self.device))
     self.grip_pos_mean = self.torch_robot_space.mean
     self.grip_pos_std = self.torch_robot_space.stddev
     # goal space
     self.torch_goal_space = torch.distributions.uniform.Uniform(
-      low=torch.tensor([[-0.3, -0.2, self.cfg.block_size/2]],
+      low=torch.tensor([[-0.2, -0.1, self.cfg.block_size/2]],
                        device=self.device).repeat(self.cfg.num_goals, 1),
-      high=torch.tensor([[0., 0.2, self.cfg.block_size/2+0.2]], device=self.device).repeat(self.cfg.num_goals, 1))
+      high=torch.tensor([[0., 0.1, self.cfg.block_size/2+0.1]], device=self.device).repeat(self.cfg.num_goals, 1))
     self.goal_mean = self.torch_goal_space.mean
     self.goal_std = self.torch_goal_space.stddev
 
@@ -618,7 +618,7 @@ class FrankaCube(gym.Env):
 
   def ezpolicy(self, obs):
     up_step = 5
-    reach_step = 30
+    reach_step = 300
     grasp_step = 33
     end_step = 50
     pos = obs[..., :3]*self.grip_pos_std+self.grip_pos_mean

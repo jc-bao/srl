@@ -40,7 +40,7 @@ finger_shift: [0,0,-0.04]
 err: 0.05
 clip_actions: 1.0
 # block
-inhand_rate: 0.3
+inhand_rate: 0.0
 block_size: 0.04 
 block_length: 0.04
 # robot
