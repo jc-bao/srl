@@ -198,7 +198,8 @@ class AgentBase:
         # reset record params
         traj_start_ptr[done_idx] = (data_ptr+1) % self.EP.max_env_step
         traj_lens[done_idx] = 0
-        ten_s = ten_s_next
+      # setup next state
+      ten_s = ten_s_next
 
     return AttrDict(
       steps=self.total_step,
@@ -215,13 +216,12 @@ class AgentBase:
       end_point = (start_point + traj_lens[i]) % self.EP.max_env_step
       ag_start = self.traj_list[i, start_point][self.EP.state_dim +
                                                 2+self.EP.action_dim+self.EP.info_dim-self.EP.goal_dim:self.EP.state_dim+2+self.EP.action_dim+self.EP.info_dim]
-      # Note: -1 to avoid final state error (next state is reset)
-      ag_end = self.traj_list[i, end_point-1][self.EP.state_dim +
+      ag_end = self.traj_list[i, (end_point-1)%self.EP.max_env_step][self.EP.state_dim +
                                                 2+self.EP.action_dim+self.EP.info_dim-self.EP.goal_dim:self.EP.state_dim+2+self.EP.action_dim+self.EP.info_dim]
-      # dropout unmoved exp
+      # dropout unmoved experience
       if torch.max(abs(ag_start - ag_end)) < 5e-2:
         useless_steps += traj_lens[i]
-        pass
+        continue
       if start_point < end_point:
         state_traj.append(
           self.traj_list[i, start_point:end_point, :self.EP.state_dim])
@@ -236,11 +236,12 @@ class AgentBase:
           self.traj_list[i, start_point:, self.EP.state_dim:],
           self.traj_list[i, :end_point, self.EP.state_dim:]
         ), dim=0))
-    state_traj = torch.cat(state_traj, dim=0)
-    other_traj = torch.cat(other_traj, dim=0)
-    self.buffer.extend_buffer(state_traj, other_traj)
+    if len(state_traj) > 0:
+      state_traj = torch.cat(state_traj, dim=0)
+      other_traj = torch.cat(other_traj, dim=0)
+      self.buffer.extend_buffer(state_traj, other_traj)
     return AttrDict(
-      collected_steps=state_traj.shape[0],
+      collected_steps=len(state_traj),
       useless_steps=useless_steps
     )
 

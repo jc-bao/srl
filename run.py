@@ -25,10 +25,6 @@ def train(config):
 				wandb.log({"video": wandb.Video(msg.video, fps=30, format="mp4")})
 	torch.set_grad_enabled(False)
 
-	result = exp_agent.eval_vec_env()
-	log(result)
-	exit()
-
 	# warmup
 	print('explore...')
 	result = exp_agent.explore_vec_env()
@@ -64,11 +60,13 @@ if __name__ == '__main__':
 	parser.add_argument('-f', '--file', type=str,
 											default='sac', help='config file')
 	parser.add_argument('-k', '--kwargs', type=json.loads, default={})
+	parser.add_argument('-e', '--envargs', type=json.loads, default={})
 	args = parser.parse_args()
 	with open(f'configs/{args.file}.yaml', "r") as stream:
 		try:
 			config = AttrDict(yaml.safe_load(stream))
 			config.update(args.kwargs)
+			config['env_kwargs'].update(args.envargs)
 		except yaml.YAMLError as exc:
 			print(exc)
 
