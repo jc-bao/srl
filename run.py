@@ -8,8 +8,7 @@ import argparse
 import wandb
 
 import agent
-import envs
-
+from envs.franka_cube import FrankaCube
 
 def train(config):
 
