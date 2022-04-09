@@ -12,7 +12,7 @@ if_use_per: false
 buffer_size: 100
 
 # env_params
-env_name: 'PNPToy-v0'
+env_name: ReachToy-v0
 env_params: null
 env_kwargs:
   num_envs: 2 

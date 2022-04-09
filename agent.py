@@ -219,7 +219,7 @@ class AgentBase:
       end_info_dict = self.EP.info_parser(end_info)
       # TODO merge buffer and add parser
       # dropout unmoved experience
-      if end_info_dict.early_termin:
+      if getattr(end_info_dict, 'early_termin', False):
         useless_steps += traj_lens[i]
         continue
       if start_point < end_point:

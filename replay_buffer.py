@@ -62,8 +62,8 @@ class ReplayBuffer:  # for off-policy
       fut_ag = self.EP.info_parser(fut_info).ag
       # NOTE: to sample next state
       # relabel
-      self.EP.obs_updater(trans_dict.state[indices_her_local_bool], AttrDict(g=fut_ag))
-      self.EP.obs_updater(next_trans_dict.state[indices_her_local_bool], AttrDict(g=fut_ag))
+      trans_dict.state[indices_her_local_bool] = self.EP.obs_updater(trans_dict.state[indices_her_local_bool], AttrDict(g=fut_ag))
+      next_trans_dict.state[indices_her_local_bool] = self.EP.obs_updater(next_trans_dict.state[indices_her_local_bool], AttrDict(g=fut_ag))
       # recompute
       trans_dict.rew[indices_her_local_bool] = self.EP.compute_reward(info_dict.ag, fut_ag, None)
     return AttrDict(

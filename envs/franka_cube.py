@@ -12,7 +12,7 @@ import pathlib
 
 
 class FrankaCube(gym.Env):
-	def __init__(self, cfg_file='isaac_configs/FrankaCube.yaml', **kwargs):
+	def __init__(self, cfg_file='configs/FrankaCube.yaml', **kwargs):
 		# get config and setup base class
 		cfg_path = pathlib.Path(__file__).parent.resolve()/cfg_file
 		with open(cfg_path) as config_file:

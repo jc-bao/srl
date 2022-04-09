@@ -1,0 +1,7 @@
+dim: 2
+num_envs: 2
+sim_device_id: 0
+max_steps: 20
+auto_reset: true
+err: 0.05
+vel: 0.2
