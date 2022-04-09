@@ -1,8 +1,8 @@
 import os
-
 import numpy as np
 import numpy.random as rd
 import torch
+from attrdict import AttrDict
 
 
 class ReplayBuffer:  # for off-policy
@@ -12,50 +12,27 @@ class ReplayBuffer:  # for off-policy
     self.prev_idx = 0
     self.if_full = False
     self.max_len = cfg.buffer_size
-    EP = cfg.env_params
-    self.state_dim = EP.state_dim
-    self.action_dim = EP.action_dim
-    self.info_dim = EP.info_dim
-    self.extra_info_dim = cfg.extra_info_dim
-    self.goal_dim = EP.goal_dim
-    self.reward_fn = EP.reward_fn
+    self.cfg = cfg
+    self.EP = cfg.env_params
     self.device = cfg.device
 
-    other_dim = 1 + 1 + self.action_dim + self.info_dim + self.extra_info_dim  # reward_dim + mask_dim + action_dim + info + extra info
-    self.buf_other = torch.empty(
-      (self.max_len, other_dim), dtype=torch.float32, device=self.device)
+    # reward_dim + mask_dim + action_dim + info
+    self.total_other_dim = 1 + 1 + self.EP.action_dim + self.EP.info_dim
+    self.total_dim = self.total_other_dim+self.EP.state_dim
+    self.data = torch.empty(
+      (self.max_len, self.EP.state_dim+self.total_other_dim), dtype=torch.float32, device=self.device)
 
-    buf_state_size = (self.max_len, self.state_dim) if isinstance(
-      self.state_dim, int) else (self.max_len, *self.state_dim)
-    self.buf_state = torch.empty(
-      buf_state_size, dtype=torch.float32, device=self.device)
-
-  def extend_buffer(self, state, other):  # CPU array to CPU array
-    size = len(other)
+  def extend_buffer(self, traj_data):  # CPU array to CPU array
+    size = len(traj_data)
     next_idx = self.next_idx + size
-
     if next_idx > self.max_len:
-      self.buf_state[self.next_idx:self.max_len] = state[:self.max_len - self.next_idx]
-      self.buf_other[self.next_idx:self.max_len] = other[:self.max_len - self.next_idx]
+      self.data[self.next_idx:self.max_len] = traj_data[:self.max_len - self.next_idx]
       self.if_full = True
-
       next_idx = next_idx - self.max_len
-      self.buf_state[0:next_idx] = state[-next_idx:]
-      self.buf_other[0:next_idx] = other[-next_idx:]
+      self.data[0:next_idx] = traj_data[-next_idx:]
     else:
-      self.buf_state[self.next_idx:next_idx] = state
-      self.buf_other[self.next_idx:next_idx] = other
+      self.data[self.next_idx:next_idx] = traj_data
     self.next_idx = next_idx
-
-  def update_buffer(self, traj_lists):
-    steps = 0
-    r_exp = 0.
-    for traj_list in traj_lists:
-      self.extend_buffer(state=traj_list[0], other=torch.hstack(traj_list[1:]))
-
-      steps += traj_list[1].shape[0]
-      r_exp += traj_list[1].mean().item()
-    return steps, r_exp / len(traj_lists)
 
   def sample_batch(self, batch_size, her_rate=0, indices = None) -> tuple:
     if indices is None:
@@ -63,53 +40,53 @@ class ReplayBuffer:  # for off-policy
     else:
       batch_size = indices.shape[0] 
     # filter done state
-    other =self.buf_other[indices] 
-    filtered_local_indices = other[..., 1] > 1e-3
+    trans =self.data[indices] 
+    trans_dict = self.data_parser(trans)
+    filtered_local_indices = trans_dict.mask > 1e-3
     # filter final state
     indices = indices[filtered_local_indices]
-    other = other[filtered_local_indices]
-    state = self.buf_state[indices]
-    next_state = self.buf_state[indices+1]
+    trans = trans[filtered_local_indices]
+    trans_dict = self.data_parser(trans)
+    next_trans = self.data[indices+1]
+    next_trans_dict = self.data_parser(next_trans)
     # get state
-    info = other[..., 2+self.action_dim:2+self.action_dim+self.info_dim]
-    reward = other[..., 0:1]
-    mask = other[..., 1:2]
-    action = other[..., 2:2+self.action_dim]
     if her_rate > 0:
       indices_her_local_bool = torch.rand(size=indices.shape, device=self.device) < her_rate
-      tleft = info[indices_her_local_bool, -1].long()
+      info_dict = self.EP.info_parser(trans_dict.info[indices_her_local_bool])
+      tleft = info_dict.tleft.long()
       indices_her_global = indices[indices_her_local_bool]
       # get local variables
       idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft)).long()
-      future_goal = self.buf_other[(indices_her_global+idx_shift)%self.max_len, 2+self.action_dim+self.info_dim-self.goal_dim:2+self.action_dim+self.info_dim] # NOTE: to sample next state
+      fut_trans = self.data[(indices_her_global+idx_shift)%self.max_len]
+      fut_info = self.data_parser(fut_trans).info
+      fut_ag = self.EP.info_parser(fut_info).ag
+      # NOTE: to sample next state
       # relabel
-      state[indices_her_local_bool, -self.goal_dim:] = future_goal 
-      next_state[indices_her_local_bool, -self.goal_dim:] = future_goal 
+      self.EP.obs_updater(trans_dict.state[indices_her_local_bool], AttrDict(g=fut_ag))
+      self.EP.obs_updater(next_trans_dict.state[indices_her_local_bool], AttrDict(g=fut_ag))
       # recompute
-      next_state_relabeled = next_state[indices_her_local_bool]
-      ag = next_state_relabeled[..., -self.goal_dim*2:-self.goal_dim]
-      dg = next_state_relabeled[..., -self.goal_dim:]
-      reward[indices_her_local_bool] = self.reward_fn(ag, dg, None).unsqueeze(1)
-    return (reward, 
-            mask, # mask
-            action, # action
-            state, # state
-            next_state, # next_state
-            info) # info
+      trans_dict.rew[indices_her_local_bool] = self.EP.compute_reward(info_dict.ag, fut_ag, None)
+    return AttrDict(
+      rew = trans_dict.rew, 
+      mask = trans_dict.mask, # mask
+      action = trans_dict.action, # action
+      state = trans_dict.state, # state
+      next_state = next_trans_dict.state, # next_state
+      info = trans_dict.info) # info
 
   def sample_batch_r_m_a_s(self):
     if self.prev_idx <= self.next_idx:
-      r = self.buf_other[self.prev_idx:self.next_idx, 0:1]
-      m = self.buf_other[self.prev_idx:self.next_idx, 1:2]
-      a = self.buf_other[self.prev_idx:self.next_idx, 2:]
+      r = self.data[self.prev_idx:self.next_idx, 0:1]
+      m = self.data[self.prev_idx:self.next_idx, 1:2]
+      a = self.data[self.prev_idx:self.next_idx, 2:]
       s = self.buf_state[self.prev_idx:self.next_idx]
     else:
-      r = torch.vstack((self.buf_other[self.prev_idx:, 0:1],
-                        self.buf_other[:self.next_idx, 0:1]))
-      m = torch.vstack((self.buf_other[self.prev_idx:, 1:2],
-                        self.buf_other[:self.next_idx, 1:2]))
-      a = torch.vstack((self.buf_other[self.prev_idx:, 2:],
-                        self.buf_other[:self.next_idx, 2:]))
+      r = torch.vstack((self.data[self.prev_idx:, 0:1],
+                        self.data[:self.next_idx, 0:1]))
+      m = torch.vstack((self.data[self.prev_idx:, 1:2],
+                        self.data[:self.next_idx, 1:2]))
+      a = torch.vstack((self.data[self.prev_idx:, 2:],
+                        self.data[:self.next_idx, 2:]))
       s = torch.vstack((self.buf_state[self.prev_idx:],
                         self.buf_state[:self.next_idx],))
     self.prev_idx = self.next_idx
@@ -124,7 +101,7 @@ class ReplayBuffer:  # for off-policy
     if if_save:
       self.update_now_len()
       state_dim = self.buf_state.shape[1]
-      other_dim = self.buf_other.shape[1]
+      other_dim = self.data.shape[1]
       buf_state = np.empty((self.max_len, state_dim),
                            dtype=np.float16)  # sometimes np.uint8
       buf_other = np.empty((self.max_len, other_dim), dtype=np.float16)
@@ -132,11 +109,11 @@ class ReplayBuffer:  # for off-policy
       temp_len = self.max_len - self.now_len
       buf_state[0:temp_len] = self.buf_state[self.now_len:self.max_len].detach(
       ).cpu().numpy()
-      buf_other[0:temp_len] = self.buf_other[self.now_len:self.max_len].detach(
+      buf_other[0:temp_len] = self.data[self.now_len:self.max_len].detach(
       ).cpu().numpy()
 
       buf_state[temp_len:] = self.buf_state[:self.now_len].detach().cpu().numpy()
-      buf_other[temp_len:] = self.buf_other[:self.now_len].detach().cpu().numpy()
+      buf_other[temp_len:] = self.data[:self.now_len].detach().cpu().numpy()
 
       np.savez_compressed(save_path, buf_state=buf_state, buf_other=buf_other)
       print(f"| ReplayBuffer save in: {save_path}")
@@ -153,6 +130,17 @@ class ReplayBuffer:  # for off-policy
       self.update_now_len()
       print(f"| ReplayBuffer load: {save_path}")
 
+  def data_parser(self, data):
+    action_start = self.EP.state_dim+2
+    info_start = action_start+self.EP.action_dim
+    return AttrDict(
+      # state part
+      state = data[..., :self.EP.state_dim],
+      rew = data[..., self.EP.state_dim], 
+      mask = data[..., self.EP.state_dim+1],
+      action = data[..., action_start:info_start],
+      info = data[..., info_start:info_start+self.EP.info_dim],
+    )
 
 class ReplayBufferList(list):  # for on-policy
   def __init__(self, cfg=None):

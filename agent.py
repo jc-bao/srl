@@ -78,9 +78,8 @@ class AgentBase:
 
     ''' data '''
     # tmp buffer
-    self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step, self.EP.state_dim +
-                                 2+self.EP.action_dim+self.EP.info_dim+cfg.extra_info_dim), device=self.cfg.device, dtype=torch.float32)
     self.buffer = ReplayBufferList(cfg) if 'PPO' in cfg.agent_name else ReplayBuffer(cfg)
+    self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step, self.buffer.total_dim), device=self.cfg.device, dtype=torch.float32)
 
   def eval_vec_env(self, target_steps=None):
     # auto set target steps
@@ -157,16 +156,15 @@ class AgentBase:
         ten_a, ten_n = ten_a # record noise for no-policy
       ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
-      # preprocess info, add [1]done, [2]trajectory index, [3]traj len, [4]to left
-      ten_info = torch.cat((ten_info, ten_dones.unsqueeze(1), self.traj_idx.unsqueeze(1),
-                            torch.zeros((self.EP.num_envs, 2), device=self.cfg.device)), dim=-1)
+      # preprocess info, add [1]trajectory index, [2]traj len, [3]to left
+      ten_info = self.EP.info_updater(ten_info, AttrDict(traj_idx = self.traj_idx))
       # add data to tmp buffer
       self.traj_list[:, data_ptr, :] = torch.cat((
         ten_s,  # state
         ten_rewards.unsqueeze(1)*self.cfg.reward_scale,  # reward
         ((1-ten_dones)*self.cfg.gamma).unsqueeze(1),  # mask
         ten_a,  # action
-        ten_info  # info
+        ten_info,  # info
       ), dim=-1)
       # update ptr for tmp buffer
       data_ptr = (data_ptr+1) % self.EP.max_env_step
@@ -185,11 +183,14 @@ class AgentBase:
         # tile traj len for later use
         tiled_traj_len = traj_lens[done_idx].unsqueeze(1)\
           .tile(1, self.EP.max_env_step).float()
+        # parse data 
+        data = self.traj_list[done_idx]
+        data_info = self.buffer.data_parser(data).info
+        data_info_dict = self.EP.info_parser(data_info)
         # record traj len
-        self.traj_list[done_idx, :, -2] = tiled_traj_len
+        data_info_dict.traj_len = tiled_traj_len
         # calculate to left distance
-        self.traj_list[done_idx, :, -1] = \
-          (tiled_traj_len - self.traj_list[done_idx, :, -self.EP.info_dim+1])
+        data_info_dict.tleft = (tiled_traj_len - data_info_dict.step)
         # add to big buffer
         results = self.save_to_buffer(done_idx, traj_start_ptr, traj_lens)
         self.total_step += (results.collected_steps + results.useless_steps)
@@ -208,40 +209,32 @@ class AgentBase:
     )
 
   def save_to_buffer(self, done_idx, traj_start_ptr, traj_lens):
-    state_traj = []
-    other_traj = []
+    traj_data = []
     useless_steps = 0
     for i in done_idx:  # TODO fix the one by one add traj process
       start_point = traj_start_ptr[i]
       end_point = (start_point + traj_lens[i]) % self.EP.max_env_step
-      ag_start = self.traj_list[i, start_point][self.EP.state_dim +
-                                                2+self.EP.action_dim+self.EP.info_dim-self.EP.goal_dim:self.EP.state_dim+2+self.EP.action_dim+self.EP.info_dim]
-      ag_end = self.traj_list[i, (end_point-1)%self.EP.max_env_step][self.EP.state_dim +
-                                                2+self.EP.action_dim+self.EP.info_dim-self.EP.goal_dim:self.EP.state_dim+2+self.EP.action_dim+self.EP.info_dim]
+      end_data = self.traj_list[i, (end_point-1)%self.EP.max_env_step]
+      end_info = self.buffer.data_parser(end_data).info
+      end_info_dict = self.EP.info_parser(end_info)
+      # TODO merge buffer and add parser
       # dropout unmoved experience
-      if torch.max(abs(ag_start - ag_end)) < 5e-2:
+      if end_info_dict.early_termin:
         useless_steps += traj_lens[i]
         continue
       if start_point < end_point:
-        state_traj.append(
-          self.traj_list[i, start_point:end_point, :self.EP.state_dim])
-        other_traj.append(
-          self.traj_list[i, start_point:end_point, self.EP.state_dim:])
+        traj_data.append(
+          self.traj_list[i, start_point:end_point])
       else:
-        state_traj.append(torch.cat((
-          self.traj_list[i, start_point:, :self.EP.state_dim],
-          self.traj_list[i, :end_point, :self.EP.state_dim]
+        traj_data.append(torch.cat((
+          self.traj_list[i, start_point:],
+          self.traj_list[i, :end_point]
         ), dim=0))
-        other_traj.append(torch.cat((
-          self.traj_list[i, start_point:, self.EP.state_dim:],
-          self.traj_list[i, :end_point, self.EP.state_dim:]
-        ), dim=0))
-    if len(state_traj) > 0:
-      state_traj = torch.cat(state_traj, dim=0)
-      other_traj = torch.cat(other_traj, dim=0)
-      self.buffer.extend_buffer(state_traj, other_traj)
+    if len(traj_data) > 0:
+      traj_data = torch.cat(traj_data, dim=0)
+      self.buffer.extend_buffer(traj_data)
     return AttrDict(
-      collected_steps=len(state_traj),
+      collected_steps=len(traj_data),
       useless_steps=useless_steps
     )
 
@@ -504,18 +497,15 @@ class AgentREDqSAC(AgentSAC):
 
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
-      reward, mask, action, state, next_s, info = buffer.sample_batch(
-        batch_size, her_rate=self.cfg.her_rate)
-
-      next_a, next_log_prob = self.act_target.get_action_logprob(
-        next_s)  # stochastic policy
-      next_q = self.cri_target.get_q_min(next_s, next_a)
+      trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
+      next_a, next_log_prob = self.act_target.get_action_logprob(trans.next_state)  # stochastic policy
+      next_q = self.cri_target.get_q_min(trans.next_state, next_a)
 
       alpha = self.alpha_log.exp().detach()
-      q_label = reward + mask * (next_q + next_log_prob * alpha)
-    qs = self.cri.get_q_values(state, action)
+      q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * (next_q + next_log_prob * alpha)
+    qs = self.cri.get_q_values(trans.state, trans.action)
     obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
-    return obj_critic, state
+    return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
     with torch.no_grad():
