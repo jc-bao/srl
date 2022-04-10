@@ -24,6 +24,8 @@
 
 - [ ] Add Attention
 - [x] Add Isaac Env (fast auto reset)
+  - [x] PNP
+  - [ ] Handover
 - [x] Isaac render + viewer
 - [x] Hydra
 - [x] Render function

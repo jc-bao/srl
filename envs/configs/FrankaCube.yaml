@@ -9,7 +9,7 @@ headless: True
 enable_camera_sensors: False 
 
 # env
-early_termin_step: 20
+early_termin_step: 30
 early_termin_bar: 0.05
 # rew
 reward_type: sparse
@@ -46,6 +46,7 @@ inhand_rate: 0.0
 block_size: 0.04 
 block_length: 0.04
 # robot
+num_robots: 1
 bound_robot: true
 asset:
   assetRoot: 'isaac_assets'
