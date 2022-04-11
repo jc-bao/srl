@@ -419,13 +419,15 @@ class FrankaCube(gym.Env):
 										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
 
 	def compute_reward(self, ag, dg, info, normed=True):
+		ag = ag.view(-1, self.cfg.num_goals, 3)
+		dg = dg.view(-1, self.cfg.num_goals, 3)
 		if normed:
 			ag = ag*self.goal_std + self.goal_mean
 			dg = dg*self.goal_std + self.goal_mean
 		if self.cfg.reward_type == 'sparse':
-			return -torch.mean((torch.norm(ag.reshape(-1, self.cfg.num_goals, 3)-dg.reshape(-1, self.cfg.num_goals, 3), dim=-1) > self.cfg.err).type(torch.float32), dim=-1)
+			return -torch.mean((torch.norm(ag-dg, dim=-1) > self.cfg.err).type(torch.float32), dim=-1)
 		elif self.cfg.reward_type == 'dense':
-			return 1-torch.mean(torch.norm(ag.reshape(-1, self.cfg.num_goals, 3)-dg.reshape(-1, self.cfg.num_goals, 3), dim=-1), dim=-1)/self.cfg.num_goals
+			return 1-torch.mean(torch.norm(ag-dg, dim=-1), dim=-1)/self.cfg.num_goals
 
 	def reset(self):
 		# step first to init params
@@ -785,14 +787,16 @@ class FrankaCube(gym.Env):
 			return info[..., 0]
 		elif name == 'step':
 			return info[..., 1]
-		elif name == 'traj_idx':
+		elif name == 'early_termin':
 			return info[..., 2]
-		elif name == 'traj_len':
+		elif name == 'traj_idx':
 			return info[..., 3]
-		elif name == 'tleft':
+		elif name == 'traj_len':
 			return info[..., 4]
+		elif name == 'tleft':
+			return info[..., 5]
 		elif name == 'ag':
-			return info[..., 5:5+self.cfg.goal_dim]
+			return info[..., 6:6+self.cfg.goal_dim]
 		else:
 			raise NotImplementedError
 

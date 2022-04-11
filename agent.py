@@ -507,7 +507,6 @@ class AgentREDqSAC(AgentSAC):
 
       alpha = self.alpha_log.exp().detach()
       q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * (next_q + next_log_prob * alpha)
-    print(trans.rew.mean())
     qs = self.cri.get_q_values(trans.state, trans.action)
     obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
     return obj_critic, trans.state
