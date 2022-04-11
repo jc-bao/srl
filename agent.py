@@ -183,14 +183,18 @@ class AgentBase:
         # tile traj len for later use
         tiled_traj_len = traj_lens[done_idx].unsqueeze(1)\
           .tile(1, self.EP.max_env_step).float()
-        # parse data 
+        # get data 
         data = self.traj_list[done_idx]
-        data_info = self.buffer.data_parser(data).info
-        data_info_dict = self.EP.info_parser(data_info)
-        # record traj len
-        data_info_dict.traj_len = tiled_traj_len
         # calculate to left distance
-        data_info_dict.tleft = (tiled_traj_len - data_info_dict.step)
+        info_step = self.buffer.data_parser(data, 'info.step')
+        # NOTE: not inplace op here
+        self.traj_list[done_idx] = self.buffer.data_updater(
+          data, 
+          AttrDict(
+            info = AttrDict(
+              tleft = tiled_traj_len - info_step,
+              traj_len = tiled_traj_len))
+        )
         # add to big buffer
         results = self.save_to_buffer(done_idx, traj_start_ptr, traj_lens)
         self.total_step += (results.collected_steps + results.useless_steps)
@@ -215,7 +219,7 @@ class AgentBase:
       start_point = traj_start_ptr[i]
       end_point = (start_point + traj_lens[i]) % self.EP.max_env_step
       end_data = self.traj_list[i, (end_point-1)%self.EP.max_env_step]
-      end_info = self.buffer.data_parser(end_data).info
+      end_info = self.buffer.data_parser(end_data, 'info')
       end_info_dict = self.EP.info_parser(end_info)
       # TODO merge buffer and add parser
       # dropout unmoved experience

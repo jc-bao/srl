@@ -128,14 +128,25 @@ class ReachToyEnv(gym.Env):
 		delta = - obs[..., :self.cfg.dim] + obs[..., self.cfg.dim:]
 		return (delta / torch.norm(delta, dim=-1, keepdim=True))
 
-	def obs_parser(self, obs):
+	def obs_parser(self, obs, name = None):
 		assert obs.shape[-1] == self.cfg.state_dim
-		return AttrDict(
-			shared = obs[..., :self.cfg.shared_dim],
-			seperate = obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim],
-			ag = obs[..., self.cfg.shared_dim+self.cfg.seperate_dim-self.cfg.goal_dim:self.cfg.shared_dim+self.cfg.seperate_dim], 
-			g = obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:]
-		)
+		if name is None:
+			return AttrDict(
+				shared = obs[..., :self.cfg.shared_dim],
+				seperate = obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim],
+				ag = obs[..., self.cfg.shared_dim+self.cfg.seperate_dim-self.cfg.goal_dim:self.cfg.shared_dim+self.cfg.seperate_dim], 
+				g = obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:]
+			)
+		elif name == 'shared':
+			return obs[..., :self.cfg.shared_dim]
+		elif name == 'seperate':
+			return obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim]
+		elif name == 'ag':
+			return obs[..., self.cfg.shared_dim+self.cfg.seperate_dim-self.cfg.goal_dim:self.cfg.shared_dim+self.cfg.seperate_dim]
+		elif name == 'g':
+			return obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:] 
+		else:
+			raise NotImplementedError
 	
 	def obs_updater(self, old_obs, new_obs:AttrDict):
 		if 'shared' in new_obs:
@@ -148,16 +159,31 @@ class ReachToyEnv(gym.Env):
 			old_obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:] = new_obs.g
 		return old_obs
 
-	def info_parser(self, info):
+	def info_parser(self, info, name = None):
 		assert info.shape[-1] == self.cfg.info_dim, f'info {self.cfg.info_dim} shape error: {info.shape}' 
-		return AttrDict(
-			success = info[..., 0], 
-			step= info[...,1],
-			traj_idx = info[..., 2],
-			traj_len = info[..., 3],
-			tleft = info[..., 4],
-			ag = info[..., 5:5+self.cfg.goal_dim]
-		)
+		if name is None:
+			return AttrDict(
+				success = info[..., 0], 
+				step= info[...,1],
+				traj_idx = info[..., 2],
+				traj_len = info[..., 3],
+				tleft = info[..., 4],
+				ag = info[..., 5:5+self.cfg.goal_dim]
+			)
+		elif name == 'success':
+			return info[..., 0]
+		elif name == 'step':
+			return info[..., 1]
+		elif name == 'traj_idx':
+			return info[..., 2]
+		elif name == 'traj_len':
+			return info[..., 3]
+		elif name == 'tleft':
+			return info[..., 4]
+		elif name == 'ag':
+			return info[..., 5:5+self.cfg.goal_dim]
+		else:
+			raise NotImplementedError
 
 	def info_updater(self, old_info, new_info:AttrDict):
 		if 'success' in new_info:
