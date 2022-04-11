@@ -227,7 +227,8 @@ class ReachToyEnv(gym.Env):
 
 
 class PNPToyEnv(gym.Env):
-	def __init__(self, dim: int = 2, num_envs: int = 2, gpu_id=0, max_steps=40, auto_reset=True, err=0.1, vel=0.2, reward_type='sparse', num_goals = 1):
+	def __init__(self, cfg = {}, dim: int = 2, num_envs: int = 2, gpu_id=0, max_steps=40, auto_reset=True, err=0.1, vel=0.2, reward_type='sparse', num_goals = 1):
+		self.cfg = cfg
 		self.device = torch.device(f"cuda:{gpu_id}" if (
 			torch.cuda.is_available() and (gpu_id >= 0)) else "cpu")
 		self.cfg.dim = dim

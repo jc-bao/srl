@@ -9,6 +9,7 @@ import wandb
 
 import agent
 from envs.franka_cube import FrankaCube
+from envs.toy import ReachToyEnv
 
 def train(config):
 
@@ -19,7 +20,7 @@ def train(config):
 	def log(msg):
 		print(msg)
 		if config.wandb:
-			wandb.log(msg, step=exp_agent.total_step.item())
+			wandb.log(msg, step=exp_agent.total_step)
 			if msg.get('video') is not None:
 				wandb.log({"video": wandb.Video(msg.video, fps=30, format="mp4")})
 	torch.set_grad_enabled(False)
