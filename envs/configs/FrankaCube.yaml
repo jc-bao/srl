@@ -52,6 +52,12 @@ asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
   assetFileNameSphere: 'urdf/sphere.urdf'
+# table 
+table_size: [1.0, 0.8, 0.4]
+table_gap: 0.0
+robot_gap: 0.6
+robot_y: 0.5
+ee_init_pos: [0.0, 0.0, 0.05]
 
 # sim:
 physics_engine: SIM_PHYSX 

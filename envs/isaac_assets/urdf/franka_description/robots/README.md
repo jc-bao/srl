@@ -10,3 +10,4 @@ curl -H "Accept: application/json" -H "Content-type: application/json" -X POST -
   "positions": [0,0.03,0,0,0,0,0]
 }' http://127.0.0.1:7777/set_joint_positions | jq
 '''
+0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164
