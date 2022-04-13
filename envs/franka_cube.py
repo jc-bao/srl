@@ -453,7 +453,10 @@ class FrankaCube(gym.Env):
 		if self.cfg.reward_type == 'sparse':
 			return -torch.mean((torch.norm(ag-dg, dim=-1) > self.cfg.err).type(torch.float32), dim=-1)
 		elif self.cfg.reward_type == 'dense':
-			return 1-torch.mean(torch.norm(ag-dg, dim=-1), dim=-1)/self.cfg.num_goals
+			distances = torch.mean(torch.norm(ag-dg, dim=-1))
+			distance_rew = 0.5*(1-distances, dim=-1)/self.cfg.num_goals
+			reach_rew = 0.5*torch.mean(distances<self.cfg.err, dim=-1)
+			return distance_rew+reach_rew 
 
 	def reset(self):
 		# step first to init params
