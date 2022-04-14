@@ -189,11 +189,21 @@ class ReplayBuffer:  # for off-policy
 class ReplayBufferList(list):  # for on-policy
 	def __init__(self, cfg=None):
 		list.__init__(self)
+		self.cfg = cfg
+		self.EP = cfg.env_params
+		self.device = cfg.device
+		self.total_other_dim = 1 + 1 + self.EP.action_dim + self.EP.info_dim
+		self.total_dim = self.total_other_dim+self.EP.state_dim
+
+	# def update_buffer(self, traj_list):
+	# 	cur_items = list(map(list, zip(*traj_list)))
+	# 	self[:] = [torch.cat(item, dim=0) for item in cur_items]
+	# 	steps = self[1].shape[0]
+	# 	r_exp = self[1].mean()
+	# 	return steps, r_exp
 
 	def update_buffer(self, traj_list):
-		cur_items = list(map(list, zip(*traj_list)))
-		self[:] = [torch.cat(item, dim=0) for item in cur_items]
-
-		steps = self[1].shape[0]
-		r_exp = self[1].mean().item()
+		self[:] = traj_list
+		steps = self[1].shape[0]*self[1].shape[1]
+		r_exp = self[1].mean()
 		return steps, r_exp

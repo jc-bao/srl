@@ -176,14 +176,14 @@ class ActorPPO(nn.Module):
 
     delta = ((a_avg - action) / a_std).pow(2) * 0.5
     logprob = -(self.a_std_log + self.sqrt_2pi_log +
-                delta).sum(1)  # new_logprob
+                delta).sum(-1)  # new_logprob
 
     dist_entropy = (logprob.exp() * logprob).mean()  # policy entropy
     return logprob, dist_entropy
 
   def get_old_logprob(self, _action, noise):  # noise = action - a_noise
     delta = noise.pow(2) * 0.5
-    return -(self.a_std_log + self.sqrt_2pi_log + delta).sum(1)  # old_logprob
+    return -(self.a_std_log + self.sqrt_2pi_log + delta).sum(-1)  # old_logprob
 
   @staticmethod
   def get_a_to_e(action):

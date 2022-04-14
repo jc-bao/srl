@@ -19,7 +19,9 @@ if_use_gae: true
 env_name: 'PandaPNP-v0'
 env_params: null
 env_kwargs:
-  env_num: 16 
+  num_envs: 2
+  num_cameras: 0
+  base_steps: 10
   reward_type: dense
 reward_scale: 1
 
@@ -36,9 +38,9 @@ gpu_id: 0
 agent_name: AgentPPO
 max_collect_steps: !!float 1e9
 resue: 1 
-steps_per_rollout: 1600
+steps_per_rollout: 20
 updates_per_rollout: null # calulate with resue
-batch_size: 256
+batch_size: 2
 gamma: 0.99
 lr: 0.00024
 soft_update_tau: 0.0039
@@ -46,6 +48,8 @@ soft_update_tau: 0.0039
 # eval
 eval_per_rollout: 1
 eval_steps: null # set with steps per rollout
+render: false 
 
 # save
 cwd: results
+rollout_per_save: 0.0001

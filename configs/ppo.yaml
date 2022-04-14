@@ -1,4 +1,5 @@
 # wandb
+wandb: false
 project: debug 
 name: hello
 
@@ -15,15 +16,10 @@ ratio_clip: 0.25
 if_use_gae: true
 
 # env_params
-env_name: 'PNPToy-v0'
+env_name: 'PandaPNP-v0'
 env_params: null
 env_kwargs:
-  env_num: 4096 
-  max_step: 100
-  dim: 2
-  vel: 0.2 
-  err: 0.2
-  num_goals: 1
+  num_envs: 4096
 reward_scale: 1
 extra_info_dim: 4 # extra info get from agent
 
@@ -40,9 +36,9 @@ gpu_id: 0
 agent_name: AgentPPO
 max_collect_steps: !!float 1e9
 resue: 1 
-steps_per_rollout: 102400
+steps_per_rollout: 409600
 updates_per_rollout: null # calulate with resue
-batch_size: 25600
+batch_size: 102400
 gamma: 0.99
 lr: 0.00024
 soft_update_tau: 0.0039
@@ -50,6 +46,8 @@ soft_update_tau: 0.0039
 # eval
 eval_per_rollout: 1
 eval_steps: null # set with steps per rollout
+render: false 
 
 # save
 cwd: results
+rollout_per_save: 0.1

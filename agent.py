@@ -23,13 +23,16 @@ class AgentBase:
       self.cfg.update(eval_steps=cfg.steps_per_rollout)
     # dir
     if cfg.wandb:
-      self.cfg.update(cwd=f'{wandb.run.dir}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
+      self.cfg.update(
+        cwd=f'{wandb.run.dir}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
     else:
-      self.cfg.update(cwd=f'./{cfg.cwd}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
+      self.cfg.update(
+        cwd=f'./{cfg.cwd}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
     os.makedirs(self.cfg.cwd, exist_ok=True)
     # update times
     if self.cfg.updates_per_rollout is None:
-      self.cfg.update(updates_per_rollout = cfg.resue*cfg.steps_per_rollout//cfg.batch_size)
+      self.cfg.update(updates_per_rollout=cfg.resue *
+                      cfg.steps_per_rollout//cfg.batch_size)
 
     '''seed '''
     np.random.seed(cfg.random_seed)
@@ -78,8 +81,10 @@ class AgentBase:
 
     ''' data '''
     # tmp buffer
-    self.buffer = ReplayBufferList(cfg) if 'PPO' in cfg.agent_name else ReplayBuffer(cfg)
-    self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step, self.buffer.total_dim), device=self.cfg.device, dtype=torch.float32)
+    self.buffer = ReplayBufferList(
+      cfg) if 'PPO' in cfg.agent_name else ReplayBuffer(cfg)
+    self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step,
+                                 self.buffer.total_dim), device=self.cfg.device, dtype=torch.float32)
 
   def eval_vec_env(self, target_steps=None):
     # auto set target steps
@@ -130,7 +135,7 @@ class AgentBase:
       ep_rew=torch.mean(ep_rew/num_ep).item(),
       final_rew=torch.mean(final_rew/num_ep).item(),
       ep_steps=torch.mean(ep_step/num_ep).item(),
-      video = video
+      video=video
     )
 
   def explore_vec_env(self, target_steps=None):
@@ -150,14 +155,16 @@ class AgentBase:
     useless_steps = 0  # data explored but dropped
     # loop
     ten_s = self.env.reset()
+    print(target_steps)
     while collected_steps < target_steps:
       ten_a = self.act.get_action(ten_s).detach()  # different
       if isinstance(ten_a, tuple):
-        ten_a, ten_n = ten_a # record noise for no-policy
+        ten_a, ten_n = ten_a  # record noise for no-policy
       ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
       # preprocess info, add [1]trajectory index, [2]traj len, [3]to left
-      ten_info = self.EP.info_updater(ten_info, AttrDict(traj_idx = self.traj_idx))
+      ten_info = self.EP.info_updater(
+        ten_info, AttrDict(traj_idx=self.traj_idx))
       # add data to tmp buffer
       self.traj_list[:, data_ptr, :] = torch.cat((
         ten_s,  # state
@@ -183,17 +190,17 @@ class AgentBase:
         # tile traj len for later use
         tiled_traj_len = traj_lens[done_idx].unsqueeze(1)\
           .tile(1, self.EP.max_env_step).float()
-        # get data 
+        # get data
         data = self.traj_list[done_idx]
         # calculate to left distance
         info_step = self.buffer.data_parser(data, 'info.step')
         # NOTE: not inplace op here
         self.traj_list[done_idx] = self.buffer.data_updater(
-          data, 
+          data,
           AttrDict(
-            info = AttrDict(
-              tleft = tiled_traj_len - info_step,
-              traj_len = tiled_traj_len))
+            info=AttrDict(
+              tleft=tiled_traj_len - info_step,
+              traj_len=tiled_traj_len))
         )
         # add to big buffer
         results = self.save_to_buffer(done_idx, traj_start_ptr, traj_lens)
@@ -218,7 +225,7 @@ class AgentBase:
     for i in done_idx:  # TODO fix the one by one add traj process
       start_point = traj_start_ptr[i]
       end_point = (start_point + traj_lens[i]) % self.EP.max_env_step
-      end_data = self.traj_list[i, (end_point-1)%self.EP.max_env_step]
+      end_data = self.traj_list[i, (end_point-1) % self.EP.max_env_step]
       end_info = self.buffer.data_parser(end_data, 'info')
       end_info_dict = self.EP.info_parser(end_info)
       # TODO merge buffer and add parser
@@ -242,7 +249,7 @@ class AgentBase:
       useless_steps=useless_steps
     )
 
-  def convert_trajectory(self, buf_items, last_done):  # [ElegantRL.2022.01.01]
+  def convert_trajectory(self, buf_items, last_done):
     buf_items = list(map(list, zip(*buf_items)))
     '''stack items'''
     buf_items[0] = torch.stack(buf_items[0])
@@ -265,13 +272,13 @@ class AgentBase:
       buf_items[2] = ((1 - torch.tensor(buf_items[2], dtype=torch.float32)) * self.cfg.gamma
                       ).unsqueeze(1).unsqueeze(2)
     '''splice items'''
-    for j in range(len(buf_items)):
-      cur_item = list()
-      buf_item = buf_items[j]
-      for env_i in range(self.EP.num_envs):
-        last_step = last_done[env_i]
-        cur_item.append(buf_item[:last_step, env_i])
-      buf_items[j] = torch.vstack(cur_item)
+    # for j in range(len(buf_items)):
+    #   cur_item = list()
+    #   buf_item = buf_items[j]
+    #   for env_i in range(self.EP.num_envs):
+    #     last_step = last_done[env_i]
+    #     cur_item.append(buf_item[:last_step, env_i])
+    #   buf_items[j] = torch.vstack(cur_item)
     return buf_items
 
   def get_obj_critic_raw(self, buffer, batch_size):
@@ -329,9 +336,10 @@ class AgentBase:
     for tar, cur in zip(target_net.parameters(), current_net.parameters()):
       tar.data.copy_(cur.data * tau + tar.data * (1.0 - tau))
 
-  def save_or_load_agent(self, file_tag = '', cwd=None, if_save=True):
+  def save_or_load_agent(self, file_tag='', cwd=None, if_save=True):
     if cwd is None:
       cwd = self.cfg.cwd
+
     def load_torch_file(model_or_optim, _path):
       state_dict = torch.load(_path, map_location=lambda storage, loc: storage)
       model_or_optim.load_state_dict(state_dict)
@@ -388,9 +396,9 @@ class AgentSAC(AgentBase):
       # self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau) # SAC don't use act_target network
 
     return AttrDict(
-      critic_loss = obj_critic.item(), 
-      actor_loss = -obj_actor.item(),
-      alpha_log = self.alpha_log.exp().detach().item()
+      critic_loss=obj_critic.item(),
+      actor_loss=-obj_actor.item(),
+      alpha_log=self.alpha_log.exp().detach().item()
     )
 
   def get_obj_critic_raw(self, buffer, batch_size):
@@ -502,11 +510,13 @@ class AgentREDqSAC(AgentSAC):
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
       trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
-      next_a, next_log_prob = self.act_target.get_action_logprob(trans.next_state)  # stochastic policy
+      next_a, next_log_prob = self.act_target.get_action_logprob(
+        trans.next_state)  # stochastic policy
       next_q = self.cri_target.get_q_min(trans.next_state, next_a)
 
       alpha = self.alpha_log.exp().detach()
-      q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * (next_q + next_log_prob * alpha)
+      q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
+        (next_q + next_log_prob * alpha)
     qs = self.cri.get_q_values(trans.state, trans.action)
     obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
     return obj_critic, trans.state
@@ -610,7 +620,7 @@ class AgentDDPG(AgentBase):
 class AgentPPO(AgentBase):
   def __init__(self, cfg):
     super().__init__(cfg=cfg)
-    if cfg.if_use_gae: 
+    if cfg.if_use_gae:
       self.get_reward_sum = self.get_reward_sum_gae
     else:
       self.get_reward_sum = self.get_reward_sum_raw
@@ -624,10 +634,12 @@ class AgentPPO(AgentBase):
         f'explore: target_steps is not None, forced to {target_steps}')
     # TODO merge into base class explore fn
     traj_list = list()
-    last_done = torch.zeros(self.EP.num_envs, dtype=torch.int, device=self.cfg.device)
+    last_done = torch.zeros(
+      self.EP.num_envs, dtype=torch.int, device=self.cfg.device)
     ten_s = self.env.reset()
     step_i = 0
-    ten_dones = torch.zeros(self.EP.num_envs, dtype=torch.int, device=self.cfg.device)
+    ten_dones = torch.zeros(
+      self.EP.num_envs, dtype=torch.int, device=self.cfg.device)
     get_action = self.act.get_action
     get_a_to_e = self.act.get_a_to_e
     while step_i < target_steps:
@@ -640,16 +652,15 @@ class AgentPPO(AgentBase):
       ten_s = ten_s_next
     self.total_step += self.EP.num_envs * step_i
     buf_items = self.convert_trajectory(traj_list, last_done)
-    steps, mean_rew =  self.buffer.update_buffer((buf_items,))  # traj_list
+    steps, mean_rew = self.buffer.update_buffer(buf_items)  # traj_list
     return AttrDict(
       steps=self.total_step,
       mean_rew=mean_rew.item(),
     )
 
-
   def update_net(self):
     print('update: preprocess...')
-    with torch.no_grad(): 
+    with torch.no_grad():
       buf_state, buf_reward, buf_mask, buf_action, buf_noise = [
         ten.to(self.cfg.device) for ten in self.buffer]
       buf_len = buf_state.shape[0]
@@ -671,11 +682,12 @@ class AgentPPO(AgentBase):
     '''update network'''
     obj_critic = None
     obj_actor = None
-    assert buf_len >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
+    assert buf_len * \
+      self.EP.num_envs >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
     print('update: backprop...')
     for _ in range(self.cfg.updates_per_rollout):
       indices = torch.randint(buf_len, size=(
-        self.cfg.batch_size,), requires_grad=False, device=self.cfg.device)
+        self.cfg.batch_size//self.EP.num_envs,), requires_grad=False, device=self.cfg.device)
 
       state = buf_state[indices]
       r_sum = buf_r_sum[indices]
@@ -687,6 +699,7 @@ class AgentPPO(AgentBase):
       new_logprob, obj_entropy = self.act.get_logprob_entropy(
         state, action)  # it is obj_actor
       ratio = (new_logprob - logprob.detach()).exp()
+      print(adv_v.shape, ratio.shape, new_logprob.shape, logprob.shape)
       surrogate1 = adv_v * ratio
       surrogate2 = adv_v * \
         ratio.clamp(1 - self.cfg.ratio_clip, 1 + self.cfg.ratio_clip)
@@ -704,9 +717,9 @@ class AgentPPO(AgentBase):
 
     a_std_log = getattr(self.act, 'a_std_log', torch.zeros(1)).mean()
     return AttrDict(
-      critic_loss = obj_critic.item(), 
-      actor_loss = -obj_actor.item(),
-      a_std_log = a_std_log.item() 
+      critic_loss=obj_critic.item(),
+      actor_loss=-obj_actor.item(),
+      a_std_log=a_std_log.item()
     )
 
   def get_reward_sum_raw(self, buf_len, buf_reward, buf_mask, buf_value):
@@ -721,11 +734,10 @@ class AgentPPO(AgentBase):
     return buf_r_sum, buf_adv_v
 
   def get_reward_sum_gae(self, buf_len, ten_reward, ten_mask, ten_value):
-    buf_r_sum = torch.empty(buf_len, dtype=torch.float32,
+    buf_r_sum = torch.empty((buf_len, self.EP.num_envs, 1), dtype=torch.float32,
                             device=self.cfg.device)  # old policy value
-    buf_adv_v = torch.empty(buf_len, dtype=torch.float32,
+    buf_adv_v = torch.empty((buf_len, self.EP.num_envs, 1), dtype=torch.float32,
                             device=self.cfg.device)  # advantage value
-
     pre_r_sum = 0
     pre_adv_v = 0  # advantage value of previous step
     for i in range(buf_len - 1, -1, -1):  # Notice: mask = (1-done) * gamma
