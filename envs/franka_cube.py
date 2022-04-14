@@ -109,7 +109,8 @@ class FrankaCube(gym.Env):
 			device=self.device,)
 		self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(self.cfg.num_envs, self.cfg.num_robots,2)
 		self.franka_default_dof_state[...,-1] = 0.
-		orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
+		# orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
+		orns = [[1.0, 0., 0., 0.],[-1.0, 0., 0., 0.]]
 		self.franka_default_orn = to_torch(
 			[[orns[i%2] for i in range(self.cfg.num_robots)]], device=self.device).repeat(self.cfg.num_envs, 1, 1)
 		lower = gymapi.Vec3(-self.cfg.env_spacing, -self.cfg.env_spacing, 0.0)
@@ -529,7 +530,7 @@ class FrankaCube(gym.Env):
 			self.device), -self.cfg.clip_actions, self.cfg.clip_actions).view(self.cfg.num_envs,self.cfg.num_robots,4)
 		orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
 		pos_errs = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel
-		# pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
+		pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
 		# pos_errs[reset_idx] = self.franka_default_ee_pos.tile(done_env_num,self.cfg.num_robots,1)+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
 		# pos_errs = self.franka_default_ee_pos.tile(self.cfg.num_envs,self.cfg.num_robots,1)+self.origin_shift.tile(self.cfg.num_envs,1,1) - self.grip_pos
 		# clip with bound
@@ -537,8 +538,9 @@ class FrankaCube(gym.Env):
 			pos_errs = torch.clip(pos_errs+self.grip_pos, self.torch_robot_space.low,
 													 self.torch_robot_space.high) - self.grip_pos
 		dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
-		self.franka_dof_targets[..., :self.franka_hand_index] = self.franka_dof_poses.squeeze(
-			-1)[..., :self.franka_hand_index] + self.control_ik(dposes)
+		# self.franka_dof_targets[..., :self.franka_hand_index] = self.franka_dof_poses.squeeze(
+		# 	-1)[..., :self.franka_hand_index] + self.control_ik(dposes)
+		self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 		# grip
 		grip_acts = (self.actions[..., [3]] + 1) * 0.02
 		# reset gripper
@@ -560,7 +562,7 @@ class FrankaCube(gym.Env):
 				act_indices.shape[0])
 		
 		if done_env_num > 0:
-			# reset positions
+			# reset positions TODO cannot reset to any pose as ik cannot solve it
 			# franka_dof_states = self.franka_dof_targets.repeat(1,1,1,2) 
 			# franka_dof_states[..., -1]=0.
 			reset_indices = self.global_indices[reset_idx, :self.cfg.num_robots].flatten()
@@ -698,54 +700,60 @@ class FrankaCube(gym.Env):
 
 	def control_ik(self, dpose):
 		# solve damped least squares
-		# j_eefs = torch.stack(self.j_eefs).transpose(0,1)
 		num_it = 0
-		err = torch.norm(dpose[:,:,:3,0], dim=-1)
-		u = torch.zeros_like(self.franka_dof_poses[...,:self.franka_hand_index], device=self.device, dtype=torch.float)
-		franka_states = self.franka_dof_poses[...,:self.franka_hand_index]
-		init_ee_pos = self.chain.forward_kinematics(
-				(franka_states+u).view(-1,self.franka_hand_index),
+		lmbda = torch.eye(6, device=self.device) * (self.cfg.damping ** 2)
+		# init_joint = self.franka_dof_poses[...,:self.franka_hand_index] 
+		current_joint = self.franka_dof_poses[...,:self.franka_hand_index].clone()
+		target_ee_pos = self.chain.forward_kinematics(
+			current_joint.view(-1,self.franka_hand_index),
+			world=pk.Transform3d(
+				pos=[0,-0.5,0.4],
+				rot=[0,0,np.pi/2],device=self.device)
+		).get_matrix()[:,:3,3].view(self.cfg.num_envs, self.cfg.num_robots, 3)+dpose[:,:,:3,0]
+		rot = torch.tensor(
+			[
+				[0,-1,0,0,0,0],
+				[1,0,0,0,0,0],
+				[0,0,1,0,0,0],
+				[0,0,0,0,-1,0],
+				[0,0,0,1,0,0],
+				[0,0,0,0,0,1],
+			],
+			dtype=torch.float,
+			device=self.device)
+		while True:
+			j_eef = rot@self.chain.jacobian(
+				current_joint.view(-1,self.franka_hand_index),
+				).view(self.cfg.num_envs,self.cfg.num_robots,6,self.franka_hand_index) 
+			j_eef_T = j_eef.transpose(-2,-1)
+			current_joint = (j_eef_T @ torch.inverse(j_eef @ j_eef_T + lmbda)@ dpose).view(self.cfg.num_envs, self.cfg.num_robots, self.franka_hand_index) + current_joint
+			current_ee_trans = self.chain.forward_kinematics(
+				current_joint.view(-1,self.franka_hand_index),
 				world=pk.Transform3d(
 					pos=[0,-0.5,0.4],
 					rot=[0,0,np.pi/2],device=self.device)
-			).get_matrix()[:, :3, 3]
-		# debug: print pos diff
-		# print('POS_DIFF:', torch.stack(self.hand_pos,dim=1)-init_ee_pos)
-		while torch.min(err) > 0.005:
-			# NOTE please get global jacobian
-			# TODO transform jacobian to global coordinate automatically
-			rot = torch.tensor(
-				[
-					[0,-1,0,0,0,0],
-					[1,0,0,0,0,0],
-					[0,0,1,0,0,0],
-					[0,0,0,0,-1,0],
-					[0,0,0,1,0,0],
-					[0,0,0,0,0,1],
-				],
-				dtype=torch.float,
-				device=self.device)
-			# transform jacobian to global coordinate
-			j_eefs = rot@self.chain.jacobian(
-				(franka_states+u).view(-1,self.franka_hand_index),
-				).view(self.cfg.num_envs,self.cfg.num_robots,6,self.franka_hand_index)
-			# print jacobian get from isaac
-			# j_eefs_isaac = torch.stack(self.j_eefs, dim=1)
-			# print('get:\n',j_eefs_isaac[0,0],'\nreal:\n',j_eefs[0,0],'\ndiff:\n',j_eefs_isaac[0,0]-j_eefs[0,0],'\n================')
-			j_eef_T = torch.transpose(j_eefs, -2, -1)
-			lmbda = torch.eye(6, device=self.device) * (self.cfg.damping ** 2)
-			u = (j_eef_T @ torch.inverse(j_eefs @ j_eef_T + lmbda)@ dpose).view(self.cfg.num_envs, self.cfg.num_robots, self.franka_hand_index)
-			ee_new = self.chain.forward_kinematics(
-				(franka_states+u).view(-1,self.franka_hand_index),
-				world=pk.Transform3d(
-					pos=[0,-0.5,0.4],
-					rot=[0,0,np.pi/2],device=self.device)
-			).get_matrix()[:, :3, 3]
-			err = torch.norm(ee_new - (init_ee_pos+dpose[:,:,:3,0]), dim=-1)
+			)
+			current_ee_pos = current_ee_trans.get_matrix()[:, :3, 3]
+			current_ee_rot = pk.matrix_to_quaternion(current_ee_trans.get_matrix()[:, :3, :3])
+			current_ee_rot = torch.cat((current_ee_rot[...,1:4], current_ee_rot[...,:1]),dim=-1)
+			orn_errs = self.orientation_error(self.franka_default_orn, current_ee_rot.view(self.cfg.num_envs, self.cfg.num_robots, 4))
+			pos_errs = target_ee_pos - current_ee_pos 
+			dpose = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
+			err = torch.norm(dpose.squeeze(-1),dim=-1)
 			num_it += 1
-			# debug: print number of its and ee diff
-			print(num_it, ee_new-init_ee_pos-dpose[:,:,:3,0])
-		return u
+			# print(num_it, current_ee_pos, target_ee_pos)
+			if err < self.cfg.ik_err or num_it > self.cfg.max_ik_iter:
+				break
+		return current_joint
+
+	def control_ik_old(self, dpose):
+		# solve damped least squares
+		j_eefs = torch.stack(self.j_eefs).transpose(0,1)
+		j_eef_T = torch.transpose(j_eefs, -2, -1)
+		lmbda = torch.eye(6, device=self.device) * (self.cfg.damping ** 2)
+		u = (j_eef_T @ torch.inverse(j_eefs @ j_eef_T + lmbda)
+				 @ dpose).view(self.cfg.num_envs, self.cfg.num_robots, self.franka_hand_index)
+		return u+self.franka_dof_poses[...,:self.franka_hand_index]
 
 	def orientation_error(self, desired, current):
 		cc = quat_conjugate(current)
@@ -954,11 +962,11 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=0.5, bound_robot=False, sim_device_id = 0, num_goals = 1)
+	env = gym.make('PandaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=True, base_steps=100, inhand_rate=0.5, bound_robot=False, sim_device_id = 0, num_goals = 1)
 	env.cfg.early_termin_step = 10
 	obs = env.reset()
 	start = time.time()
-	while True:
+	for _ in range(100):
 		if args.random:
 			act = torch.rand((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)*2-1
 		elif args.ezpolicy:

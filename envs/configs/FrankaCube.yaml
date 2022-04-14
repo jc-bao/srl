@@ -35,8 +35,10 @@ control_freq_inv: 1 # TODO check
 env_spacing: 1.5
 debug_viz: true
 damping: 0.05
-# max_vel: 0.6
-max_vel: 1.8 # max move 0.05 per step
+max_vel: 0.6
+max_ik_iter: 10
+ik_err: 0.005
+# max_vel: 1.8 # max move 0.05 per step
 dof_vel_scale: 1
 finger_shift: [0,0,-0.04]
 err: 0.05
