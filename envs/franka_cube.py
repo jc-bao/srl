@@ -707,37 +707,44 @@ class FrankaCube(gym.Env):
 				(franka_states+u).view(-1,self.franka_hand_index),
 				world=pk.Transform3d(
 					pos=[0,-0.5,0.4],
-					rot=[np.pi/2,0,0,np.pi/2],device=self.device)
+					rot=[0,0,np.pi/2],device=self.device)
 			).get_matrix()[:, :3, 3]
+		# debug: print pos diff
+		# print('POS_DIFF:', torch.stack(self.hand_pos,dim=1)-init_ee_pos)
 		while torch.min(err) > 0.005:
 			# NOTE please get global jacobian
+			# TODO transform jacobian to global coordinate automatically
 			rot = torch.tensor(
 				[
-					[0.,1,0,0,0,0],
+					[0,-1,0,0,0,0],
 					[1,0,0,0,0,0],
 					[0,0,1,0,0,0],
-					[0,0,0,0,1,0],
+					[0,0,0,0,-1,0],
 					[0,0,0,1,0,0],
 					[0,0,0,0,0,1],
 				],
+				dtype=torch.float,
 				device=self.device)
+			# transform jacobian to global coordinate
 			j_eefs = rot@self.chain.jacobian(
 				(franka_states+u).view(-1,self.franka_hand_index),
 				).view(self.cfg.num_envs,self.cfg.num_robots,6,self.franka_hand_index)
-			# print('get:\n',j_foo[0,0],'\nreal:\n',j_eefs[0,0],'\n================')
+			# print jacobian get from isaac
+			# j_eefs_isaac = torch.stack(self.j_eefs, dim=1)
+			# print('get:\n',j_eefs_isaac[0,0],'\nreal:\n',j_eefs[0,0],'\ndiff:\n',j_eefs_isaac[0,0]-j_eefs[0,0],'\n================')
 			j_eef_T = torch.transpose(j_eefs, -2, -1)
 			lmbda = torch.eye(6, device=self.device) * (self.cfg.damping ** 2)
 			u = (j_eef_T @ torch.inverse(j_eefs @ j_eef_T + lmbda)@ dpose).view(self.cfg.num_envs, self.cfg.num_robots, self.franka_hand_index)
-			ee_trans = self.chain.forward_kinematics(
+			ee_new = self.chain.forward_kinematics(
 				(franka_states+u).view(-1,self.franka_hand_index),
 				world=pk.Transform3d(
 					pos=[0,-0.5,0.4],
-					rot=[np.pi/2,0,0,np.pi/2],device=self.device)
-			)
-			ee_new = ee_trans.get_matrix()[:, :3, 3]
+					rot=[0,0,np.pi/2],device=self.device)
+			).get_matrix()[:, :3, 3]
 			err = torch.norm(ee_new - (init_ee_pos+dpose[:,:,:3,0]), dim=-1)
 			num_it += 1
-			print(num_it, ee_new, init_ee_pos+dpose[:,:,:3,0])
+			# debug: print number of its and ee diff
+			print(num_it, ee_new-init_ee_pos-dpose[:,:,:3,0])
 		return u
 
 	def orientation_error(self, desired, current):
