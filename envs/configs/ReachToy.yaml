@@ -5,3 +5,6 @@ max_steps: 50
 auto_reset: true
 err: 0.05
 vel: 0.2
+num_goals: 1
+num_robots: 1
+inhand_rate: 0.0

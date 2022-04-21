@@ -25,45 +25,58 @@ class ReachToyEnv(gym.Env):
 			
 		self.num_step = torch.empty(self.cfg.num_envs, dtype=torch.int, device=self.device)
 		self.reach_step = torch.empty(self.cfg.num_envs, dtype=torch.int, device=self.device)
-		self.goal = torch.empty((self.cfg.num_envs, self.cfg.dim), dtype=torch.float32, device=self.device)
-		self.pos = torch.empty((self.cfg.num_envs, self.cfg.dim), dtype=torch.float32, device=self.device)
+		self.goal = torch.empty((self.cfg.num_envs, self.cfg.num_goals,self.cfg.dim), dtype=torch.float32, device=self.device)
+		self.obj = torch.empty((self.cfg.num_envs, self.cfg.num_goals, self.cfg.dim), dtype=torch.float32, device=self.device)
+		self.pos = torch.empty((self.cfg.num_envs, self.cfg.num_robots, self.cfg.dim), dtype=torch.float32, device=self.device)
+		self.attached = torch.zeros((self.cfg.num_env, self.cfg.num_robots, self.cfg.num_goals), dtype=torch.bool, device=self.device)
 
 		# gym space
 		self.space = spaces.Box(low=-np.ones(self.cfg.dim), high=np.ones(self.cfg.dim))
 		self.action_space = spaces.Box(
-			low=-np.ones(self.cfg.dim), high=np.ones(self.cfg.dim))
-		self.obs_space = spaces.Box(
-			low=-np.ones(self.cfg.dim*2), high=np.ones(self.cfg.dim*2)),
-		self.goal_space = spaces.Box(
-			low=-np.ones(self.cfg.dim), high=np.ones(self.cfg.dim))
+			low=-np.ones(self.cfg.dim+1), high=np.ones(self.cfg.dim+1)) # +1 for gripper
 
 		# torch space for vec env
 		self.torch_space = Uniform(
 			low=-torch.ones(self.cfg.dim, device=self.device), high=torch.ones(self.cfg.dim, device=self.device))
-		self.torch_action_space = self.torch_space
-		self.torch_obs_space = Uniform(
-			low=-torch.ones(self.cfg.dim*2, device=self.device), high=torch.ones(self.cfg.dim*2, device=self.device)
-		)
-		self.torch_goal_space = self.torch_space
+		self.torch_action_space = Uniform(
+			low=-torch.ones(self.cfg.dim+1, device=self.device), high=torch.ones(self.cfg.dim+1, device=self.device))
 		
 		self.reset()
 
 	def step(self, action):
 		self.num_step += 1
+		# update pose
+		action = action.view(self.cfg.num_envs, self.cfg.num_robots, self.cfg.dim+1) # gripper state
 		action = torch.clamp(action, self.torch_action_space.low,
 												self.torch_action_space.high)
-		self.pos = torch.clamp(self.pos + action*self.cfg.vel,
+		self.pos = torch.clamp(self.pos + action[...,:self.cfg.dim]*self.cfg.vel,
 													self.torch_space.low, self.torch_space.high)
-		d = torch.norm(self.pos - self.goal, dim=-1)
+		# update attached matrix
+		robot_obj_dist = torch.norm(
+			self.pos.unsqueeze(2)-self.obj.unsqueeze(1),
+			dim=-1
+		) # (env,robot,obj)
+		robot_to_obj_min_dist = torch.min(robot_obj_dist, dim=1)[0].unsqueeze(1)
+		obj_to_robot_min_dist = torch.min(robot_obj_dist, dim=2)[0].unsqueeze(2)
+		self.attached = (
+			(action[..., -1] < 0).unsqueeze(2) & # close gripper
+			robot_obj_dist < self.cfg.reach_threshold &# less than thereshold
+			robot_obj_dist < robot_to_obj_min_dist &# robot is close to obj
+			robot_obj_dist < obj_to_robot_min_dist # obj is close to robot
+		)
+		# update obj pos
+		self.obj = self.pos*self.attached
+		# update reach state
+		d = torch.norm(self.obj - self.goal, dim=-1)
 		if_reach = (d < self.cfg.err)
 		# if reached, not update reach step
 		self.reach_step[~if_reach] = self.num_step[~if_reach]
-		reward = self.compute_reward(self.pos, self.goal, None)
+		reward = self.compute_reward(self.obj, self.goal, None)
 		info = torch.cat((
 			if_reach.type(torch.float32).unsqueeze(-1),  # success
 			self.num_step.type(torch.float32).unsqueeze(-1),  # step
 			torch.empty((self.cfg.num_envs, 3), device=self.device, dtype=torch.float),# traj_idx, traj_len, tleft 
-			self.pos),  # achieved goal
+			self.obj.view(self.cfg.num_envs, -1)),  # achieved goal
 			dim=-1)
 		done = torch.logical_or(
 			(self.num_step >= self.cfg.max_steps), (self.num_step - self.reach_step) > 4).type(torch.float32)
@@ -78,8 +91,9 @@ class ReachToyEnv(gym.Env):
 		num_reset_env = env_idx.shape[0]
 		self.num_step[env_idx] = 0
 		self.reach_step[env_idx] = 0
-		self.goal[env_idx] = self.torch_goal_space.sample((num_reset_env,))
-		self.pos[env_idx] = self.torch_goal_space.sample((num_reset_env,))
+		self.obj[env_idx] = self.torch_space.sample((num_reset_env,self.cfg.num_goals))
+		self.goal[env_idx] = self.torch_space.sample((num_reset_env,self.cfg.num_goals))
+		self.pos[env_idx] = self.torch_space.sample((num_reset_env,self.cfg.num_robots))
 		return self.get_obs()
 
 	def render(self):
@@ -108,19 +122,21 @@ class ReachToyEnv(gym.Env):
 				plt.show()
 
 	def get_obs(self):
-		return torch.cat((self.pos, self.goal), dim=-1)
+		return torch.cat((self.pos.view(self.cfg.num_envs,-1), self.obj.view(self.cfg.num_envs,-1), self.goal.view(self.cfg.num_envs,-1)), dim=-1)
 
 	def compute_reward(self, ag, dg, info):
-		return -(torch.norm(ag-dg,dim=-1) > self.cfg.err).type(torch.float32)
+		ag = ag.view(self.cfg.num_envs, self.cfg.num_goals, self.cfg.dim)
+		dg = dg.view(self.cfg.num_envs, self.cfg.num_goals, self.cfg.dim)
+		return -torch.mean(torch.norm(ag-dg,dim=-1) > self.cfg.err, dim=-1).type(torch.float32)
 	
 	def update_config(self, cfg):
 		cfg.update(
-			action_dim = cfg.dim, 
-			state_dim = cfg.dim * 2,
-			shared_dim = 0, 
-			seperate_dim = cfg.dim, 
-			goal_dim = cfg.dim, 
-			info_dim = 5 + cfg.dim, 
+			action_dim = cfg.num_robots*(cfg.dim+1), 
+			state_dim = cfg.dim * (cfg.num_robots + cfg.num_goals*2),
+			shared_dim = self.dim * cfg.num_goals * 2, 
+			seperate_dim = cfg.dim*cfg.num_robots, 
+			goal_dim = cfg.dim*self.num_goals, 
+			info_dim = 5 + cfg.dim*self.num_goals, 
 		)
 		return cfg
 
@@ -201,8 +217,7 @@ class ReachToyEnv(gym.Env):
 		return old_info
 
 	def close(self):
-		self.gym.destroy_viewer(self.viewer)
-		self.gym.destroy_sim(self.sim)
+		pass
 
 	def env_params(self):
 		return AttrDict(
@@ -214,7 +229,7 @@ class ReachToyEnv(gym.Env):
 			goal_dim=self.cfg.goal_dim,
 			info_dim=self.cfg.info_dim,  # is_success, step, achieved_goal
 			# numbers
-			num_goals = 1, 
+			num_goals = self.cfg.num_goals, 
 			num_envs=self.cfg.num_envs,
 			max_env_step=self.cfg.max_steps,
 			# functions

@@ -13,7 +13,7 @@ import pytorch_kinematics as pk
 
 
 class FrankaCube(gym.Env):
-	def __init__(self, cfg_file='configs/FrankaCube.yaml', **kwargs):
+	def __init__(self, cfg_file='configs/franka_yuke.yaml', **kwargs):
 		# get config and setup base class
 		cfg_path = pathlib.Path(__file__).parent.resolve()/cfg_file
 		with open(cfg_path) as config_file:
@@ -109,8 +109,8 @@ class FrankaCube(gym.Env):
 			device=self.device,)
 		self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(self.cfg.num_envs, self.cfg.num_robots,2)
 		self.franka_default_dof_state[...,-1] = 0.
-		# orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
-		orns = [[1.0, 0., 0., 0.],[-1.0, 0., 0., 0.]]
+		orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
+		# orns = [[1.0, 0., 0., 0.],[-1.0, 0., 0., 0.]]
 		self.franka_default_orn = to_torch(
 			[[orns[i%2] for i in range(self.cfg.num_robots)]], device=self.device).repeat(self.cfg.num_envs, 1, 1)
 		lower = gymapi.Vec3(-self.cfg.env_spacing, -self.cfg.env_spacing, 0.0)
@@ -962,11 +962,11 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=True, base_steps=100, inhand_rate=0.5, bound_robot=False, sim_device_id = 0, num_goals = 1)
+	env = gym.make('PandaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, base_steps=100, inhand_rate=0.5, bound_robot=False, sim_device_id = 0, num_goals = 1, table_gap=0.3)
 	env.cfg.early_termin_step = 10
 	obs = env.reset()
 	start = time.time()
-	for _ in range(100):
+	for _ in range(10000):
 		if args.random:
 			act = torch.rand((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)*2-1
 		elif args.ezpolicy:

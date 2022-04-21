@@ -1,6 +1,6 @@
 # wandb
 wandb: true
-project: debug 
+project: REDQ_debug 
 name: hello
 
 # seed 
