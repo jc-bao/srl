@@ -35,16 +35,16 @@ control_freq_inv: 1 # TODO check
 env_spacing: 1.5
 debug_viz: true
 damping: 0.05
-max_vel: 5.0
+max_vel: 10.0
 max_ik_iter: 10
-ik_err: 0.005
+ik_err: 0.005 # for iteration version of IK
 # max_vel: 1.8 # max move 0.05 per step
 dof_vel_scale: 1
 finger_shift: [0,0,-0.04]
 err: 0.05
 clip_actions: 1.0
 # block
-inhand_rate: 0.0
+inhand_rate: 0.2
 block_size: 0.04 
 block_length: 0.04
 # robot

@@ -241,12 +241,12 @@ class AgentBase:
           self.traj_list[i, start_point:],
           self.traj_list[i, :end_point]
         ), dim=0))
-    if len(traj_data) > 0:
+    if traj_data:
       traj_data = torch.cat(traj_data, dim=0)
       self.buffer.extend_buffer(traj_data)
     return AttrDict(
       collected_steps=len(traj_data),
-      useless_steps=useless_steps
+      useless_steps=int(useless_steps)
     )
 
   def convert_trajectory(self, buf_items, last_done):

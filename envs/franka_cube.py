@@ -26,7 +26,7 @@ class FrankaCube(gym.Env):
 		self.device = self.cfg.sim_device
 
 		# setup ik solver
-		self.chain = pk.build_serial_chain_from_urdf(open("./isaac_assets/urdf/franka_description/robots/franka_panda.urdf").read(), "panda_hand").to(device = self.device)
+		# self.chain = pk.build_serial_chain_from_urdf(open("./isaac_assets/urdf/franka_description/robots/franka_panda.urdf").read(), "panda_hand").to(device = self.device)
 
 		# setup isaac
 		self.gym = gymapi.acquire_gym()
@@ -950,7 +950,7 @@ class FrankaCube(gym.Env):
 		)
 
 
-gym.register(id='PandaPNP-v0', entry_point=FrankaCube)
+gym.register(id='FrankaPNP-v0', entry_point=FrankaCube)
 
 if __name__ == '__main__':
 	import argparse
@@ -962,13 +962,13 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('PandaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, base_steps=100, inhand_rate=0.5, bound_robot=False, sim_device_id = 0, num_goals = 1, table_gap=0.3)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=0.5, bound_robot=False, sim_device_id = 0, num_goals = 1, max_vel=10)
 	env.cfg.early_termin_step = 10
 	obs = env.reset()
 	start = time.time()
 	for _ in range(10000):
 		if args.random:
-			act = torch.rand((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)*2-1
+			act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)
 		elif args.ezpolicy:
 			act = env.ezpolicy(obs)
 		else:

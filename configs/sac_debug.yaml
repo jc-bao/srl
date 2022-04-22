@@ -12,11 +12,10 @@ if_use_per: false
 buffer_size: 1000
 
 # env_params
-env_name: 'PandaPNP-v0'
+env_name: 'ReachToy-v0'
 env_params: null
 env_kwargs:
-  num_envs: 4 
-  inhand_rate: 1
+  num_envs: 4
   num_cameras: 0
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
@@ -44,7 +43,7 @@ soft_update_tau: 0.0039
 # eval
 eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
-render: true
+render: false
 
 # save
 cwd: results

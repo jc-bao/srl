@@ -124,10 +124,10 @@ class ReachToyEnv(gym.Env):
 		self.gripper[env_idx,:] = 0
 		self.attached[env_idx, :, :] = False
 		# init obj in hand TODO support multi robot inhand
-		self.attached[env_idx, 0, 0] = ((torch.randn(num_reset_env)+1)/2 < self.cfg.inhand_rate)
+		self.attached[env_idx, 0, 0] = ((torch.randn(num_reset_env, device=self.device)+1)/2 < self.cfg.inhand_rate)
 		return self.get_obs()
 
-	def render(self):
+	def render(self, mode=None):
 		if self.num_step[0] == 1:
 			self.data = [[self.pos.clone(), self.obj.clone()]]
 		else:
@@ -167,8 +167,8 @@ class ReachToyEnv(gym.Env):
 		return torch.cat((self.pos.view(self.cfg.num_envs, -1), self.gripper, self.obj.view(self.cfg.num_envs, -1), self.goal.view(self.cfg.num_envs, -1)), dim=-1)
 
 	def compute_reward(self, ag, dg, info):
-		ag = ag.view(self.cfg.num_envs, self.cfg.num_goals, self.cfg.dim)
-		dg = dg.view(self.cfg.num_envs, self.cfg.num_goals, self.cfg.dim)
+		ag = ag.view(-1, self.cfg.num_goals, self.cfg.dim)
+		dg = dg.view(-1, self.cfg.num_goals, self.cfg.dim)
 		return -torch.mean((torch.norm(ag-dg, dim=-1) > self.cfg.err).type(torch.float32), dim=-1)
 
 	def update_config(self, cfg):

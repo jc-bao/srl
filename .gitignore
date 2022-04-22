@@ -18,3 +18,5 @@ runs/
 .idea/
 results/
 wandb/
+
+.DS_Store
