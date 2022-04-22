@@ -1,7 +1,8 @@
 dim: 2
 num_envs: 2
 sim_device_id: 0
-max_steps: 50
+base_steps: 50
+max_steps: null
 auto_reset: true
 err: 0.05
 vel: 0.2

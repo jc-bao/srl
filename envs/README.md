@@ -2,6 +2,14 @@
 
 ## Toy
 
+| Pick And Place (1 robot, 3 object)                           | Pick And Place (2 robot, 4 object)                           |      |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | ---- |
+| ![IMG_6B53975E0019-1](https://tva1.sinaimg.cn/large/e6c9d24ely1h1ijgnvtodj20xz0tun01.jpg) | ![image-20220422155543345](https://tva1.sinaimg.cn/large/e6c9d24ely1h1ijylcge5j20vu0nmab5.jpg) |      |
+| Large Scale Param (Up to 1e5 envs)                           |                                                              |      |
+| <img src="https://tva1.sinaimg.cn/large/e6c9d24ely1h1ik4eirxtj209c0towfc.jpg" alt="image-20220422160120022" style="zoom:25%;" /> |                                                              |      |
+
+
+
 ## Isaac Panda
 
 ### TODO
