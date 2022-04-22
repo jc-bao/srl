@@ -121,6 +121,10 @@ class ReachToyEnv(gym.Env):
 			(num_reset_env, self.cfg.num_goals))
 		self.pos[env_idx] = self.torch_space.sample(
 			(num_reset_env, self.cfg.num_robots))
+		self.gripper[env_idx,:] = 0
+		self.attached[env_idx, :, :] = False
+		# init obj in hand TODO support multi robot inhand
+		self.attached[env_idx, 0, 0] = ((torch.randn(num_reset_env)+1)/2 < self.cfg.inhand_rate)
 		return self.get_obs()
 
 	def render(self):
@@ -720,7 +724,7 @@ gym.register(id='PNPToy-v0', entry_point=PNPToyEnv)
 gym.register(id='HandoverToy-v0', entry_point=HandoverToyEnv)
 
 if __name__ == '__main__':
-	env = ReachToyEnv(gpu_id=-1, err=0.05, num_envs=4, num_goals=2, num_robots=1, auto_reset=False)
+	env = ReachToyEnv(gpu_id=-1, err=0.05, num_envs=1, num_goals=1, num_robots=1, inhand_rate=1, auto_reset=False)
 	obs = env.reset()
 	for _ in range(env.cfg.max_steps):
 		act = env.ezpolicy(obs)

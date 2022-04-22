@@ -1,11 +1,11 @@
 dim: 2
-num_envs: 2
+num_envs: 4096
 sim_device_id: 0
 base_steps: 50
 max_steps: null
 auto_reset: true
-err: 0.05
-vel: 0.2
+err: 0.2
+vel: 0.3
 num_goals: 1
 num_robots: 1
-inhand_rate: 0.0
+inhand_rate: 0.2
