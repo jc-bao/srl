@@ -1,7 +1,7 @@
 # wandb
-wandb: false
-project: debug 
-name: hello
+wandb: true
+project: PPO_debug 
+name: FrankaPNP_default
 
 # seed 
 random_seed: 0
@@ -16,10 +16,11 @@ ratio_clip: 0.25
 if_use_gae: true
 
 # env_params
-env_name: 'PandaPNP-v0'
+env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
   num_envs: 4096
+  reward_type: dense
 reward_scale: 1
 extra_info_dim: 4 # extra info get from agent
 
@@ -35,7 +36,7 @@ gpu_id: 0
 # algorithm
 agent_name: AgentPPO
 max_collect_steps: !!float 1e9
-resue: 1 
+resue: 1
 steps_per_rollout: 409600
 updates_per_rollout: null # calulate with resue
 batch_size: 102400
@@ -44,10 +45,10 @@ lr: 0.00024
 soft_update_tau: 0.0039
 
 # eval
-eval_per_rollout: 1
+eval_per_rollout: 0.02 
 eval_steps: null # set with steps per rollout
-render: false 
+render: true
 
 # save
 cwd: results
-rollout_per_save: 0.1
+rollout_per_save: 0.01

@@ -691,7 +691,7 @@ class AgentPPO(AgentBase):
 
       state = buf_state[indices]
       r_sum = buf_r_sum[indices]
-      adv_v = buf_adv_v[indices]
+      adv_v = buf_adv_v[indices].squeeze(-1)
       action = buf_action[indices]
       logprob = buf_logprob[indices]
 
@@ -699,7 +699,6 @@ class AgentPPO(AgentBase):
       new_logprob, obj_entropy = self.act.get_logprob_entropy(
         state, action)  # it is obj_actor
       ratio = (new_logprob - logprob.detach()).exp()
-      print(adv_v.shape, ratio.shape, new_logprob.shape, logprob.shape)
       surrogate1 = adv_v * ratio
       surrogate2 = adv_v * \
         ratio.clamp(1 - self.cfg.ratio_clip, 1 + self.cfg.ratio_clip)

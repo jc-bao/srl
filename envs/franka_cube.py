@@ -813,6 +813,8 @@ class FrankaCube(gym.Env):
 			physics_engine=getattr(gymapi, cfg.physics_engine),
 			# steps
 			max_steps=cfg.base_steps*cfg.num_goals,
+			# judge for success
+			success_bar={'sparse':-0.01, 'dense': 0.94}[cfg.reward_type]
 		)
 		cfg.table_size = [cfg.robot_gap-cfg.table_gap, cfg.table_size[1], cfg.table_size[2]]
 		sim_params = gymapi.SimParams()
