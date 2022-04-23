@@ -466,7 +466,7 @@ class FrankaCube(gym.Env):
 			return -torch.mean((torch.norm(ag-dg, dim=-1) > self.cfg.err).type(torch.float32), dim=-1)
 		elif self.cfg.reward_type == 'dense':
 			distances = torch.norm(ag-dg, dim=-1)
-			distance_rew = 0.5*(1-torch.mean(distances,dim=-1))/self.cfg.num_goals
+			distance_rew = 0.5*(1-torch.mean(distances,dim=-1)*5)/self.cfg.num_goals
 			reach_rew = 0.5*torch.mean((distances<self.cfg.err).float(), dim=-1)
 			return distance_rew+reach_rew 
 
