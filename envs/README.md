@@ -12,6 +12,14 @@
 
 ## Isaac Panda
 
+| FrankaPNP-v0                                                 |      |      |
+| ------------------------------------------------------------ | ---- | ---- |
+| ![isaac_demo](https://tva1.sinaimg.cn/large/e6c9d24ely1h1jm00od1lg20dk0cme84.gif) |      |      |
+|                                                              |      |      |
+|                                                              |      |      |
+
+
+
 ### TODO
 
 #### L1
