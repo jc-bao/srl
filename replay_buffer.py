@@ -143,11 +143,10 @@ class ReplayBuffer:  # for off-policy
 				info=data[..., info_start:info_start+self.EP.info_dim],
 			)
 		elif 'state' in name:
-			if '.' in name:
-				sub_name = name.split('.')[1]
-				return self.EP.obs_parser(data[..., :self.EP.state_dim], sub_name)
-			else:
+			if '.' not in name:
 				return data[..., :self.EP.state_dim]
+			sub_name = name.split('.')[1]
+			return self.EP.obs_parser(data[..., :self.EP.state_dim], sub_name)
 		elif name == 'rew':
 			return data[..., self.EP.state_dim]
 		elif name == 'mask':
@@ -155,11 +154,10 @@ class ReplayBuffer:  # for off-policy
 		elif name == 'action':
 			return data[..., action_start:info_start]
 		elif 'info' in name:
-			if '.' in name:
-				sub_name = name.split('.')[1]
-				return self.EP.info_parser(data[..., info_start:info_start+self.EP.info_dim], sub_name)
-			else:
+			if '.' not in name:
 				return data[..., info_start:info_start+self.EP.info_dim]
+			sub_name = name.split('.')[1]
+			return self.EP.info_parser(data[..., info_start:info_start+self.EP.info_dim], sub_name)
 
 	def data_updater(self, old_data, new_data):
 		action_start = self.EP.state_dim+2

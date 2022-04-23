@@ -44,9 +44,9 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([0.2, 0.15, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-0.25, -0.2, self.cfg.block_size/2],
+			low=torch.tensor([-0.25, -0.2, self.cfg.block_size/2+self.cfg.table_size[2]],
 											 device=self.device),
-			high=torch.tensor([0.25, 0.2, self.cfg.block_size/2+0.25], device=self.device))
+			high=torch.tensor([0.25, 0.2, self.cfg.block_size/2+0.25+self.cfg.table_size[2]], device=self.device))
 		# goal space
 		self.torch_goal_space = torch.distributions.uniform.Uniform(
 			low=torch.tensor([-0.2, -0.15, self.cfg.block_size/2], device=self.device),
@@ -79,8 +79,8 @@ class FrankaCube(gym.Env):
 			# set the camera position based on up axis
 			sim_params = self.gym.get_sim_params(self.sim)
 			if sim_params.up_axis == gymapi.UP_AXIS_Z:
-				cam_pos = gymapi.Vec3(1.0, -1.0, 1.0)
-				cam_target = gymapi.Vec3(-0.2, 0.0, 0.0)
+				cam_pos = gymapi.Vec3(1.0, 1.0, 1.0)
+				cam_target = gymapi.Vec3(0.0, 0.0, 0.4)
 			else:
 				cam_pos = gymapi.Vec3(20.0, 3.0, 25.0)
 				cam_target = gymapi.Vec3(10.0, 0.0, 15.0)
@@ -308,7 +308,7 @@ class FrankaCube(gym.Env):
 			camera_properties.width = 320
 			camera_properties.height = 200
 			h1 = self.gym.create_camera_sensor(self.envs[j], camera_properties)
-			camera_position = gymapi.Vec3(0, -1, 0.3)
+			camera_position = gymapi.Vec3(1, 1, 1)
 			camera_target = gymapi.Vec3(0, 0, 0)
 			self.gym.set_camera_location(
 				h1, self.envs[j], camera_position, camera_target)
@@ -761,11 +761,11 @@ class FrankaCube(gym.Env):
 		return q_r[..., 0:3] * torch.sign(q_r[..., 3]).unsqueeze(-1)
 
 	def ezpolicy(self, obs):
-		up_step = 5
-		reach_step = 15 
-		grasp_step = 18
-		end_step = 50
-		pos = obs[..., :3]*self.grip_pos_std+self.grip_pos_mean
+		up_step = 8
+		reach_step = 38
+		grasp_step = 45
+		end_step = 100
+		pos = obs[..., :3]*self.goal_std+self.goal_mean + self.origin_shift
 		obj = obs[..., 17:20].view(
 			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
 		goal = obs[..., 20:23].view(
@@ -785,12 +785,12 @@ class FrankaCube(gym.Env):
 					action[env_id, 2:4] = 1
 				elif up_step <= self.progress_buf[env_id] < reach_step:
 					# action[env_id, :3] = (torch.tensor([-0.15,0,0.05],device=self.device) - pos_now)
-					action[env_id, :3] = (obj_now - pos_now)/r2o*0.5
+					action[env_id, :3] = (obj_now - pos_now)/r2o
 					action[env_id, 3] = 1
 				elif reach_step <= self.progress_buf[env_id] < grasp_step:
 					action[env_id, 3] = -1
 				elif grasp_step <= self.progress_buf[env_id] < end_step:
-					action[env_id, :3] = (goal_now - obj_now)/o2g*0.5
+					action[env_id, :3] = (goal_now - obj_now)/o2g
 		return action
 
 	def update_config(self, cfg):
@@ -963,7 +963,7 @@ if __name__ == '__main__':
 	run policy
 	'''
 	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=0.5, bound_robot=False, sim_device_id = 0, num_goals = 1, max_vel=10)
-	env.cfg.early_termin_step = 10
+	env.cfg.early_termin_step = 30
 	obs = env.reset()
 	start = time.time()
 	for _ in range(10000):
