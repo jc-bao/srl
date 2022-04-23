@@ -650,7 +650,7 @@ class AgentPPO(AgentBase):
       step_i += self.EP.num_envs
       last_done[torch.where(ten_dones)[0]] = step_i  # behind `step_i+=1`
       ten_s = ten_s_next
-    self.total_step += self.EP.num_envs * step_i
+    self.total_step += step_i
     buf_items = self.convert_trajectory(traj_list, last_done)
     steps, mean_rew = self.buffer.update_buffer(buf_items)  # traj_list
     return AttrDict(
