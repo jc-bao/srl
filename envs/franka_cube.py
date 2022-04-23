@@ -40,8 +40,8 @@ class FrankaCube(gym.Env):
 		# spaces
 		# block space
 		self.torch_block_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-0.2, -0.15, self.cfg.block_size/2],device=self.device),
-			high=torch.tensor([0.2, 0.15, self.cfg.block_size/2+0.001], device=self.device))
+			low=torch.tensor([-self.cfg.goal_space[0]/2, -self.cfg.goal_space[1]/2, self.cfg.block_size/2],device=self.device),
+			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
 			low=torch.tensor([-0.25, -0.2, self.cfg.block_size/2+self.cfg.table_size[2]],
@@ -49,8 +49,8 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([0.25, 0.2, self.cfg.block_size/2+0.25+self.cfg.table_size[2]], device=self.device))
 		# goal space
 		self.torch_goal_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-0.2, -0.15, self.cfg.block_size/2], device=self.device),
-			high=torch.tensor([0.2, 0.15, self.cfg.block_size/2+0.2], device=self.device))
+			low=torch.tensor([-self.cfg.goal_space[0]/2, -self.cfg.goal_space[1]/2, self.cfg.block_size/2], device=self.device),
+			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+self.cfg.goal_space[2]], device=self.device))
 		self.goal_mean = self.torch_goal_space.mean
 		self.goal_std = self.torch_goal_space.stddev
 
@@ -257,8 +257,12 @@ class FrankaCube(gym.Env):
 				table_state_pose = gymapi.Transform()
 				table_state_pose.p = gymapi.Vec3(franka_pos.p.x, 0, self.cfg.table_size[2]/2)
 				table_state_pose.r = gymapi.Quat(0, 0, 0, 1)
-				self.gym.create_actor(
-						env_ptr, table_asset, table_state_pose, "table{}".format(franka_id), i, 0, 0,)	
+				table_actor = self.gym.create_actor(
+						env_ptr, table_asset, table_state_pose, "table{}".format(franka_id), i, 0, 0,)
+				prop = gymapi.RigidShapeProperties()
+				prop.friction = self.cfg.friction 
+				self.gym.set_actor_rigid_shape_properties(
+					env_ptr, table_actor, [prop])
 			if self.cfg.aggregate_mode == 2:
 				self.gym.begin_aggregate(
 					env_ptr, max_agg_bodies, max_agg_shapes, True)
@@ -526,8 +530,10 @@ class FrankaCube(gym.Env):
 		self.progress_buf[reset_idx] = 0
 		self.success_step_buf[reset_idx] = 0
 		# set action here
-		self.actions = torch.clip(actions.clone().to(
-			self.device), -self.cfg.clip_actions, self.cfg.clip_actions).view(self.cfg.num_envs,self.cfg.num_robots,4)
+		self.actions = torch.clip(
+			actions.clone().view(self.cfg.num_envs,self.cfg.num_robots,4).to(self.device)+self.cfg.action_shift
+			, 
+			-self.cfg.clip_actions, self.cfg.clip_actions)
 		orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
 		pos_errs = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel
 		pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
@@ -814,8 +820,11 @@ class FrankaCube(gym.Env):
 			# steps
 			max_steps=cfg.base_steps*cfg.num_goals,
 			# judge for success
-			success_bar={'sparse':-0.01, 'dense': 0.94}[cfg.reward_type]
+			success_bar={'sparse':-0.01, 'dense': 0.94}[cfg.reward_type],
 		)
+		# robot control
+		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
+		# table size
 		cfg.table_size = [cfg.robot_gap-cfg.table_gap, cfg.table_size[1], cfg.table_size[2]]
 		sim_params = gymapi.SimParams()
 		if cfg.up_axis not in ["z", "y"]:
@@ -964,8 +973,8 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=0., bound_robot=True, sim_device_id = 0, num_goals = 1, max_vel=10)
-	env.cfg.early_termin_step = 80
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=0.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
+	env.cfg.early_termin_step = 60
 	obs = env.reset()
 	start = time.time()
 	for _ in range(10000):
@@ -977,7 +986,7 @@ if __name__ == '__main__':
 			act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 		obs, rew, done, info = env.step(act)
 		env.render(mode='human')
-		# print(env.info_parser(info).early_termin)
+		print(env.info_parser(info).early_termin)
 		# Image.fromarray(images[0]).save('foo.png')
 
 	print(time.time()-start)

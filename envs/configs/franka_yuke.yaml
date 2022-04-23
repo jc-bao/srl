@@ -9,7 +9,7 @@ headless: True
 enable_camera_sensors: False 
 
 # env
-early_termin_step: 80
+early_termin_step: 60
 early_termin_bar: 0.05
 # rew
 reward_type: sparse
@@ -50,6 +50,7 @@ block_length: 0.04
 # robot
 num_robots: 1
 bound_robot: true
+action_shift: [0,0,-0.3,0]
 asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
@@ -60,6 +61,9 @@ table_gap: 0.0
 robot_gap: 0.6
 robot_y: 0.5
 ee_init_pos: [0.0, 0.0, 0.05]
+friction: 0.01
+# goal space
+goal_space: [0.2, 0.2, 0.1]
 
 # sim:
 physics_engine: SIM_PHYSX 
