@@ -9,7 +9,7 @@ from isaacgym.torch_utils import *
 import torch
 from attrdict import AttrDict
 import pathlib
-import pytorch_kinematics as pk
+# import pytorch_kinematics as pk
 
 
 class FrankaCube(gym.Env):
@@ -101,13 +101,17 @@ class FrankaCube(gym.Env):
 		# finger shift
 		self.finger_shift = to_torch(self.cfg.finger_shift, device=self.device)
 		# joint pos
-		self.franka_default_ee_pos = to_torch(
-			self.cfg.ee_init_pos,
-			device=self.device,) 
-		self.franka_default_dof_pos = to_torch(
-			[[0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164, 0.02, 0.02]],
-			device=self.device,)
-		self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(self.cfg.num_envs, self.cfg.num_robots,2)
+		# self.franka_default_ee_pos = to_torch(
+		# 	self.cfg.ee_init_pos,
+		# 	device=self.device,) 
+		# self.franka_default_dof_pos = to_torch(
+		# 	[[0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164, 0.02, 0.02]],
+		# 	device=self.device,)
+		predefined_dof_pos = torch.load('configs/default_joint_pos.pt').to(self.device)
+		random_idx = torch.randint(low=0, high=predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
+		self.franka_default_dof_pos = torch.empty((self.cfg.num_envs*self.cfg.num_robots, predefined_dof_pos.shape[-1]), device=self.device)
+		self.franka_default_dof_pos = predefined_dof_pos[random_idx]
+		self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(1,1,2)
 		self.franka_default_dof_state[...,-1] = 0.
 		orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
 		# orns = [[1.0, 0., 0., 0.],[-1.0, 0., 0., 0.]]
@@ -214,6 +218,7 @@ class FrankaCube(gym.Env):
 			self.franka_roots.append([*pos, *rot])
 		self.origin_shift = to_torch(self.origin_shift, device=self.device)
 		self.franka_roots = to_torch(self.franka_roots)
+		self.default_grip_pos = self.origin_shift.unsqueeze(0).repeat(self.cfg.num_envs,1,1).clone()
 
 		# compute aggregate size
 		num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
@@ -483,6 +488,7 @@ class FrankaCube(gym.Env):
 			self.reset_buf[:] = True
 			obs, _, _, _ = self.step(act)
 		self.progress_buf[:] = 0  # NOTE: make sure step start from 0
+		self.default_grip_pos = self.grip_pos.clone()
 		return obs
 
 	def step(self, actions: torch.Tensor):
@@ -515,9 +521,12 @@ class FrankaCube(gym.Env):
 			block_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[block_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
 			if inhand_idx.any():
-				choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
+				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
+				# NOTE can only choose block 0 in hand now
+				choosed_block = 0 
 				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(inhand_idx.sum().item(),))
-				self.init_ag[inhand_idx, choosed_block] = self.franka_default_ee_pos + self.origin_shift[choosed_robot] 
+				self.init_ag[inhand_idx, choosed_block] = self.default_grip_pos[inhand_idx, choosed_robot]
+				# self.init_ag[inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
 			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
 			# change to hand or random pos
 			self.gym.set_actor_root_state_tensor_indexed(
@@ -973,7 +982,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=0.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
+	env = gym.make('FrankaPNP-v0', num_envs=16, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=1.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
 	env.cfg.early_termin_step = 60
 	obs = env.reset()
 	start = time.time()

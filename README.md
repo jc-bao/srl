@@ -68,3 +68,13 @@ change episode length to debug:
 ```
 python run.py -k '{"env_name":"PandaPNP-v0","wandb":false,"render":false,"steps_per_rollout":20,"batch_size":8}' -e '{"num_envs":1,"num_cameras":0,"headless":true,"base_steps":20}'
 ```
+
+## Requirements
+
+'''
+isaacgym
+torch
+attrdict
+gym
+pytorch_kinematics
+'''
