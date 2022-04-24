@@ -155,7 +155,6 @@ class AgentBase:
     useless_steps = 0  # data explored but dropped
     # loop
     ten_s = self.env.reset()
-    print(target_steps)
     while collected_steps < target_steps:
       ten_a = self.act.get_action(ten_s).detach()  # different
       if isinstance(ten_a, tuple):
@@ -282,24 +281,15 @@ class AgentBase:
     return buf_items
 
   def get_obj_critic_raw(self, buffer, batch_size):
-    """
-    Calculate the loss of networks with **uniform sampling**.
-
-    :param buffer: the ReplayBuffer instance that stores the trajectories.
-    :param batch_size: the size of batch data for Stochastic Gradient Descent (SGD).
-    :return: the loss of the network and states.
-    """
     with torch.no_grad():
-      reward, mask, action, state, next_s, info = buffer.sample_batch(
-        batch_size, her_rate=self.cfg.her_rate)
-      next_a = self.act_target(next_s)
-      critic_targets: torch.Tensor = self.cri_target(next_s, next_a)
+      trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
+      next_a = self.act_target(trans.next_state)  # stochastic policy
+      critic_targets: torch.Tensor = self.cri_target(trans.next_state, next_a)
       (next_q, min_indices) = torch.min(critic_targets, dim=1, keepdim=True)
-      q_label = reward + mask * next_q
-    q = self.cri(state, action)
+      q_label = trans.rew.unsqueeze(-1)+ trans.mask.unsqueeze(-1) * next_q 
+    q = self.cri(trans.state, trans.action)
     obj_critic = self.criterion(q, q_label)
-
-    return obj_critic, state
+    return obj_critic, trans.state 
 
   def get_obj_critic_per(self, buffer, batch_size):
     """
@@ -600,13 +590,13 @@ class AgentDDPG(AgentBase):
   def __init__(self, cfg):
     super().__init__(cfg=cfg)
     self.act.explore_noise = getattr(
-      cfg, 'explore_noise', 0.1)  # set for `get_action()`
+      cfg, 'explore_noise', 0.2)  # set for `get_action()`
 
-  def update_net(self, buffer):
-    buffer.update_now_len()
+  def update_net(self):
+    self.buffer.update_now_len()
     obj_critic = obj_actor = None
-    for _ in range(int(1 + buffer.now_len * self.cfg.repeat_times / self.cfg.batch_size)):
-      obj_critic, state = self.get_obj_critic(buffer, self.cfg.batch_size)
+    for _ in range(1+int(self.buffer.now_len / self.buffer.max_len * self.cfg.updates_per_rollout)):
+      obj_critic, state = self.get_obj_critic(self.buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
       self.soft_update(self.cri_target, self.cri, self.cfg.soft_update_tau)
 
@@ -614,7 +604,10 @@ class AgentDDPG(AgentBase):
       obj_actor = -self.cri(state, action_pg).mean()
       self.optimizer_update(self.act_optimizer, obj_actor)
       self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau)
-    return obj_critic.item(), -obj_actor.item()
+    return AttrDict(
+      critic_loss=obj_critic.item(),
+      actor_loss=-obj_actor.item(),
+    )
 
 
 class AgentPPO(AgentBase):

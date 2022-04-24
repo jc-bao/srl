@@ -13,10 +13,10 @@ import pathlib
 
 
 class FrankaCube(gym.Env):
-	def __init__(self, cfg_file='configs/franka_yuke.yaml', **kwargs):
+	def __init__(self, cfg_file='franka_yuke.yaml', **kwargs):
 		# get config and setup base class
-		cfg_path = pathlib.Path(__file__).parent.resolve()/cfg_file
-		with open(cfg_path) as config_file:
+		self.cfg_path = pathlib.Path(__file__).parent.resolve()/'configs'
+		with open(self.cfg_path/cfg_file) as config_file:
 			try:
 				cfg = AttrDict(yaml.load(config_file, Loader=yaml.SafeLoader))
 			except yaml.YAMLError as exc:
@@ -107,7 +107,7 @@ class FrankaCube(gym.Env):
 		# self.franka_default_dof_pos = to_torch(
 		# 	[[0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164, 0.02, 0.02]],
 		# 	device=self.device,)
-		predefined_dof_pos = torch.load('configs/default_joint_pos.pt').to(self.device)
+		predefined_dof_pos = torch.load(self.cfg_path/'default_joint_pos.pt').to(self.device)
 		random_idx = torch.randint(low=0, high=predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
 		self.franka_default_dof_pos = torch.empty((self.cfg.num_envs*self.cfg.num_robots, predefined_dof_pos.shape[-1]), device=self.device)
 		self.franka_default_dof_pos = predefined_dof_pos[random_idx]
@@ -557,7 +557,8 @@ class FrankaCube(gym.Env):
 		# 	-1)[..., :self.franka_hand_index] + self.control_ik(dposes)
 		self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 		# grip
-		grip_acts = (self.actions[..., [3]] + 1) * 0.02
+		# grip_acts = (self.actions[..., [3]] + 1) * 0.02
+		grip_acts = self.franka_dof_poses[..., [self.franka_hand_index]] + self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel
 		# reset gripper
 		self.franka_dof_targets[..., self.franka_hand_index:
 														self.franka_hand_index+2] = grip_acts.repeat(1, 1, 2)
