@@ -538,7 +538,6 @@ class FrankaCube(gym.Env):
 			orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
 			filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
 			pos_errs = filtered_pos_target - self.hand_pos_tensor 
-			print(i, pos_target-self.hand_pos_tensor)
 			pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
 			# clip with bound
 			if self.cfg.bound_robot:
