@@ -44,6 +44,10 @@ class AgentBase:
     self.cfg.update(env_params=self.env.env_params())
     # alias for env_params
     self.EP = self.cfg.env_params
+    # batch size
+    if self.cfg.batch_size < self.EP.num_envs:
+      print('WARNING: batch_size < num_envs, set batch_size to num_envs')
+      self.cfg.batch_size = self.EP.num_envs
 
     '''set up actor critic'''
     act_class = getattr(net, cfg.act_net, None)
@@ -652,7 +656,6 @@ class AgentPPO(AgentBase):
     )
 
   def update_net(self):
-    print('update: preprocess...')
     with torch.no_grad():
       buf_state, buf_reward, buf_mask, buf_action, buf_noise = [
         ten.to(self.cfg.device) for ten in self.buffer]
@@ -677,7 +680,6 @@ class AgentPPO(AgentBase):
     obj_actor = None
     assert buf_len * \
       self.EP.num_envs >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
-    print('update: backprop...')
     for _ in range(self.cfg.updates_per_rollout):
       indices = torch.randint(buf_len, size=(
         self.cfg.batch_size//self.EP.num_envs,), requires_grad=False, device=self.cfg.device)
