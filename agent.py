@@ -684,7 +684,7 @@ class AgentPPO(AgentBase):
     for i in range(self.cfg.updates_per_rollout):
       # indices = torch.randint(buf_len, size=(batch_size_per_env,), requires_grad=False, device=self.cfg.device)
 
-      indices = torch.arange(start=batch_size_per_env*i, end=batch_size_per_env*(i+1), requires_grad=False, device=self.cfg.device)
+      indices = torch.arange(start=(batch_size_per_env*i), end=batch_size_per_env*(i+1), requires_grad=False, device=self.cfg.device)%buf_len
 
       state = buf_state[indices]
       r_sum = buf_r_sum[indices]
