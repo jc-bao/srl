@@ -147,7 +147,7 @@ class ActorPPO(nn.Module):
 
     # the logarithm (log) of standard deviation (std) of action, it is a trainable parameter
     self.a_std_log = nn.Parameter(torch.zeros(
-      (1, EP.action_dim)) - 0.5, requires_grad=True)
+      (1, EP.action_dim)) - 0., requires_grad=True)
     self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
 
   def forward(self, state):

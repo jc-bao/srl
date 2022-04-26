@@ -680,9 +680,11 @@ class AgentPPO(AgentBase):
     obj_actor = None
     assert buf_len * \
       self.EP.num_envs >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
-    for _ in range(self.cfg.updates_per_rollout):
-      indices = torch.randint(buf_len, size=(
-        self.cfg.batch_size//self.EP.num_envs,), requires_grad=False, device=self.cfg.device)
+    batch_size_per_env = self.cfg.batch_size//self.EP.num_envs
+    for i in range(self.cfg.updates_per_rollout):
+      # indices = torch.randint(buf_len, size=(batch_size_per_env,), requires_grad=False, device=self.cfg.device)
+
+      indices = torch.arange(start=batch_size_per_env*i, end=batch_size_per_env*(i+1), requires_grad=False, device=self.cfg.device)
 
       state = buf_state[indices]
       r_sum = buf_r_sum[indices]
