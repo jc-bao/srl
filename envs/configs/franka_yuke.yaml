@@ -92,3 +92,4 @@ physx:
 
 task:
   randomize: False
+auto_reset: True

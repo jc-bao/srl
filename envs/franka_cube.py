@@ -479,7 +479,7 @@ class FrankaCube(gym.Env):
 			reach_rew = 0.5*torch.mean((distances<self.cfg.err).float(), dim=-1)
 			return distance_rew+reach_rew 
 
-	def reset(self):
+	def reset(self, config=None):
 		# step first to init params
 		act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
 		for _ in range(5):
@@ -493,7 +493,10 @@ class FrankaCube(gym.Env):
 
 	def step(self, actions: torch.Tensor):
 		# apply actions
-		reset_idx = self.reset_buf.clone()
+		if self.cfg.auto_reset:
+			reset_idx = self.reset_buf.clone()
+		else:
+			reset_idx = torch.zeros_like(self.reset_buf, device=self.device)
 		done_env_num = reset_idx.sum()
 		# reset goals
 		goal_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
