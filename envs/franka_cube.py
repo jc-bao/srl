@@ -184,6 +184,9 @@ class FrankaCube(gym.Env):
 		# create block assets
 		box_opts = gymapi.AssetOptions()
 		box_opts.density = 400
+		box_opts.angular_damping = 100
+		box_opts.linear_damping = 10
+		box_opts.thickness = 0.005
 		block_asset = self.gym.create_box(
 			self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
 		goal_opts = gymapi.AssetOptions()
@@ -1168,7 +1171,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, inhand_rate=0.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 1, inhand_rate=1.0, max_grip_vel=0.3)
 	obs = env.reset()
 	start = time.time()
 	action_list = [
