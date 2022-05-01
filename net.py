@@ -52,8 +52,14 @@ class ActorSAC(nn.Module):
 
 class ActorFixSAC(nn.Module):
   def __init__(self, cfg):
-    self.cfg = cfg
-    EP = cfg.env_params
+    self.cfg, EP = AttrDict(), AttrDict()
+    # filter out isaac object to make function pickleable
+    for k, v in cfg.env_params.items():
+      if not hasattr(v, '__call__'):
+        EP[k] = v
+    for k, v in cfg.items():
+      if k != 'env_params':
+        self.cfg[k] = cfg[k]
     super().__init__()
     if cfg.net_type == 'deepset': 
       self.net_state = ActorDeepsetBlock(cfg)
