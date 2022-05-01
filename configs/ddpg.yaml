@@ -1,7 +1,7 @@
 # wandb
 wandb: true
 project: DDPG_debug 
-name: hello
+name: default 
 
 # seed 
 random_seed: 0
@@ -11,7 +11,7 @@ her_rate: 0.8
 if_use_per: false
 buffer_size: 3000000
 
-# env_params
+ nv_params
 env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
@@ -34,8 +34,8 @@ max_collect_steps: !!float 1e9
 resue: 10
 steps_per_rollout: 409600
 updates_per_rollout: null # calulate with resue
-batch_size: 8192
-gamma: 0.99
+batch_size: 2048
+gamma: 0.98
 lr: 0.00024
 soft_update_tau: 0.05
 explore_noise: 0.2
