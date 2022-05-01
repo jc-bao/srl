@@ -498,6 +498,8 @@ class FrankaCube(gym.Env):
 		# reset goals
 		goal_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[goal_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
+		ground_goal_idx = reset_idx & (torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) 
+		self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
 		# reset blocks
 		if done_env_num > 0:
 			block_indices = self.global_indices[reset_idx, 1:].flatten()
@@ -530,16 +532,16 @@ class FrankaCube(gym.Env):
 		self.actions = torch.clip(
 			actions.clone().view(self.cfg.num_envs,self.cfg.num_robots,4).to(self.device)+self.cfg.action_shift, 
 			-self.cfg.clip_actions, self.cfg.clip_actions)
-		# pos_target = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel + self.hand_pos_tensor
-		# filtered_pos_target = self.hand_pos_tensor
+		pos_target = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel + self.hand_pos_tensor
+		filtered_pos_target = self.hand_pos_tensor
 		# step physics and render each frame
 		for i in range(self.cfg.control_freq_inv):
 			# setup control params
 			orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
-			self.target_hand_pos = self.actions[..., :3] * self.cfg.dt * self.cfg.max_vel + self.target_hand_pos
-			pos_errs = self.target_hand_pos - self.hand_pos_tensor 
-			# filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
-			# pos_errs = filtered_pos_target - self.hand_pos_tensor 
+			# self.target_hand_pos = self.actions[..., :3] * self.cfg.dt * self.cfg.max_vel + self.target_hand_pos
+			# pos_errs = self.target_hand_pos - self.hand_pos_tensor 
+			filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
+			pos_errs = filtered_pos_target - self.hand_pos_tensor 
 			# pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
 			# clip with bound
 			if self.cfg.bound_robot:
@@ -959,10 +961,10 @@ class FrankaCube(gym.Env):
 		return q_r[..., 0:3] * torch.sign(q_r[..., 3]).unsqueeze(-1)
 
 	def ezpolicy(self, obs):
-		up_step = 8
-		reach_step = 38
-		grasp_step = 45
-		end_step = 100
+		up_step = 4
+		reach_step = 15
+		grasp_step = 17
+		end_step = 50
 		pos = obs[..., :3]*self.goal_std+self.goal_mean + self.origin_shift
 		obj = obs[..., 17:20].view(
 			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
@@ -983,13 +985,14 @@ class FrankaCube(gym.Env):
 					action[env_id, 2:4] = 1
 				elif up_step <= self.progress_buf[env_id] < reach_step:
 					# action[env_id, :3] = (torch.tensor([-0.15,0,0.05],device=self.device) - pos_now)
-					action[env_id, :3] = (obj_now - pos_now)/r2o
+					action[env_id, :3] = (obj_now - pos_now)*8
 					action[env_id, 3] = 1
 				elif reach_step <= self.progress_buf[env_id] < grasp_step:
 					action[env_id, 3] = -1
 				elif grasp_step <= self.progress_buf[env_id] < end_step:
-					action[env_id, :3] = (goal_now - obj_now)/o2g
-		return action
+					action[env_id, :3] = (goal_now - obj_now)*4
+					action[env_id, 3] = -1
+		return action - self.cfg.action_shift
 
 	def update_config(self, cfg):
 		cfg.update(enable_camera_sensors=cfg.num_cameras > 0)
@@ -1165,7 +1168,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, inhand_rate=1.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, inhand_rate=0.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
 	obs = env.reset()
 	start = time.time()
 	action_list = [
@@ -1174,14 +1177,14 @@ if __name__ == '__main__':
     *([[-1,0,0,1]]*4),
     *([[0,-1,0,1]]*4),]
 	for i in range(100):
-		for j in range(16):
+		for j in range(env.cfg.max_steps):
 			if args.random:
 				act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)
 			elif args.ezpolicy:
 				act = env.ezpolicy(obs)
 			else:
 				act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
-				act = torch.tensor([action_list[j]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
+				act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
 			env.render(mode='human')
 			# print(env.info_parser(info).early_termin)
