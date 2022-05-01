@@ -619,7 +619,7 @@ class FrankaCube(gym.Env):
 		early_termin = ((self.progress_buf >= self.cfg.early_termin_step) & \
 			(
 				# not touch the object
-				torch.all(torch.max(self.init_ag - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_termin_bar)|
+				torch.all(torch.max(self.init_ag - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_termin_bar, dim=-1)|
 				# hit the ground
 				torch.any(self.grip_pos[..., 2] < (self.cfg.block_size/4+self.cfg.table_size[2]), dim=-1) |
 				# block droped
@@ -627,9 +627,12 @@ class FrankaCube(gym.Env):
 			))
 		success_env = rew > self.cfg.success_bar
 		self.success_step_buf[~success_env] = self.progress_buf[~success_env]
-		self.reset_buf = ((self.progress_buf >= (self.cfg.max_steps)) |
-											(self.progress_buf >= self.success_step_buf + self.cfg.extra_steps) |
-											early_termin)
+		if self.cfg.auto_reset:
+			self.reset_buf = ((self.progress_buf >= (self.cfg.max_steps)) |
+												(self.progress_buf >= self.success_step_buf + self.cfg.extra_steps) |
+												early_termin)
+		else:
+			self.reset_buf[:] = False
 		done = self.reset_buf.clone().type(torch.float)
 		# info
 		info = torch.cat((
