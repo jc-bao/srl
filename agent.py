@@ -40,6 +40,7 @@ class AgentBase:
     torch.set_default_dtype(torch.float32)
 
     '''env setup'''
+    print('[Agent] env setup')
     self.env = gym.make(cfg.env_name, **cfg.env_kwargs)
     self.cfg.update(env_params=self.env.env_params())
     # alias for env_params
@@ -50,6 +51,7 @@ class AgentBase:
       self.cfg.batch_size = self.EP.num_envs
 
     '''set up actor critic'''
+    print('[Agent] net setup')
     act_class = getattr(net, cfg.act_net, None)
     cri_class = getattr(net, cfg.critic_net, None)
     self.act = act_class(cfg).to(self.cfg.device)
@@ -66,6 +68,7 @@ class AgentBase:
       self.cri.parameters(), self.cfg.lr) if cri_class else self.act_optimizer
 
     '''function'''
+    print('[Agent] data setup')
     self.criterion = torch.nn.SmoothL1Loss()
     # PER (Prioritized Experience Replay) for sparse reward
     if getattr(cfg, 'if_use_per', False):

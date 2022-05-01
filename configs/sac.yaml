@@ -1,7 +1,7 @@
 # wandb
 wandb: true
-project: REDQ_debug 
-name: hello
+project: SAC_debug 
+name: default
 
 # seed 
 random_seed: 0
@@ -9,7 +9,7 @@ random_seed: 0
 # replay
 her_rate: 0.8
 if_use_per: false
-buffer_size: 5000000
+buffer_size: 2500000
 
 # env_params
 env_name: 'FrankaPNP-v0'
@@ -21,7 +21,7 @@ extra_info_dim: 0 # extra info get from agent
 
 # network
 act_net: ActorFixSAC
-critic_net: CriticREDq
+critic_net: CriticTwin
 net_dim: 128
 net_type: deepset
 if_act_target: false
@@ -29,18 +29,18 @@ if_cri_target: false
 gpu_id: 0
 
 # algorithm
-agent_name: AgentREDqSAC
+agent_name: AgentSAC
 max_collect_steps: !!float 1e9
 resue: 10
-steps_per_rollout: 819200
+steps_per_rollout: 409600
 updates_per_rollout: null # calulate with resue
-batch_size: 8192
-gamma: 0.99
+batch_size: 2048
+gamma: 0.98
 lr: 0.00024
-soft_update_tau: 0.0039
+soft_update_tau: 0.05
 
 # eval
-eval_per_rollout: 0.1
+eval_per_rollout: 0.2
 eval_steps: null # set with steps per rollout
 render: true 
 
