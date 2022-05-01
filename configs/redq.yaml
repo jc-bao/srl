@@ -34,7 +34,7 @@ max_collect_steps: !!float 1e9
 resue: 10
 steps_per_rollout: 819200
 updates_per_rollout: null # calulate with resue
-batch_size: 8192
+batch_size: 2048 
 gamma: 0.99
 lr: 0.00024
 soft_update_tau: 0.0039
