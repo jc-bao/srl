@@ -464,6 +464,7 @@ class FrankaCube(gym.Env):
 		self.grip_pos = (torch.stack(self.franka_lfinger_poses,dim=1) +
 										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
 		self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
+		self.target_hand_pos = self.hand_pos_tensor.clone()
 
 	def compute_reward(self, ag, dg, info, normed=True):
 		ag = ag.view(-1, self.cfg.num_goals, 3)
@@ -482,8 +483,7 @@ class FrankaCube(gym.Env):
 	def reset(self, config=None):
 		# step first to init params
 		act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
-		for _ in range(5):
-			obs, _, _, _ = self.step(act)
+		obs, _, _, _ = self.step(act)
 		for _ in range(5):
 			self.reset_buf[:] = True
 			obs, _, _, _ = self.step(act)
@@ -493,10 +493,7 @@ class FrankaCube(gym.Env):
 
 	def step(self, actions: torch.Tensor):
 		# apply actions
-		if self.cfg.auto_reset:
-			reset_idx = self.reset_buf.clone()
-		else:
-			reset_idx = torch.zeros_like(self.reset_buf, device=self.device)
+		reset_idx = self.reset_buf.clone()
 		done_env_num = reset_idx.sum()
 		# reset goals
 		goal_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
@@ -533,15 +530,17 @@ class FrankaCube(gym.Env):
 		self.actions = torch.clip(
 			actions.clone().view(self.cfg.num_envs,self.cfg.num_robots,4).to(self.device)+self.cfg.action_shift, 
 			-self.cfg.clip_actions, self.cfg.clip_actions)
-		pos_target = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel + self.hand_pos_tensor
-		filtered_pos_target = self.hand_pos_tensor
+		# pos_target = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel + self.hand_pos_tensor
+		# filtered_pos_target = self.hand_pos_tensor
 		# step physics and render each frame
 		for i in range(self.cfg.control_freq_inv):
 			# setup control params
 			orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
-			filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
-			pos_errs = filtered_pos_target - self.hand_pos_tensor 
-			pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
+			self.target_hand_pos = self.actions[..., :3] * self.cfg.dt * self.cfg.max_vel + self.target_hand_pos
+			pos_errs = self.target_hand_pos - self.hand_pos_tensor 
+			# filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
+			# pos_errs = filtered_pos_target - self.hand_pos_tensor 
+			# pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
 			# clip with bound
 			if self.cfg.bound_robot:
 				pos_errs = torch.clip(pos_errs+self.grip_pos, self.torch_robot_space.low,
@@ -582,6 +581,7 @@ class FrankaCube(gym.Env):
 			self.gym.refresh_rigid_body_state_tensor(self.sim)
 			self.gym.refresh_jacobian_tensors(self.sim)
 			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
+			self.target_hand_pos[reset_idx] = self.hand_pos_tensor[reset_idx] 
 		if not self.cfg.headless:
 			self.render(mode='human')
 		if self.device == "cpu":
@@ -809,9 +809,12 @@ class FrankaCube(gym.Env):
 			))
 		success_env = rew > self.cfg.success_bar
 		self.success_step_buf[~success_env] = self.progress_buf[~success_env]
-		self.reset_buf = ((self.progress_buf >= (self.cfg.max_steps)) |
-											(self.progress_buf >= self.success_step_buf + self.cfg.extra_steps) |
-											early_termin)
+		if self.cfg.auto_reset:
+			self.reset_buf = ((self.progress_buf >= (self.cfg.max_steps)) |
+												(self.progress_buf >= self.success_step_buf + self.cfg.extra_steps) |
+												early_termin)
+		else:
+			self.reset_buf[...] = False
 		done = self.reset_buf.clone().type(torch.float)
 		# info
 		info = torch.cat((
@@ -1162,20 +1165,26 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, base_steps=100, inhand_rate=1.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
-	env.cfg.early_termin_step = 60
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, inhand_rate=1.0, bound_robot=True, sim_device_id = 0, num_goals = 1)
 	obs = env.reset()
 	start = time.time()
-	for _ in range(10000):
-		if args.random:
-			act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)
-		elif args.ezpolicy:
-			act = env.ezpolicy(obs)
-		else:
-			act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
-		obs, rew, done, info = env.step(act)
-		env.render(mode='human')
-		print(env.info_parser(info).early_termin)
+	action_list = [
+    *([[1,0,0,1]]*4), 
+    *([[0,1,0,1]]*4),
+    *([[-1,0,0,1]]*4),
+    *([[0,-1,0,1]]*4),]
+	for i in range(100):
+		for j in range(16):
+			if args.random:
+				act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)
+			elif args.ezpolicy:
+				act = env.ezpolicy(obs)
+			else:
+				act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
+				act = torch.tensor([action_list[j]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
+			obs, rew, done, info = env.step(act)
+			env.render(mode='human')
+			# print(env.info_parser(info).early_termin)
 		# Image.fromarray(images[0]).save('foo.png')
 
 	print(time.time()-start)
