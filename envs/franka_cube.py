@@ -184,7 +184,7 @@ class FrankaCube(gym.Env):
 
 		# create block assets
 		box_opts = gymapi.AssetOptions()
-		box_opts.density = 400
+		box_opts.density = 100
 		box_opts.angular_damping = 100
 		box_opts.linear_damping = 10
 		box_opts.thickness = 0.005
@@ -1073,12 +1073,12 @@ class FrankaCube(gym.Env):
 					action[env_id, 2:4] = 1
 				elif up_step <= self.progress_buf[env_id] < reach_step:
 					# action[env_id, :3] = (torch.tensor([-0.15,0,0.05],device=self.device) - pos_now)
-					action[env_id, :3] = (obj_now - pos_now)*8
+					action[env_id, :3] = (obj_now - pos_now)*16
 					action[env_id, 3] = 1
 				elif reach_step <= self.progress_buf[env_id] < grasp_step:
 					action[env_id, 3] = -1
 				elif grasp_step <= self.progress_buf[env_id] < end_step:
-					action[env_id, :3] = (goal_now - obj_now)*4
+					action[env_id, :3] = (goal_now - obj_now)*16
 					action[env_id, 3] = -1
 		return action - self.cfg.action_shift
 
@@ -1106,6 +1106,8 @@ class FrankaCube(gym.Env):
 			max_steps=cfg.base_steps*cfg.num_goals,
 			# judge for success
 			success_bar={'sparse':-0.01, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
+			# block size
+			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
 		)
 		# robot control
 		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
@@ -1262,7 +1264,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 2, inhand_rate=1.0, max_grip_vel=0.3)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 1, inhand_rate=1.0, max_vel=2)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
