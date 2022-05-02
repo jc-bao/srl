@@ -1020,7 +1020,7 @@ class FrankaCube(gym.Env):
 			shared_dim=cfg.per_shared_dim * cfg.num_robots, 
 			state_dim=cfg.per_shared_dim * cfg.num_robots + cfg.per_seperate_dim * \
 			cfg.num_goals + cfg.per_goal_dim*cfg.num_goals,
-			info_dim=cfg.info_dim + cfg.num_goals*cfg.per_goal_dim,
+			info_dim=cfg.info_dim + cfg.num_goals*cfg.per_goal_dim + cfg.num_robots*3,
 			seperate_dim=cfg.per_seperate_dim * cfg.num_goals,
 			goal_dim=cfg.per_goal_dim * cfg.num_goals,
 			# device
