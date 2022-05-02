@@ -47,7 +47,7 @@ err: 0.05
 clip_actions: 1.0
 # block
 inhand_rate: 0.2
-goal_ground_rate: 0.5
+goal_ground_rate: 0.2
 block_size: 0.04 
 block_length: 0.2
 # robot
@@ -66,7 +66,7 @@ robot_y: 0.5
 # ee_init_pos: [0.0, 0.0, 0.05]
 friction: 0.01
 # goal space
-goal_space: [0.3, 0.3, 0.15]
+goal_space: [0.3, 0.3, 0.2]
 
 # sim:
 physics_engine: SIM_PHYSX 
