@@ -1,6 +1,6 @@
 # wandb
 wandb: true
-project: DDPG_debug 
+project: TD3_debug 
 name: default 
 
 # seed 
@@ -21,7 +21,7 @@ extra_info_dim: 0 # extra info get from agent
 
 # network
 act_net: Actor
-critic_net: Critic
+critic_net: CriticTwin
 net_dim: 128
 net_type: deepset
 if_act_target: true
@@ -29,21 +29,24 @@ if_cri_target: true
 gpu_id: 0
 
 # algorithm
-agent_name: AgentDDPG
+agent_name: AgentTD3
 max_collect_steps: !!float 1e9
-resue: 2 
+resue: 10
 steps_per_rollout: 409600
 updates_per_rollout: null # calulate with resue
 batch_size: 2048
 gamma: 0.98
 lr: 0.00024
-soft_update_tau: 0.05
+soft_update_tau: 0.005
 explore_noise: 0.2
+# TD3
+update_freq: 2
+policy_noise: 0.15
 
 # eval
-eval_per_rollout: 0.2
+eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
-render: true 
+render: false
 
 # save
 cwd: results

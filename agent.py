@@ -292,10 +292,10 @@ class AgentBase:
       next_a = self.act_target(trans.next_state)  # stochastic policy
       critic_targets: torch.Tensor = self.cri_target(trans.next_state, next_a)
       (next_q, min_indices) = torch.min(critic_targets, dim=1, keepdim=True)
-      q_label = trans.rew.unsqueeze(-1)+ trans.mask.unsqueeze(-1) * next_q 
+      q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * next_q
     q = self.cri(trans.state, trans.action)
     obj_critic = self.criterion(q, q_label)
-    return obj_critic, trans.state 
+    return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
     """
@@ -408,7 +408,8 @@ class AgentSAC(AgentBase):
       q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
         (next_q + next_log_prob * alpha)
     q1, q2 = self.cri.get_q1_q2(trans.state, trans.action)
-    obj_critic = (self.criterion(q1, q_label) + self.criterion(q2, q_label)) / 2
+    obj_critic = (self.criterion(q1, q_label) +
+                  self.criterion(q2, q_label)) / 2
     return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
@@ -614,6 +615,59 @@ class AgentDDPG(AgentBase):
     )
 
 
+class AgentTD3(AgentDDPG):
+  def __init__(self, cfg):
+    super().__init__(cfg=cfg)
+
+  def update_net(self) -> tuple:
+    self.buffer.update_now_len()
+    obj_critic = obj_actor = None
+    for update_c in range(1+int(self.buffer.now_len / self.buffer.max_len * self.cfg.updates_per_rollout)):
+      obj_critic, state = self.get_obj_critic(self.buffer, self.cfg.batch_size)
+      self.optimizer_update(self.cri_optimizer, obj_critic)
+
+      action_pg = self.act(state)  # policy gradient
+      obj_actor = -self.cri_target(state, action_pg).mean() 
+      self.optimizer_update(self.act_optimizer, obj_actor)
+      if update_c % self.cfg.update_freq == 0:  # delay update
+        self.soft_update(self.cri_target, self.cri, self.cfg.soft_update_tau)
+        self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau)
+    return AttrDict(
+      critic_loss=obj_critic.item()/2,
+      actor_loss=-obj_actor.item(),
+    )
+
+  def get_obj_critic_raw(self, buffer, batch_size):
+    with torch.no_grad():
+      trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
+      next_a = self.act_target.get_action_noise(trans.next_state, self.cfg.policy_noise)
+      next_q = torch.min(*self.cri_target.get_q1_q2(trans.next_state, next_a))
+      q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * next_q
+    q1, q2 = self.cri.get_q1_q2(trans.state, trans.action)
+    obj_critic = self.criterion(q1, q_label) + self.criterion(q2, q_label)
+    return obj_critic, trans.state
+
+  def get_obj_critic_per(self, buffer, batch_size):
+    with torch.no_grad():
+      reward, mask, action, state, next_s, is_weights = buffer.sample_batch(
+        batch_size
+      )
+      next_a = self.act_target.get_action_noise(
+        next_s, self.policy_noise
+      )  # policy noise
+      next_q = torch.min(
+        *self.cri_target.get_q1_q2(next_s, next_a)
+      )  # twin critics
+      q_label = reward + mask * next_q
+
+    q1, q2 = self.cri.get_q1_q2(state, action)
+    td_error = self.criterion(q1, q_label) + self.criterion(q2, q_label)
+    obj_critic = (td_error * is_weights).mean()
+
+    buffer.td_error_update(td_error.detach())
+    return obj_critic, state
+
+
 class AgentPPO(AgentBase):
   def __init__(self, cfg):
     super().__init__(cfg=cfg)
@@ -659,7 +713,7 @@ class AgentPPO(AgentBase):
     with torch.no_grad():
       buf_state, buf_reward, buf_mask, buf_action, buf_noise = [
         ten.to(self.cfg.device) for ten in self.buffer]
-        # ten.to(self.cfg.device).view(-1,ten.shape[-1]) for ten in self.buffer]
+    # ten.to(self.cfg.device).view(-1,ten.shape[-1]) for ten in self.buffer]
       buf_len = buf_state.shape[0]
 
       '''get buf_r_sum, buf_logprob'''
@@ -682,17 +736,18 @@ class AgentPPO(AgentBase):
     # assert buf_len * \
     #   self.EP.num_envs >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
     # batch_size_per_env = self.cfg.batch_size//self.EP.num_envs
-    num_traj_per_batch = self.cfg.batch_size//buf_len # split traj by env number
+    num_traj_per_batch = self.cfg.batch_size//buf_len  # split traj by env number
     for i in range(self.cfg.updates_per_rollout):
       # indices = torch.randint(buf_len, size=(batch_size_per_env,), requires_grad=False, device=self.cfg.device)
       # indices = torch.arange(start=(self.cfg.batch_size*i), end=self.cfg.batch_size*(i+1), requires_grad=False, device=self.cfg.device)%buf_len
-      indices = torch.arange(start=(num_traj_per_batch*i), end=num_traj_per_batch*(i+1), requires_grad=False, device=self.cfg.device)%self.EP.num_envs
+      indices = torch.arange(start=(num_traj_per_batch*i), end=num_traj_per_batch*(
+        i+1), requires_grad=False, device=self.cfg.device) % self.EP.num_envs
 
-      state = buf_state[:,indices]
-      r_sum = buf_r_sum[:,indices]
-      adv_v = buf_adv_v[:,indices].squeeze(-1)
-      action = buf_action[:,indices]
-      logprob = buf_logprob[:,indices]
+      state = buf_state[:, indices]
+      r_sum = buf_r_sum[:, indices]
+      adv_v = buf_adv_v[:, indices].squeeze(-1)
+      action = buf_action[:, indices]
+      logprob = buf_logprob[:, indices]
 
       '''PPO: Surrogate objective of Trust Region'''
       new_logprob, obj_entropy = self.act.get_logprob_entropy(
