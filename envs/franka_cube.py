@@ -435,6 +435,8 @@ class FrankaCube(gym.Env):
 		self.init_ag = torch.zeros_like(self.block_states[..., :3], device=self.device, dtype=torch.float)
 		self.goal = self.root_state_tensor[:, self.cfg.num_robots*2 +
 																			 self.cfg.num_goals:self.cfg.num_robots*2+self.cfg.num_goals*2, :3]
+		# table
+		self.table_states = self.root_state_tensor[:, self.cfg.num_robots:self.cfg.num_robots*2]
 
 		# object pos
 		rigid_body_tensor = self.gym.acquire_rigid_body_state_tensor(self.sim)
@@ -506,6 +508,7 @@ class FrankaCube(gym.Env):
 				v_old = self.cfg[k]
 				self.cfg[k] = v
 				print(f'[Curriculum] change {k} from {v_old} to {v}')
+				# TODO move this to general update
 			else:
 				print(f'[Curriculum] config has no attribute {k}')
 		# resample original pos
@@ -515,6 +518,9 @@ class FrankaCube(gym.Env):
 		act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
 		obs, _, _, _ = self.step(act) # TODO try to remove this
 		# for _ in range(5):
+		# change params here TODO more elegant way
+		if 'table_gap' in config:
+			self.table_states[:,:,0] = torch.tensor([-(v+self.cfg.table_size[0])/2,(v+self.cfg.table_size[0])/2], device=self.device)
 		self.reset_buf[:] = True
 		obs, _, _, _ = self.step(act)
 		'''
