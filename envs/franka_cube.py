@@ -482,6 +482,17 @@ class FrankaCube(gym.Env):
 			distance_rew = 0.5*(1-torch.mean(distances,dim=-1)*5)/self.cfg.num_goals
 			reach_rew = 0.5*torch.mean((distances<self.cfg.err).float(), dim=-1)
 			return distance_rew+reach_rew 
+		elif self.cfg.reward_type == 'dense+':
+			# distance to obj
+			dist2obj = torch.norm(ag-info.grip_pos, dim=-1) # TODO multi robot
+			dist2obj_rew = 0.25*(1-torch.mean(dist2obj,dim=-1)*5)/self.cfg.num_goals
+			reach_obj_rew = 0.25*torch.mean((dist2obj<self.cfg.err).float(), dim=-1)
+			# distance to goal
+			dist2g = torch.norm(ag-dg, dim=-1)
+			dist2g_rew = 0.25*(1-torch.mean(dist2g,dim=-1)*5)/self.cfg.num_goals
+			reach_g_rew = 0.25*torch.mean((dist2g<self.cfg.err).float(), dim=-1)
+			return dist2obj_rew+reach_obj_rew+dist2g_rew+reach_g_rew
+
 
 	def reset(self, config=None):
 		# step first to init params
@@ -614,7 +625,7 @@ class FrankaCube(gym.Env):
 		), dim=-1)
 		# rew
 		rew = self.compute_reward(
-			self.block_states[..., :3], self.goal, None, normed=False)
+			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos), normed=False)
 		# reset
 		early_termin = ((self.progress_buf >= self.cfg.early_termin_step) & \
 			(
@@ -642,6 +653,7 @@ class FrankaCube(gym.Env):
 			torch.empty((self.cfg.num_envs, 3), device=self.device, dtype=torch.float),# traj_idx, traj_len, tleft
 			((self.block_states[..., :3]-self.goal_mean)/self.goal_std).view(
 				self.cfg.num_envs, 3*self.cfg.num_goals).type(torch.float),
+			self.grip_pos.view(self.cfg.num_envs, -1), 
 		), dim=-1)
 
 		# debug viz
@@ -1023,7 +1035,7 @@ class FrankaCube(gym.Env):
 			# steps
 			max_steps=cfg.base_steps*cfg.num_goals,
 			# judge for success
-			success_bar={'sparse':-0.01, 'dense': 0.94}[cfg.reward_type],
+			success_bar={'sparse':-0.01, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
 		)
 		# robot control
 		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
@@ -1118,6 +1130,8 @@ class FrankaCube(gym.Env):
 			return info[..., 5]
 		elif name == 'ag':
 			return info[..., 6:6+self.cfg.goal_dim]
+		elif name == 'grip_pos':
+			return info[..., 6+self.cfg.goal_dim:6+self.cfg.goal_dim+self.cfg.num_robot*3]
 		else:
 			raise NotImplementedError
 
@@ -1136,6 +1150,8 @@ class FrankaCube(gym.Env):
 			old_info[..., 5] = new_info.tleft
 		if 'ag' in new_info:
 			old_info[..., 6:6+self.cfg.num_goals*3] = new_info.ag
+		if 'grip_pos' in new_info:
+			old_info[..., 6+self.cfg.num_goals*3:6+self.cfg.num_goals*3+self.cfg.num_robot*3] = new_info.grip_pos
 		return old_info
 
 	def close(self):
