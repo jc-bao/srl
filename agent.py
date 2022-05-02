@@ -40,16 +40,17 @@ class AgentBase:
     torch.set_default_dtype(torch.float32)
 
     '''env setup'''
+    print('[Agent] env setup')
     self.env = gym.make(cfg.env_name, **cfg.env_kwargs)
     self.cfg.update(env_params=self.env.env_params())
     # alias for env_params
     self.EP = self.cfg.env_params
     # batch size
     if self.cfg.batch_size < self.EP.num_envs:
-      print('WARNING: batch_size < num_envs, set batch_size to num_envs')
-      self.cfg.batch_size = self.EP.num_envs
+      print('[Agent] WARNING: batch_size < num_envs')
 
     '''set up actor critic'''
+    print('[Agent] net setup')
     act_class = getattr(net, cfg.act_net, None)
     cri_class = getattr(net, cfg.critic_net, None)
     self.act = act_class(cfg).to(self.cfg.device)
@@ -66,6 +67,7 @@ class AgentBase:
       self.cri.parameters(), self.cfg.lr) if cri_class else self.act_optimizer
 
     '''function'''
+    print('[Agent] data setup')
     self.criterion = torch.nn.SmoothL1Loss()
     # PER (Prioritized Experience Replay) for sparse reward
     if getattr(cfg, 'if_use_per', False):
@@ -397,19 +399,17 @@ class AgentSAC(AgentBase):
 
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
-      reward, mask, action, state, next_s, info = buffer.sample_batch(
-        batch_size, her_rate=self.cfg.her_rate)
-
+      trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
       next_a, next_log_prob = self.act_target.get_action_logprob(
-        next_s)  # stochastic policy
-      next_q = self.cri_target.get_q_min(next_s, next_a)
+        trans.next_state)  # stochastic policy
+      next_q = self.cri_target.get_q_min(trans.next_state, next_a)
 
       alpha = self.alpha_log.exp().detach()
-      q_label = reward + mask * (next_q + next_log_prob * alpha)
-    q1, q2 = self.cri.get_q1_q2(state, action)
-    obj_critic = (self.criterion(q1, q_label) +
-                  self.criterion(q2, q_label)) / 2
-    return obj_critic, state
+      q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
+        (next_q + next_log_prob * alpha)
+    q1, q2 = self.cri.get_q1_q2(trans.state, trans.action)
+    obj_critic = (self.criterion(q1, q_label) + self.criterion(q2, q_label)) / 2
+    return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
     with torch.no_grad():

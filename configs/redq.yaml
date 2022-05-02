@@ -1,7 +1,7 @@
 # wandb
 wandb: true
-project: DDPG_debug 
-name: default 
+project: REDQ_debug 
+name: hello
 
 # seed 
 random_seed: 0
@@ -20,8 +20,8 @@ reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
 
 # network
-act_net: ActorSAC
-critic_net: CriticTwin
+act_net: ActorFixSAC
+critic_net: CriticREDq
 net_dim: 128
 net_type: deepset
 if_act_target: false
@@ -29,19 +29,18 @@ if_cri_target: false
 gpu_id: 0
 
 # algorithm
-agent_name: AgentDDPG
+agent_name: AgentREDqSAC
 max_collect_steps: !!float 1e9
 resue: 10
-steps_per_rollout: 409600
+steps_per_rollout: 819200
 updates_per_rollout: null # calulate with resue
-batch_size: 2048
-gamma: 0.98
+batch_size: 2048 
+gamma: 0.99
 lr: 0.00024
-soft_update_tau: 0.05
-explore_noise: 0.2
+soft_update_tau: 0.0039
 
 # eval
-eval_per_rollout: 0.2
+eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
 render: true 
 
