@@ -55,7 +55,7 @@ curri:
     now: 0.5
     end: 0.
     step: -0.25
-    bar: -0.2
+    bar: -0.8
 
 # save
 cwd: results
