@@ -20,7 +20,7 @@ env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
   num_envs: 8192
-  reward_type: dense+
+  reward_type: dense
 reward_scale: 1
 extra_info_dim: 4 # extra info get from agent
 
@@ -48,6 +48,14 @@ soft_update_tau: 0.0039
 eval_per_rollout: 0.02 
 eval_steps: null # set with steps per rollout
 render: true
+
+# curriculum
+curri:
+  inhand_rate: 
+    now: 0.5
+    end: 0.
+    step: -0.25
+    bar: -0.2
 
 # save
 cwd: results
