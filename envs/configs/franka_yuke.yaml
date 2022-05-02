@@ -53,7 +53,7 @@ block_length: 0.04
 # robot
 num_robots: 1
 bound_robot: true
-action_shift: [0,0,-0.3,0]
+action_shift: [0,0,-0.1,0]
 asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'

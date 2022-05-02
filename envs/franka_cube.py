@@ -107,10 +107,11 @@ class FrankaCube(gym.Env):
 		# self.franka_default_dof_pos = to_torch(
 		# 	[[0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164, 0.02, 0.02]],
 		# 	device=self.device,)
-		predefined_dof_pos = torch.load(self.cfg_path/'default_joint_pos.pt').to(self.device)
-		random_idx = torch.randint(low=0, high=predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
-		self.franka_default_dof_pos = torch.empty((self.cfg.num_envs*self.cfg.num_robots, predefined_dof_pos.shape[-1]), device=self.device)
-		self.franka_default_dof_pos = predefined_dof_pos[random_idx]
+		self.predefined_dof_pos = torch.load(self.cfg_path/'default_joint_pos.pt').to(self.device)
+		random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
+		self.franka_default_dof_pos = torch.empty((self.cfg.num_envs*self.cfg.num_robots, self.predefined_dof_pos.shape[-1]), device=self.device)
+		self.franka_default_dof_pos = self.predefined_dof_pos[random_idx]
+		# self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(self.cfg.num_envs,self.cfg.num_robots,2)
 		self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(1,1,2)
 		self.franka_default_dof_state[...,-1] = 0.
 		orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
@@ -507,12 +508,54 @@ class FrankaCube(gym.Env):
 				print(f'[Curriculum] change {k} from {v_old} to {v}')
 			else:
 				print(f'[Curriculum] config has no attribute {k}')
+		# resample original pos
+		random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
+		self.franka_default_dof_state[:,:,0] = self.predefined_dof_pos[random_idx]
 		# step first to init params
 		act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
+		obs, _, _, _ = self.step(act) # TODO try to remove this
+		# for _ in range(5):
+		self.reset_buf[:] = True
 		obs, _, _, _ = self.step(act)
-		for _ in range(5):
-			self.reset_buf[:] = True
-			obs, _, _, _ = self.step(act)
+		'''
+		reset to any pos (deprecated as it is slow)
+		# pos_target = self.torch_goal_space.sample((self.cfg.num_envs,self.cfg.num_robots))+self.origin_shift - self.finger_shift
+		pos_target = self.torch_goal_space.sample((self.cfg.num_envs,self.cfg.num_robots))+self.origin_shift - self.finger_shift
+		print(pos_target, self.goal)
+		filtered_pos_target = self.hand_pos_tensor.clone()
+		for _ in range(100): # TODO wrap up as a function
+			# setup control params
+			orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
+			# filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
+			filtered_pos_target = pos_target
+			pos_errs = filtered_pos_target - self.hand_pos_tensor 
+			# clip with bound
+			if self.cfg.bound_robot:
+				pos_errs = torch.clip(pos_errs+self.grip_pos, self.torch_robot_space.low,
+														self.torch_robot_space.high) - self.grip_pos
+			dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
+			self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
+			# limit
+			self.franka_dof_targets[..., :self.num_franka_dofs] = tensor_clamp(
+				self.franka_dof_targets[...,
+																: self.num_franka_dofs], self.franka_dof_lower_limits, self.franka_dof_upper_limits)
+			# Deploy actions
+			act_indices = self.global_indices[:, :self.cfg.num_robots].flatten()
+			self.gym.set_dof_position_target_tensor_indexed(
+				self.sim, 
+				gymtorch.unwrap_tensor(self.franka_dof_targets),
+				gymtorch.unwrap_tensor(act_indices),
+				act_indices.shape[0])
+			# simulate
+			self.gym.simulate(self.sim)
+			# update state data
+			self.gym.refresh_actor_root_state_tensor(self.sim)
+			self.gym.refresh_dof_state_tensor(self.sim)
+			self.gym.refresh_rigid_body_state_tensor(self.sim)
+			self.gym.refresh_jacobian_tensors(self.sim)
+			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
+		print('end:', self.hand_pos_tensor - pos_target)
+		'''
 		self.progress_buf[:] = 0  # NOTE: make sure step start from 0
 		self.default_grip_pos = self.grip_pos.clone()
 		return obs
@@ -1205,13 +1248,13 @@ if __name__ == '__main__':
 	run policy
 	'''
 	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 1, inhand_rate=1.0, max_grip_vel=0.3)
-	obs = env.reset()
 	start = time.time()
-	action_list = [
-		*([[1,0,0,1]]*4), 
-		*([[0,1,0,1]]*4),
-		*([[-1,0,0,1]]*4),
-		*([[0,-1,0,1]]*4),]
+	# action_list = [
+	# 	*([[1,0,0,1]]*4), 
+	# 	*([[0,1,0,1]]*4),
+	# 	*([[-1,0,0,1]]*4),
+	# 	*([[0,-1,0,1]]*4),]
+	obs = env.reset()
 	for i in range(100):
 		for j in range(env.cfg.max_steps):
 			if args.random:
@@ -1220,7 +1263,7 @@ if __name__ == '__main__':
 				act = env.ezpolicy(obs)
 			else:
 				act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
-				act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
+				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
 			env.render(mode='human')
 			# print(env.info_parser(info).early_termin)
