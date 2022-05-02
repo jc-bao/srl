@@ -50,6 +50,8 @@ eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
 render: false
 
+curri: {}
+
 # save
 cwd: results
 rollout_per_save: 0.1

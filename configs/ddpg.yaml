@@ -40,6 +40,8 @@ lr: 0.00024
 soft_update_tau: 0.005
 explore_noise: 0.2
 
+curri: {}
+
 # eval
 eval_per_rollout: 0.2
 eval_steps: null # set with steps per rollout
