@@ -21,7 +21,7 @@ env_params: null
 env_kwargs:
   num_envs: 2
   num_cameras: 0
-  reward_type: dense
+  reward_type: dense+
   headless: true 
 reward_scale: 1
 
