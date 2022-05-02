@@ -22,7 +22,7 @@ env_kwargs:
   num_envs: 2
   num_cameras: 0
   reward_type: dense
-  headless: false
+  headless: true 
 reward_scale: 1
 
 # network

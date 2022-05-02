@@ -5,344 +5,369 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+class Actor(nn.Module):
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.net = nn.Sequential(
+			nn.Linear(EP.state_dim, cfg.net_dim),nn.ReLU(),
+			nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
+			nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
+			nn.Linear(cfg.net_dim, EP.action_dim),
+		)
+		self.explore_noise = cfg.explore_noise  # standard deviation of exploration action noise
+
+	def forward(self, state):
+		return self.net(state).tanh()  # action.tanh()
+
+	def get_action(self, state):  # for exploration
+		action = self.net(state).tanh()
+		noise = (torch.randn_like(action) *
+						 self.explore_noise).clamp(-0.5, 0.5)
+		return (action + noise).clamp(-1.0, 1.0)
+
+
 class ActorSAC(nn.Module):
-  def __init__(self, cfg):
-    self.cfg, EP = AttrDict(), AttrDict()
-    # filter out isaac object to make function pickleable
-    for k, v in cfg.env_params.items():
-      if not hasattr(v, '__call__'):
-        EP[k] = v
-    for k, v in cfg.items():
-      if k != 'env_params':
-        self.cfg[k] = cfg[k]
-    super().__init__()
-    self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
-                                   nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(), )
-    self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
-    self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
-    self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+																	 nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(), )
+		self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+																	 nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
+		self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+																	 nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
+		self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
 
-  def forward(self, state):
-    tmp = self.net_state(state)
-    return self.net_a_avg(tmp).tanh()  # action
+	def forward(self, state):
+		tmp = self.net_state(state)
+		return self.net_a_avg(tmp).tanh()  # action
 
-  def get_action(self, state):
-    t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
-    a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
-    return torch.normal(a_avg, a_std).tanh()  # re-parameterize
+	def get_action(self, state):
+		t_tmp = self.net_state(state)
+		a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
+		a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
+		return torch.normal(a_avg, a_std).tanh()  # re-parameterize
 
-  def get_action_logprob(self, state):
-    t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
-    a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
-    a_std = a_std_log.exp()
+	def get_action_logprob(self, state):
+		t_tmp = self.net_state(state)
+		a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
+		a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
+		a_std = a_std_log.exp()
 
-    noise = torch.randn_like(a_avg, requires_grad=True)
-    a_tan = (a_avg + a_std * noise).tanh()  # action.tanh()
+		noise = torch.randn_like(a_avg, requires_grad=True)
+		a_tan = (a_avg + a_std * noise).tanh()  # action.tanh()
 
-    logprob = a_std_log + self.log_sqrt_2pi + \
-      noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
-    # fix logprob using the derivative of action.tanh()
-    logprob = logprob + (-a_tan.pow(2) + 1.000001).log()
-    return a_tan, logprob.sum(1, keepdim=True)  # todo negative logprob
+		logprob = a_std_log + self.log_sqrt_2pi + \
+			noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
+		# fix logprob using the derivative of action.tanh()
+		logprob = logprob + (-a_tan.pow(2) + 1.000001).log()
+		return a_tan, logprob.sum(1, keepdim=True)  # todo negative logprob
 
 
 class ActorFixSAC(nn.Module):
-  def __init__(self, cfg):
-    self.cfg, EP = AttrDict(), AttrDict()
-    # filter out isaac object to make function pickleable
-    for k, v in cfg.env_params.items():
-      if not hasattr(v, '__call__'):
-        EP[k] = v
-    for k, v in cfg.items():
-      if k != 'env_params':
-        self.cfg[k] = cfg[k]
-    super().__init__()
-    if cfg.net_type == 'deepset': 
-      self.net_state = ActorDeepsetBlock(cfg)
-    elif cfg.net_type == 'mlp':
-      self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
-      nn.Linear(cfg.net_dim, EP.net_dim), nn.ReLU())
-    else:
-      raise NotImplementedError
-    self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
-    self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
-    self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
-    self.soft_plus = nn.Softplus()
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		if cfg.net_type == 'deepset':
+			self.net_state = ActorDeepsetBlock(cfg)
+		elif cfg.net_type == 'mlp':
+			self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+																		 nn.Linear(cfg.net_dim, EP.net_dim), nn.ReLU())
+		else:
+			raise NotImplementedError
+		self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+																	 nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
+		self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+																	 nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
+		self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
+		self.soft_plus = nn.Softplus()
 
-  def forward(self, state):
-    tmp = self.net_state(state)
-    return self.net_a_avg(tmp).tanh()  # action
+	def forward(self, state):
+		tmp = self.net_state(state)
+		return self.net_a_avg(tmp).tanh()  # action
 
-  def get_action(self, state):
-    t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
-    a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
-    return torch.normal(a_avg, a_std).tanh()  # re-parameterize
+	def get_action(self, state):
+		t_tmp = self.net_state(state)
+		a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
+		a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
+		return torch.normal(a_avg, a_std).tanh()  # re-parameterize
 
-  def get_a_log_std(self, state):
-    t_tmp = self.net_state(state)
-    a_log_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
-    return a_log_std
+	def get_a_log_std(self, state):
+		t_tmp = self.net_state(state)
+		a_log_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
+		return a_log_std
 
-  def get_logprob(self, state, action):
-    t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
-    a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
-    a_std = a_std_log.exp()
+	def get_logprob(self, state, action):
+		t_tmp = self.net_state(state)
+		a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
+		a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
+		a_std = a_std_log.exp()
 
-    '''add noise to a_noise in stochastic policy'''
-    a_noise = a_avg + a_std * torch.randn_like(a_avg, requires_grad=True)
-    noise = a_noise - action  # todo
+		'''add noise to a_noise in stochastic policy'''
+		a_noise = a_avg + a_std * torch.randn_like(a_avg, requires_grad=True)
+		noise = a_noise - action  # todo
 
-    log_prob = a_std_log + self.log_sqrt_2pi + \
-      noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
-    log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *
-                 a_noise)) * 2.  # better than below
-    return log_prob
+		log_prob = a_std_log + self.log_sqrt_2pi + \
+			noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
+		log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *
+																											 a_noise)) * 2.  # better than below
+		return log_prob
 
-  def get_action_logprob(self, state):
-    t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
-    a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
-    a_std = a_std_log.exp()
+	def get_action_logprob(self, state):
+		t_tmp = self.net_state(state)
+		a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
+		a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
+		a_std = a_std_log.exp()
 
-    '''add noise to a_noise in stochastic policy'''
-    noise = torch.randn_like(a_avg, requires_grad=True)
-    a_noise = a_avg + a_std * noise
-    # Can only use above code instead of below, because the tensor need gradients here.
-    # a_noise = torch.normal(a_avg, a_std, requires_grad=True)
+		'''add noise to a_noise in stochastic policy'''
+		noise = torch.randn_like(a_avg, requires_grad=True)
+		a_noise = a_avg + a_std * noise
+		# Can only use above code instead of below, because the tensor need gradients here.
+		# a_noise = torch.normal(a_avg, a_std, requires_grad=True)
 
-    '''compute log_prob according to mean and std of a_noise (stochastic policy)'''
-    # self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
-    log_prob = a_std_log + self.log_sqrt_2pi + \
-      noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
-    """same as below:
-        from torch.distributions.normal import Normal
-        log_prob = Normal(a_avg, a_std).log_prob(a_noise)
-        # same as below:
-        a_delta = (a_avg - a_noise).pow(2) /(2*a_std.pow(2))
-        log_prob = -a_delta - a_std.log() - np.log(np.sqrt(2 * np.pi))
-        """
+		'''compute log_prob according to mean and std of a_noise (stochastic policy)'''
+		# self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
+		log_prob = a_std_log + self.log_sqrt_2pi + \
+			noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
+		"""same as below:
+				from torch.distributions.normal import Normal
+				log_prob = Normal(a_avg, a_std).log_prob(a_noise)
+				# same as below:
+				a_delta = (a_avg - a_noise).pow(2) /(2*a_std.pow(2))
+				log_prob = -a_delta - a_std.log() - np.log(np.sqrt(2 * np.pi))
+				"""
 
-    '''fix log_prob of action.tanh'''
-    log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *
-                 a_noise)) * 2.  # better than below
-    """same as below:
-        epsilon = 1e-6
-        a_noise_tanh = a_noise.tanh()
-        log_prob = log_prob - (1 - a_noise_tanh.pow(2) + epsilon).log()
+		'''fix log_prob of action.tanh'''
+		log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *
+																											 a_noise)) * 2.  # better than below
+		"""same as below:
+				epsilon = 1e-6
+				a_noise_tanh = a_noise.tanh()
+				log_prob = log_prob - (1 - a_noise_tanh.pow(2) + epsilon).log()
 
-        Thanks for:
-        https://github.com/denisyarats/pytorch_sac/blob/81c5b536d3a1c5616b2531e446450df412a064fb/agent/actor.py#L37
-        ↑ MIT License， Thanks for https://www.zhihu.com/people/Z_WXCY 2ez4U
-        They use action formula that is more numerically stable, see details in the following link
-        https://pytorch.org/docs/stable/_modules/torch/distributions/transforms.html#TanhTransform
-        https://github.com/tensorflow/probability/commit/ef6bb176e0ebd1cf6e25c6b5cecdd2428c22963f
-        """
-    return a_noise.tanh(), log_prob.sum(1, keepdim=True)
+				Thanks for:
+				https://github.com/denisyarats/pytorch_sac/blob/81c5b536d3a1c5616b2531e446450df412a064fb/agent/actor.py#L37
+				↑ MIT License， Thanks for https://www.zhihu.com/people/Z_WXCY 2ez4U
+				They use action formula that is more numerically stable, see details in the following link
+				https://pytorch.org/docs/stable/_modules/torch/distributions/transforms.html#TanhTransform
+				https://github.com/tensorflow/probability/commit/ef6bb176e0ebd1cf6e25c6b5cecdd2428c22963f
+				"""
+		return a_noise.tanh(), log_prob.sum(1, keepdim=True)
 
 
 class ActorPPO(nn.Module):
-  def __init__(self, cfg):
-    self.cfg = cfg
-    EP = cfg.env_params
-    super().__init__()
-    self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
-                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                             nn.Linear(cfg.net_dim, EP.action_dim))
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+														 nn.Linear(
+			cfg.net_dim, cfg.net_dim), nn.ReLU(),
+			nn.Linear(cfg.net_dim, EP.action_dim))
 
-    # the logarithm (log) of standard deviation (std) of action, it is a trainable parameter
-    self.a_std_log = nn.Parameter(torch.zeros(
-      (1, EP.action_dim)) - 0., requires_grad=True)
-    self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
+		# the logarithm (log) of standard deviation (std) of action, it is a trainable parameter
+		self.a_std_log = nn.Parameter(torch.zeros(
+			(1, EP.action_dim)) - 0., requires_grad=True)
+		self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
 
-  def forward(self, state):
-    return self.net(state).tanh()  # action.tanh()
+	def forward(self, state):
+		return self.net(state).tanh()  # action.tanh()
 
-  def get_action(self, state):
-    a_avg = self.net(state)
-    a_std = self.a_std_log.exp()
+	def get_action(self, state):
+		a_avg = self.net(state)
+		a_std = self.a_std_log.exp()
 
-    noise = torch.randn_like(a_avg)
-    action = a_avg + noise * a_std
-    return action, noise
+		noise = torch.randn_like(a_avg)
+		action = a_avg + noise * a_std
+		return action, noise
 
-  def get_logprob(self, state, action):
-    a_avg = self.net(state)
-    a_std = self.a_std_log.exp()
+	def get_logprob(self, state, action):
+		a_avg = self.net(state)
+		a_std = self.a_std_log.exp()
 
-    delta = ((a_avg - action) / a_std).pow(2) * 0.5
-    log_prob = -(self.a_std_log + self.sqrt_2pi_log + delta)  # new_logprob
+		delta = ((a_avg - action) / a_std).pow(2) * 0.5
+		log_prob = -(self.a_std_log + self.sqrt_2pi_log + delta)  # new_logprob
 
-    return log_prob
+		return log_prob
 
-  def get_logprob_entropy(self, state, action):
-    a_avg = self.net(state)
-    a_std = self.a_std_log.exp()
+	def get_logprob_entropy(self, state, action):
+		a_avg = self.net(state)
+		a_std = self.a_std_log.exp()
 
-    delta = ((a_avg - action) / a_std).pow(2) * 0.5
-    logprob = -(self.a_std_log + self.sqrt_2pi_log +
-                delta).sum(-1)  # new_logprob
+		delta = ((a_avg - action) / a_std).pow(2) * 0.5
+		logprob = -(self.a_std_log + self.sqrt_2pi_log +
+								delta).sum(-1)  # new_logprob
 
-    dist_entropy = (logprob.exp() * logprob).mean()  # policy entropy
-    return logprob, dist_entropy
+		dist_entropy = (logprob.exp() * logprob).mean()  # policy entropy
+		return logprob, dist_entropy
 
-  def get_old_logprob(self, _action, noise):  # noise = action - a_noise
-    delta = noise.pow(2) * 0.5
-    return -(self.a_std_log + self.sqrt_2pi_log + delta).sum(-1)  # old_logprob
+	def get_old_logprob(self, _action, noise):  # noise = action - a_noise
+		delta = noise.pow(2) * 0.5
+		# old_logprob
+		return -(self.a_std_log + self.sqrt_2pi_log + delta).sum(-1)
 
-  @staticmethod
-  def get_a_to_e(action):
-    return action.tanh()
+	@staticmethod
+	def get_a_to_e(action):
+		return action.tanh()
 
 
 class Critic(nn.Module):
-  def __init__(self, cfg):
-    self.cfg = cfg
-    EP = cfg.env_params
-    super().__init__()
-    self.net = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
-                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                             nn.Linear(cfg.net_dim, 1))
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.net = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+														 nn.Linear(
+			cfg.net_dim, cfg.net_dim), nn.ReLU(),
+			nn.Linear(
+			cfg.net_dim, cfg.net_dim), nn.ReLU(),
+			nn.Linear(cfg.net_dim, 1))
 
-  def forward(self, state, action):
-    return self.net(torch.cat((state, action), dim=1))  # q value
+	def forward(self, state, action):
+		return self.net(torch.cat((state, action), dim=1))  # q value
 
 
 class CriticTwin(nn.Module):  # shared parameter
-  def __init__(self, cfg):
-    self.cfg = cfg
-    EP = cfg.env_params
-    super().__init__()
-    self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
-                                nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
-    self.net_q1 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                nn.Linear(cfg.net_dim, 1))  # q1 value
-    self.net_q2 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                nn.Linear(cfg.net_dim, 1))  # q2 value
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+																nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
+		self.net_q1 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+																nn.Linear(cfg.net_dim, 1))  # q1 value
+		self.net_q2 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+																nn.Linear(cfg.net_dim, 1))  # q2 value
 
-  def forward(self, state, action):
-    return torch.add(*self.get_q1_q2(state, action)) / 2.  # mean Q value
+	def forward(self, state, action):
+		return torch.add(*self.get_q1_q2(state, action)) / 2.  # mean Q value
 
-  def get_q_min(self, state, action):
-    return torch.min(*self.get_q1_q2(state, action))  # min Q value
+	def get_q_min(self, state, action):
+		return torch.min(*self.get_q1_q2(state, action))  # min Q value
 
-  def get_q1_q2(self, state, action):
-    tmp = self.net_sa(torch.cat((state, action), dim=1))
-    return self.net_q1(tmp), self.net_q2(tmp)  # two Q values
+	def get_q1_q2(self, state, action):
+		tmp = self.net_sa(torch.cat((state, action), dim=1))
+		return self.net_q1(tmp), self.net_q2(tmp)  # two Q values
 
 
 class CriticREDq(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-learning)
-  def __init__(self, cfg):
-    super().__init__()
-    self.critic_num = 8
-    self.critic_list = list()
-    for critic_id in range(self.critic_num):
-      if cfg.net_type == 'deepset': 
-        child_cri_net = CriticDeepset(cfg)
-      elif cfg.net_type == 'mlp':
-        child_cri_net = Critic(cfg).net
-      else:
-        raise NotImplementedError
-      setattr(self, f'critic{critic_id:02}', child_cri_net)
-      self.critic_list.append(child_cri_net)
+	def __init__(self, cfg):
+		super().__init__()
+		self.critic_num = 8
+		self.critic_list = list()
+		for critic_id in range(self.critic_num):
+			if cfg.net_type == 'deepset':
+				child_cri_net = CriticDeepset(cfg)
+			elif cfg.net_type == 'mlp':
+				child_cri_net = Critic(cfg).net
+			else:
+				raise NotImplementedError
+			setattr(self, f'critic{critic_id:02}', child_cri_net)
+			self.critic_list.append(child_cri_net)
 
-  def forward(self, state, action):
-    # mean Q value
-    return self.get_q_values(state, action).mean(dim=1, keepdim=True)
+	def forward(self, state, action):
+		# mean Q value
+		return self.get_q_values(state, action).mean(dim=1, keepdim=True)
 
-  def get_q_min(self, state, action):
-    tensor_qs = self.get_q_values(state, action)
-    q_min = torch.min(tensor_qs, dim=1, keepdim=True)[0]  # min Q value
-    q_sum = tensor_qs.sum(dim=1, keepdim=True)  # mean Q value
-    # better than min
-    return (q_min * (self.critic_num * 0.5) + q_sum) / (self.critic_num * 1.5)
+	def get_q_min(self, state, action):
+		tensor_qs = self.get_q_values(state, action)
+		q_min = torch.min(tensor_qs, dim=1, keepdim=True)[0]  # min Q value
+		q_sum = tensor_qs.sum(dim=1, keepdim=True)  # mean Q value
+		# better than min
+		return (q_min * (self.critic_num * 0.5) + q_sum) / (self.critic_num * 1.5)
 
-  def get_q_values(self, state, action):
-    tensor_sa = torch.cat((state, action), dim=1)
-    tensor_qs = [cri_net(tensor_sa) for cri_net in self.critic_list]
-    tensor_qs = torch.cat(tensor_qs, dim=1)
-    return tensor_qs  # multiple Q values
+	def get_q_values(self, state, action):
+		tensor_sa = torch.cat((state, action), dim=1)
+		tensor_qs = [cri_net(tensor_sa) for cri_net in self.critic_list]
+		tensor_qs = torch.cat(tensor_qs, dim=1)
+		return tensor_qs  # multiple Q values
 
 
 class CriticPPO(nn.Module):
-  def __init__(self, cfg):
-    self.cfg = cfg
-    EP = cfg.env_params
-    super().__init__()
-    self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
-                             nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                             nn.Linear(cfg.net_dim, 1))
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+														 nn.Linear(
+			cfg.net_dim, cfg.net_dim), nn.ReLU(),
+			nn.Linear(cfg.net_dim, 1))
 
-  def forward(self, state):
-    return self.net(state)  # advantage value
+	def forward(self, state):
+		return self.net(state)  # advantage value
 
 
-# TODO make it sequential 
+# TODO make it sequential
 class ActorDeepsetBlock(nn.Module):
-  def __init__(self, cfg):
-    # state_dim=[shared_dim, seperate_dim, goal_dim, num_goals]
-    self.cfg = cfg
-    EP = cfg.env_params
-    super().__init__()
-    self.shared_dim = EP.shared_dim
-    self.seperate_dim = EP.seperate_dim
-    self.goal_dim = EP.goal_dim
-    self.num_goals = EP.num_goals
-    assert self.goal_dim % self.num_goals ==0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
-    self.single_goal_dim = self.goal_dim // self.num_goals
-    assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
-    self.single_seperate_dim = self.seperate_dim // self.num_goals
-    self.fc1 = nn.Linear(self.shared_dim+self.single_seperate_dim+self.single_goal_dim, cfg.net_dim)
-    self.fc2 = nn.Linear(cfg.net_dim, cfg.net_dim)
+	def __init__(self, cfg):
+		# state_dim=[shared_dim, seperate_dim, goal_dim, num_goals]
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.shared_dim = EP.shared_dim
+		self.seperate_dim = EP.seperate_dim
+		self.goal_dim = EP.goal_dim
+		self.num_goals = EP.num_goals
+		assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
+		self.single_goal_dim = self.goal_dim // self.num_goals
+		assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
+		self.single_seperate_dim = self.seperate_dim // self.num_goals
+		self.fc1 = nn.Linear(
+			self.shared_dim+self.single_seperate_dim+self.single_goal_dim, cfg.net_dim)
+		self.fc2 = nn.Linear(cfg.net_dim, cfg.net_dim)
 
-  def forward(self, state):
-    grip = state[..., :self.shared_dim]
-    obj = state[..., self.shared_dim:self.shared_dim + self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
-    g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim + self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim) 
-    grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
-    x = torch.cat((grip, obj, g), -1)
-    x = F.relu(self.fc1(x))
-    x = F.relu(self.fc2(x))
-    return x.mean(dim=1)
+	def forward(self, state):
+		grip = state[..., :self.shared_dim]
+		obj = state[..., self.shared_dim:self.shared_dim +
+								self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
+		g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim +
+							self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
+		grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
+		x = torch.cat((grip, obj, g), -1)
+		x = F.relu(self.fc1(x))
+		x = F.relu(self.fc2(x))
+		return x.mean(dim=1)
 
 
 class CriticDeepset(nn.Module):
-  def __init__(self, cfg):
-    self.cfg = cfg
-    EP = cfg.env_params
-    super().__init__()
-    self.shared_dim = EP.shared_dim
-    self.seperate_dim = EP.seperate_dim
-    self.goal_dim = EP.goal_dim
-    self.num_goals = EP.num_goals
-    self.action_dim = EP.action_dim
-    assert self.goal_dim % self.num_goals ==0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
-    self.single_goal_dim = self.goal_dim // self.num_goals
-    assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
-    self.single_seperate_dim = self.seperate_dim // self.num_goals
-    self.net_in = nn.Sequential(
-      nn.Linear(self.shared_dim+self.single_seperate_dim+self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU(),
-      nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),)
-    self.net_out = nn.Sequential(
-      nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-      nn.Linear(cfg.net_dim, 1)
-    )
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.shared_dim = EP.shared_dim
+		self.seperate_dim = EP.seperate_dim
+		self.goal_dim = EP.goal_dim
+		self.num_goals = EP.num_goals
+		self.action_dim = EP.action_dim
+		assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
+		self.single_goal_dim = self.goal_dim // self.num_goals
+		assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
+		self.single_seperate_dim = self.seperate_dim // self.num_goals
+		self.net_in = nn.Sequential(
+			nn.Linear(self.shared_dim+self.single_seperate_dim +
+								self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU(),
+			nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),)
+		self.net_out = nn.Sequential(
+			nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+			nn.Linear(cfg.net_dim, 1)
+		)
 
-  def forward(self, state, action=None):
-    if action is None:
-      action = state[..., -self.action_dim:]
-    obj = state[..., self.shared_dim:self.shared_dim + self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
-    g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim + self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim) 
-    grip = state[..., :self.shared_dim].unsqueeze(1).repeat(1, self.num_goals, 1)
-    action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
-    x = torch.cat((grip, obj, g, action), -1) # batch, obj, feature
-    x = self.net_in(x).mean(dim=1)
-    return self.net_out(x)
+	def forward(self, state, action=None):
+		if action is None:
+			action = state[..., -self.action_dim:]
+		obj = state[..., self.shared_dim:self.shared_dim +
+								self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
+		g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim +
+							self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
+		grip = state[..., :self.shared_dim].unsqueeze(
+			1).repeat(1, self.num_goals, 1)
+		action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
+		x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
+		x = self.net_in(x).mean(dim=1)
+		return self.net_out(x)
+
+def filter_cfg(config):
+	cfg, EP = AttrDict(), AttrDict()
+	# filter out isaac object to make function pickleable
+	for k, v in config.env_params.items():
+		if not hasattr(v, '__call__'):
+			EP[k] = v
+	for k, v in config.items():
+		if k != 'env_params':
+			cfg[k] = config[k]
+	return cfg, EP
