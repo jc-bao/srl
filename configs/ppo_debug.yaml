@@ -50,6 +50,14 @@ eval_per_rollout: 1
 eval_steps: null # set with steps per rollout
 render: false 
 
+# curriculum
+curri:
+  inhand_rate: 
+    now: 1.0
+    end: 0.
+    step: -0.1
+    bar: -10
+
 # save
 cwd: results
 rollout_per_save: 0.0001

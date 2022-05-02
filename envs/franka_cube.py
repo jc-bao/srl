@@ -497,7 +497,16 @@ class FrankaCube(gym.Env):
 			return dist2obj_rew+reach_obj_rew+dist2g_rew+reach_g_rew
 
 
-	def reset(self, config=None):
+	def reset(self, config={}):
+		# change params
+		'''manualy set attribute to certain value'''
+		for k, v in config.items():
+			if k in self.cfg:
+				v_old = self.cfg[k]
+				self.cfg[k] = v
+				print(f'[Curriculum] change {k} from {v_old} to {v}')
+			else:
+				print(f'[Curriculum] config has no attribute {k}')
 		# step first to init params
 		act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
 		obs, _, _, _ = self.step(act)
@@ -1199,10 +1208,10 @@ if __name__ == '__main__':
 	obs = env.reset()
 	start = time.time()
 	action_list = [
-    *([[1,0,0,1]]*4), 
-    *([[0,1,0,1]]*4),
-    *([[-1,0,0,1]]*4),
-    *([[0,-1,0,1]]*4),]
+		*([[1,0,0,1]]*4), 
+		*([[0,1,0,1]]*4),
+		*([[-1,0,0,1]]*4),
+		*([[0,-1,0,1]]*4),]
 	for i in range(100):
 		for j in range(env.cfg.max_steps):
 			if args.random:

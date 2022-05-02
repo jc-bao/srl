@@ -53,6 +53,7 @@
 
 - [ ] resume from remote
 - [ ] update env info dim automatically
+- [ ] classified log info
 
 ## Use Cases
 
