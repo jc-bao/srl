@@ -37,7 +37,7 @@ updates_per_rollout: null # calulate with reuse
 batch_size: 2048
 gamma: 0.98
 lr: 0.00024
-soft_update_tau: 0.05
+soft_update_tau: 0.005
 explore_noise: 0.2
 
 # eval

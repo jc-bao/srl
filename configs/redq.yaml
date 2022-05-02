@@ -24,8 +24,8 @@ act_net: ActorFixSAC
 critic_net: CriticREDq
 net_dim: 128
 net_type: deepset
-if_act_target: false
-if_cri_target: false
+if_act_target: true 
+if_cri_target: true
 gpu_id: 0
 
 # algorithm

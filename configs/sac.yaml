@@ -24,8 +24,8 @@ act_net: ActorFixSAC
 critic_net: CriticTwin
 net_dim: 128
 net_type: deepset
-if_act_target: false
-if_cri_target: false
+if_act_target: true
+if_cri_target: true
 gpu_id: 0
 
 # algorithm
@@ -37,7 +37,7 @@ updates_per_rollout: null # calulate with reuse
 batch_size: 2048
 gamma: 0.98
 lr: 0.00024
-soft_update_tau: 0.05
+soft_update_tau: 0.005
 
 # eval
 eval_per_rollout: 0.2
