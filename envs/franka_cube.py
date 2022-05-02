@@ -485,8 +485,11 @@ class FrankaCube(gym.Env):
 		elif self.cfg.reward_type == 'dense+':
 			# distance to obj
 			dist2obj = torch.norm(ag-info.grip_pos, dim=-1) # TODO multi robot
-			dist2obj_rew = 0.25*(1-torch.mean(dist2obj,dim=-1)*5)/self.cfg.num_goals
-			reach_obj_rew = 0.25*torch.mean((dist2obj<self.cfg.err).float(), dim=-1)
+			dist2obj_rew = 0.1*(1-torch.mean(dist2obj,dim=-1)*5)/self.cfg.num_goals
+			reach_obj_rew = 0.1*torch.mean((dist2obj<self.cfg.err).float(), dim=-1)
+			reach_obj_rew = 0.1*torch.mean((dist2obj<self.cfg.err/2).float(), dim=-1)
+			reach_obj_rew = 0.1*torch.mean((dist2obj<self.cfg.err/4).float(), dim=-1)
+			reach_obj_rew = 0.1*torch.mean((dist2obj<self.cfg.err/8).float(), dim=-1)
 			# distance to goal
 			dist2g = torch.norm(ag-dg, dim=-1)
 			dist2g_rew = 0.25*(1-torch.mean(dist2g,dim=-1)*5)/self.cfg.num_goals
