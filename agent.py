@@ -659,6 +659,7 @@ class AgentPPO(AgentBase):
     with torch.no_grad():
       buf_state, buf_reward, buf_mask, buf_action, buf_noise = [
         ten.to(self.cfg.device) for ten in self.buffer]
+        # ten.to(self.cfg.device).view(-1,ten.shape[-1]) for ten in self.buffer]
       buf_len = buf_state.shape[0]
 
       '''get buf_r_sum, buf_logprob'''
@@ -678,19 +679,20 @@ class AgentPPO(AgentBase):
     '''update network'''
     obj_critic = None
     obj_actor = None
-    assert buf_len * \
-      self.EP.num_envs >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
-    batch_size_per_env = self.cfg.batch_size//self.EP.num_envs
+    # assert buf_len * \
+    #   self.EP.num_envs >= self.cfg.batch_size, f'buf_len {buf_len}, self.cfg.batch_size {self.cfg.batch_size}'
+    # batch_size_per_env = self.cfg.batch_size//self.EP.num_envs
+    num_traj_per_batch = self.cfg.batch_size//buf_len # split traj by env number
     for i in range(self.cfg.updates_per_rollout):
       # indices = torch.randint(buf_len, size=(batch_size_per_env,), requires_grad=False, device=self.cfg.device)
+      # indices = torch.arange(start=(self.cfg.batch_size*i), end=self.cfg.batch_size*(i+1), requires_grad=False, device=self.cfg.device)%buf_len
+      indices = torch.arange(start=(num_traj_per_batch*i), end=num_traj_per_batch*(i+1), requires_grad=False, device=self.cfg.device)%self.EP.num_envs
 
-      indices = torch.arange(start=(batch_size_per_env*i), end=batch_size_per_env*(i+1), requires_grad=False, device=self.cfg.device)%buf_len
-
-      state = buf_state[indices]
-      r_sum = buf_r_sum[indices]
-      adv_v = buf_adv_v[indices].squeeze(-1)
-      action = buf_action[indices]
-      logprob = buf_logprob[indices]
+      state = buf_state[:,indices]
+      r_sum = buf_r_sum[:,indices]
+      adv_v = buf_adv_v[:,indices].squeeze(-1)
+      action = buf_action[:,indices]
+      logprob = buf_logprob[:,indices]
 
       '''PPO: Surrogate objective of Trust Region'''
       new_logprob, obj_entropy = self.act.get_logprob_entropy(

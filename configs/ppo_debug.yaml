@@ -38,9 +38,9 @@ gpu_id: 0
 agent_name: AgentPPO
 max_collect_steps: !!float 1e9
 resue: 2
-steps_per_rollout: 200
+steps_per_rollout: 100
 updates_per_rollout: null # calulate with resue
-batch_size: 2
+batch_size: 100
 gamma: 0.99
 lr: 0.00024
 soft_update_tau: 0.0039
