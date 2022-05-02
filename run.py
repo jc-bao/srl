@@ -17,6 +17,9 @@ def train(config):
 	if config.wandb:
 		wandb.init(name=config.name, project=config.project, config=config)
 	exp_agent:agent.AgentBase = getattr(agent, config.agent_name)(config)
+	if 'load_path' in config:
+		print('resume...')
+		exp_agent.save_or_load_agent(file_tag = 'best', cwd=config.load_path, if_save=False)
 	def log(msg):
 		print(msg)
 		if config.wandb:
