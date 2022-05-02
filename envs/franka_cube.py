@@ -533,7 +533,7 @@ class FrankaCube(gym.Env):
 		self.success_step_buf[reset_idx] = 0
 		# set action here
 		self.actions = torch.clip(
-			actions.clone().view(self.cfg.num_envs,self.cfg.num_robots,4).to(self.device)+self.cfg.action_shift, 
+			actions.clone().view(self.cfg.num_envs,self.cfg.num_robots,self.cfg.per_action_dim).to(self.device)+self.cfg.action_shift, 
 			-self.cfg.clip_actions, self.cfg.clip_actions)
 		pos_target = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel + self.hand_pos_tensor
 		filtered_pos_target = self.hand_pos_tensor
@@ -1004,7 +1004,9 @@ class FrankaCube(gym.Env):
 		cfg.update(enable_camera_sensors=cfg.num_cameras > 0)
 		cfg.update(
 			# dim
-			state_dim=cfg.shared_dim + cfg.per_seperate_dim * \
+			action_dim=cfg.per_action_dim * cfg.num_robots,
+			shared_dim=cfg.per_shared_dim * cfg.num_robots, 
+			state_dim=cfg.per_shared_dim * cfg.num_robots + cfg.per_seperate_dim * \
 			cfg.num_goals + cfg.per_goal_dim*cfg.num_goals,
 			info_dim=cfg.info_dim + cfg.num_goals*cfg.per_goal_dim,
 			seperate_dim=cfg.per_seperate_dim * cfg.num_goals,

@@ -22,9 +22,9 @@ num_goals: 1
 base_steps: 50 
 max_steps: null
 # dim
-action_dim: 4
+per_action_dim: 4
 state_dim: null # calculate later
-shared_dim: 7 # pos3, vel3, finger1 
+per_shared_dim: 7 # pos3, vel3, finger1 
 per_seperate_dim: 13 # block state
 seperate_dim: null
 per_goal_dim: 3
