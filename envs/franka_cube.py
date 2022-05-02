@@ -44,9 +44,9 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-0.25, -0.2, self.cfg.block_size/2+self.cfg.table_size[2]],
+			low=torch.tensor([-self.cfg.goal_space[0], -self.cfg.goal_space[1], self.cfg.block_size/2],
 											 device=self.device),
-			high=torch.tensor([0.25, 0.2, self.cfg.block_size/2+0.25+self.cfg.table_size[2]], device=self.device))
+			high=torch.tensor([self.cfg.goal_space[0], self.cfg.goal_space[1], self.cfg.block_size/2+self.cfg.goal_space[2]*2], device=self.device))
 		# goal space
 		self.torch_goal_space = torch.distributions.uniform.Uniform(
 			low=torch.tensor([-self.cfg.goal_space[0]/2, -self.cfg.goal_space[1]/2, self.cfg.block_size/2], device=self.device),
@@ -614,8 +614,8 @@ class FrankaCube(gym.Env):
 			# pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
 			# clip with bound
 			if self.cfg.bound_robot:
-				pos_errs = torch.clip(pos_errs+self.grip_pos, self.torch_robot_space.low,
-														self.torch_robot_space.high) - self.grip_pos
+				pos_errs = torch.clip(pos_errs+self.grip_pos-self.origin_shift, self.torch_robot_space.low,
+														self.torch_robot_space.high) - self.grip_pos + self.origin_shift
 			dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
 			self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 			# grip
@@ -741,6 +741,15 @@ class FrankaCube(gym.Env):
 					pos.p.x, pos.p.y, pos.p.z = mean[0]+self.origin_shift[j,0], mean[1]+self.origin_shift[j,1], mean[2]+self.origin_shift[j,2]
 					box_geom = gymutil.WireframeBoxGeometry(
 						high[0]-low[0], high[1]-low[1], high[2]-low[2], color=(0, 0, 1))
+					gymutil.draw_lines(box_geom, self.gym, self.viewer, self.envs[i], pos)
+					# draw robot space
+					low = self.torch_robot_space.low
+					high = self.torch_robot_space.high
+					mean = (high+low)/2
+					pos = gymapi.Transform()
+					pos.p.x, pos.p.y, pos.p.z = mean[0]+self.origin_shift[j,0], mean[1]+self.origin_shift[j,1], mean[2]+self.origin_shift[j,2]
+					box_geom = gymutil.WireframeBoxGeometry(
+						high[0]-low[0], high[1]-low[1], high[2]-low[2], color=(1, 0, 1))
 					gymutil.draw_lines(box_geom, self.gym, self.viewer, self.envs[i], pos)
 
 		return obs, rew, done, info
@@ -1247,7 +1256,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 1, inhand_rate=1.0, max_grip_vel=0.3)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 2, inhand_rate=1.0, max_grip_vel=0.3)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
