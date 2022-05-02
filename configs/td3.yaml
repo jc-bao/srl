@@ -31,9 +31,9 @@ gpu_id: 0
 # algorithm
 agent_name: AgentTD3
 max_collect_steps: !!float 1e9
-resue: 10
+reuse: 10
 steps_per_rollout: 409600
-updates_per_rollout: null # calulate with resue
+updates_per_rollout: null # calulate with reuse
 batch_size: 2048
 gamma: 0.98
 lr: 0.00024

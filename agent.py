@@ -31,7 +31,7 @@ class AgentBase:
     os.makedirs(self.cfg.cwd, exist_ok=True)
     # update times
     if self.cfg.updates_per_rollout is None:
-      self.cfg.update(updates_per_rollout=cfg.resue *
+      self.cfg.update(updates_per_rollout=cfg.reuse *
                       cfg.steps_per_rollout//cfg.batch_size)
 
     '''seed '''
