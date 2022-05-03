@@ -36,7 +36,7 @@ filter_param: 0.8
 env_spacing: 1.5
 debug_viz: true
 damping: 0.05
-max_vel: 2
+max_vel: 4
 max_grip_vel: 1 
 max_ik_iter: 10
 ik_err: 0.005 # for iteration version of IK

@@ -88,6 +88,8 @@ class AgentBase:
     self.traj_idx = torch.arange(
       self.EP.num_envs, device=self.cfg.device)
     self.num_traj = self.EP.num_envs
+    if self.cfg.wandb:
+      wandb.config.update(self.cfg)
 
     ''' data '''
     # tmp buffer
