@@ -522,6 +522,7 @@ class FrankaCube(gym.Env):
 		# for _ in range(5):
 		# change params here TODO more elegant way
 		if 'table_gap' in config:
+			v = config['table_gap']
 			self.table_states[:,:,0] = torch.tensor([-(v+self.cfg.table_size[0])/2,(v+self.cfg.table_size[0])/2], device=self.device)
 		self.reset_buf[:] = True
 		obs, _, _, _ = self.step(act)
