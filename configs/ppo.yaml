@@ -48,6 +48,7 @@ soft_update_tau: 0.0039
 eval_per_rollout: 0.02 
 eval_steps: null # set with steps per rollout
 render: true
+render_per_eval: 0.1
 
 # curriculum
 curri:
@@ -55,7 +56,7 @@ curri:
     now: 0.5
     end: 0.
     step: -0.25
-    bar: -0.8
+    bar: 0.4
 
 # save
 cwd: results
