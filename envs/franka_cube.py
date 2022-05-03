@@ -69,7 +69,7 @@ class FrankaCube(gym.Env):
 			# subscribe to keyboard shortcuts
 			camera_setting = gymapi.CameraProperties()
 			self.viewer = self.gym.create_viewer(self.sim, camera_setting)
-			cam_pos = gymapi.Vec3(1.5, 1.5, 0)
+			cam_pos = gymapi.Vec3(1, -1, 1)
 			look_at = gymapi.Vec3(0.5, 1, 0)
 			self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, look_at)
 			self.gym.subscribe_viewer_keyboard_event(
@@ -79,7 +79,7 @@ class FrankaCube(gym.Env):
 			# set the camera position based on up axis
 			sim_params = self.gym.get_sim_params(self.sim)
 			if sim_params.up_axis == gymapi.UP_AXIS_Z:
-				cam_pos = gymapi.Vec3(1.0, 1.0, 1.0)
+				cam_pos = gymapi.Vec3(1.0, -1.0, 1.0)
 				cam_target = gymapi.Vec3(0.0, 0.0, 0.4)
 			else:
 				cam_pos = gymapi.Vec3(20.0, 3.0, 25.0)
@@ -321,7 +321,7 @@ class FrankaCube(gym.Env):
 			camera_properties.width = 320
 			camera_properties.height = 200
 			h1 = self.gym.create_camera_sensor(self.envs[j], camera_properties)
-			camera_position = gymapi.Vec3(1, 1, 1)
+			camera_position = gymapi.Vec3(1, -1, 1)
 			camera_target = gymapi.Vec3(0, 0, 0)
 			self.gym.set_camera_location(
 				h1, self.envs[j], camera_position, camera_target)
@@ -482,7 +482,7 @@ class FrankaCube(gym.Env):
 			return -torch.mean((torch.norm(ag-dg, dim=-1) > self.cfg.err).type(torch.float32), dim=-1)
 		elif self.cfg.reward_type == 'dense':
 			distances = torch.norm(ag-dg, dim=-1)
-			distance_rew = 0.5*(1-torch.mean(distances,dim=-1)*5)/self.cfg.num_goals
+			distance_rew = 0.5*(1-torch.mean(distances,dim=-1)*5/self.cfg.num_robots)/(self.cfg.num_goals)
 			reach_rew = 0.5*torch.mean((distances<self.cfg.err).float(), dim=-1)
 			return distance_rew+reach_rew 
 		elif self.cfg.reward_type == 'dense+':
@@ -583,14 +583,21 @@ class FrankaCube(gym.Env):
 			in_hand = torch.rand((self.cfg.num_envs,),
 													 device=self.device) < self.cfg.inhand_rate
 			inhand_idx = reset_idx & in_hand
-			block_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
+			if self.cfg.obj_sample_mode == 'uniform':
+				block_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
+			elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
+				block_workspace = goal_workspace + torch.bernoulli(torch.ones_like(goal_workspace, device=self.device)*self.cfg.os_rate).long()
+				block_workspace %= self.cfg.num_robots
+			else:
+				raise NotImplementedError
 			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[block_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
 			if inhand_idx.any():
 				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
-				# NOTE can only choose block 0 in hand now
+				# NOTE can only choose block 0 in hand now TODO fix it
 				choosed_block = 0 
 				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(inhand_idx.sum().item(),))
-				self.init_ag[inhand_idx, choosed_block] = self.default_grip_pos[inhand_idx, choosed_robot]
+				self.init_ag[inhand_idx, choosed_block] = self.default_grip_pos[inhand_idx, choosed_robot] + \
+					(torch.rand_like(self.default_grip_pos[inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
 				# self.init_ag[inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
 			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
 			# change to hand or random pos
@@ -1264,7 +1271,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 1, inhand_rate=1.0, max_vel=2)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 1, inhand_rate=0.0, max_vel=2, os_rate=0.0, base_steps=5)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 

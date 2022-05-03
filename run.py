@@ -37,19 +37,20 @@ def train(config):
 	best_rew = -1000
 	num_rollouts = int(config.max_collect_steps//config.steps_per_rollout)
 	for i in range(num_rollouts):
-		print('========explore...')
+		print(f'========explore{i}==========')
 		result = exp_agent.explore_vec_env()
 		log(result)
 
-		print('========update...')
+		print(f'========update{i}...========')
 		torch.set_grad_enabled(True)
 		result = exp_agent.update_net()
 		torch.set_grad_enabled(False)
 		log(result)
 
 		if i % int(1/config.eval_per_rollout) == 0:
-			print('========eval...')
-			result = exp_agent.eval_vec_env()
+			num_eval = i // int(1/config.eval_per_rollout)
+			print(f'========eval{num_eval}...===========')
+			result = exp_agent.eval_vec_env(render = (num_eval % int(1/config.render_per_eval) == 0))
 			log(result)
 
 			if result.final_rew > best_rew and (i%config.rollout_per_save)==0:

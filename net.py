@@ -30,6 +30,7 @@ class Actor(nn.Module):
 		action = self.net(state).tanh()
 		noise = (torch.randn_like(action) * action_std).clamp(-0.5, 0.5)
 		return (action + noise).clamp(-1.0, 1.0)
+
 class ActorSAC(nn.Module):
 	def __init__(self, cfg):
 		self.cfg, EP = filter_cfg(cfg)

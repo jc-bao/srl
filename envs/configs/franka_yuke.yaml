@@ -47,9 +47,10 @@ err: 0.05
 clip_actions: 1.0
 # block
 inhand_rate: 0.2
-goal_ground_rate: 0.2
 block_size: 0.04 
 block_length: null 
+obj_sample_mode: bernoulli
+os_rate: 0.5
 # robot
 num_robots: 1
 bound_robot: true
@@ -67,6 +68,7 @@ robot_y: 0.5
 friction: 0.01
 # goal space
 goal_space: [0.3, 0.3, 0.2]
+goal_ground_rate: 0.2
 
 # sim:
 physics_engine: SIM_PHYSX 
