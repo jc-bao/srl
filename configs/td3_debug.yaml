@@ -16,7 +16,7 @@ env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
   num_envs: 4
-  num_cameras: 0
+  num_cameras: 1
   headless: true
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
@@ -46,10 +46,10 @@ update_freq: 2
 policy_noise: 0.15
 
 # eval
-eval_per_rollout: 0.1
+eval_per_rollout: 1
 eval_steps: null # set with steps per rollout
 render: false
-render_per_eval: 0.1
+render_per_eval: 0.5
 
 curri: {}
 
