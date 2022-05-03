@@ -18,9 +18,6 @@ class AgentBase:
     # device
     self.cfg.update(device=torch.device(f"cuda:{cfg.gpu_id}" if (
       torch.cuda.is_available() and (cfg.gpu_id >= 0)) else "cpu"))
-    # eval steps
-    if self.cfg.eval_steps is None:
-      self.cfg.update(eval_steps=cfg.steps_per_rollout)
     # dir
     if cfg.wandb:
       self.cfg.update(
@@ -29,10 +26,6 @@ class AgentBase:
       self.cfg.update(
         cwd=f'./{cfg.cwd}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
     os.makedirs(self.cfg.cwd, exist_ok=True)
-    # update times
-    if self.cfg.updates_per_rollout is None:
-      self.cfg.update(updates_per_rollout=cfg.reuse *
-                      cfg.steps_per_rollout//cfg.batch_size)
 
     '''seed '''
     np.random.seed(cfg.random_seed)
@@ -48,6 +41,17 @@ class AgentBase:
     # batch size
     if self.cfg.batch_size < self.EP.num_envs:
       print('[Agent] WARNING: batch_size < num_envs')
+    # rollout steps
+    if self.cfg.steps_per_rollout is None:
+      self.cfg.update(steps_per_rollout=self.EP.num_envs * self.EP.max_env_step)
+      print(f'[Params] change step per rollout to {self.cfg.steps_per_rollout}')
+    # eval steps
+    if self.cfg.eval_steps is None:
+      self.cfg.update(eval_steps=cfg.steps_per_rollout)
+    # update times
+    if self.cfg.updates_per_rollout is None:
+      self.cfg.update(updates_per_rollout=cfg.reuse *
+                      cfg.steps_per_rollout//cfg.batch_size)
 
     '''set up actor critic'''
     print('[Agent] net setup')

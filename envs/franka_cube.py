@@ -1114,7 +1114,7 @@ class FrankaCube(gym.Env):
 			# steps
 			max_steps=cfg.base_steps*cfg.num_goals,
 			# judge for success
-			success_bar={'sparse':-0.01, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
+			success_bar={'sparse':-0.01, 'sparse+':0.95, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
 			# block size
 			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
 		)
