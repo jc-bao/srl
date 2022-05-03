@@ -21,10 +21,10 @@ class AgentBase:
     # dir
     if cfg.wandb:
       self.cfg.update(
-        cwd=f'{wandb.run.dir}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
+        cwd=f'{wandb.run.dir}/model')
     else:
       self.cfg.update(
-        cwd=f'./{cfg.cwd}/{cfg.name}_{cfg.project}_{cfg.env_name[4:]}')
+        cwd=f'./{cfg.cwd}/model')
     os.makedirs(self.cfg.cwd, exist_ok=True)
 
     '''seed '''
@@ -355,7 +355,11 @@ class AgentBase:
     if cwd is None:
       cwd = self.cfg.cwd
 
-    def load_torch_file(model_or_optim, _path):
+    def load_torch_file(model_or_optim, _path=None):
+      if self.cfg.wid is not None:
+        file_name = _path.split('/')[-1]
+        _path = wandb.restore(f'model/{file_name}', f'jc-bao/{self.cfg.project}/{self.cfg.wid}')
+        # TODO make it resumable
       state_dict = torch.load(
         _path, map_location=lambda storage, loc: storage)
       model_or_optim.load_state_dict(state_dict)
@@ -371,8 +375,8 @@ class AgentBase:
     else:
       for name, obj in name_obj_list:
         save_path = f"{cwd}/{file_tag+name}.pth"
-        load_torch_file(obj, save_path) if os.path.isfile(
-          save_path) else None
+        load_torch_file(obj, save_path) if (os.path.isfile(
+          save_path) or self.cfg.wid is not None) else None
 
 
 class AgentSAC(AgentBase):

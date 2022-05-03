@@ -1,5 +1,7 @@
 # wandb
 wandb: false
+resume_mode: null
+wid: null
 project: debug 
 name: hello
 

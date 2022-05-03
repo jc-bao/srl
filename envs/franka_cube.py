@@ -1112,7 +1112,7 @@ class FrankaCube(gym.Env):
 			# isaac
 			physics_engine=getattr(gymapi, cfg.physics_engine),
 			# steps
-			max_steps=cfg.base_steps*cfg.num_goals,
+			max_steps=cfg.base_steps*cfg.num_goals*cfg.num_robots,
 			# judge for success
 			success_bar={'sparse':-0.01, 'sparse+':0.95, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
 			# block size

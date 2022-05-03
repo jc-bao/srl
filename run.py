@@ -15,11 +15,19 @@ def train(config):
 
 	'''init'''
 	if config.wandb:
-		wandb.init(name=config.name, project=config.project, config=config)
+		if config.resume_mode is None or config.resume_mode == 'restart':
+			print('[Wandb] start new run...')
+			wandb.init(name=config.name, project=config.project, config=config)
+		elif config.resume_mode == 'continue':
+			print('[Wandb] resume old run...')
+			wandb.init(project=config.project, id=config.wid, resume="allow", config=config)
 	exp_agent:agent.AgentBase = getattr(agent, config.agent_name)(config)
 	if 'load_path' in config:
-		print('resume...')
+		print('[Load] resume from local')
 		exp_agent.save_or_load_agent(file_tag = 'best', cwd=config.load_path, if_save=False)
+	elif (config.wid is not None):
+		print('[Load] resume from cloud')
+		exp_agent.save_or_load_agent(file_tag = 'best', if_save=False)
 	def log(msg):
 		print(msg)
 		if config.wandb:

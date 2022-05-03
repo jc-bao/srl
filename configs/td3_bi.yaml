@@ -1,5 +1,7 @@
 # wandb
 wandb: true
+resume_mode: null
+wid: null
 project: TD3_debug 
 name: handover_default 
 
