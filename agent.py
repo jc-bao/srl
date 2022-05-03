@@ -110,7 +110,7 @@ class AgentBase:
       self.EP.num_envs, device=self.cfg.device)
     # reset
     ten_s = self.env.reset()
-    if self.cfg.render:
+    if self.cfg.render and render:
       images = self.env.render(mode='rgb_array')
       videos = [[im] for im in images]
     # loop
@@ -132,7 +132,7 @@ class AgentBase:
       ten_s = ten_s_next
     # return
     video = None
-    if self.cfg.render:
+    if self.cfg.render and render:
       videos = np.array(videos)
       video = np.concatenate(videos, axis=0)
       video = np.moveaxis(video, -1, 1)
@@ -142,7 +142,7 @@ class AgentBase:
     for k, v in self.cfg.curri.items():
       if final_rew > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
         self.cfg.curri[k]['now'] += v['step']
-        reset_params[k] = self.cfg.curri[k]['now']
+      reset_params[k] = self.cfg.curri[k]['now']
     self.env.reset(config=reset_params)
     return AttrDict(
       steps=self.total_step,

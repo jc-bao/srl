@@ -9,7 +9,7 @@ headless: True
 enable_camera_sensors: False 
 
 # env
-early_termin_step: 25
+early_termin_step: 50
 early_termin_bar: 0.05
 # rew
 reward_type: sparse
@@ -19,7 +19,7 @@ extra_steps: 5
 num_cameras: 16
 num_envs: 4096 
 num_goals: 1
-base_steps: 50 
+base_steps: 100 
 max_steps: null
 # dim
 per_action_dim: 4
