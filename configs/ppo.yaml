@@ -52,10 +52,10 @@ render_per_eval: 0.1
 
 # curriculum
 curri:
-  inhand_rate: 
+  goal_ground_rate: 
     now: 0.5
     end: 0.
-    step: -0.25
+    step: -0.1
     bar: 0.5
 
 # save

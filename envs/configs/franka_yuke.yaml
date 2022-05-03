@@ -68,7 +68,7 @@ robot_y: 0.5
 friction: 0.01
 # goal space
 goal_space: [0.3, 0.3, 0.2]
-goal_ground_rate: 0.2
+goal_ground_rate: 0.5
 
 # sim:
 physics_engine: SIM_PHYSX 
