@@ -221,7 +221,7 @@ class FrankaCube(gym.Env):
 			franka_start_poses.append(franka_start_pose)
 			self.franka_roots.append([*pos, *rot])
 		self.origin_shift = to_torch(self.origin_shift, device=self.device)
-		self.franka_roots = to_torch(self.franka_roots)
+		self.franka_roots = to_torch(self.franka_roots, device=self.device)
 		self.default_grip_pos = self.origin_shift.unsqueeze(0).repeat(self.cfg.num_envs,1,1).clone()
 
 		# compute aggregate size
@@ -1126,8 +1126,8 @@ class FrankaCube(gym.Env):
 			graphics_device_id=-1 \
 				if ((not cfg.enable_camera_sensors)
 						and cfg.headless) else cfg.sim_device_id,
-			sim_device=f'cuda:{cfg.sim_device_id}' if cfg.sim_device_id >= 0 else 'cpu',
-			rl_device=f'cuda:{cfg.rl_device_id}' if cfg.rl_device_id >= 0 else 'cpu',
+			sim_device=torch.device(f'cuda:{cfg.sim_device_id}' if cfg.sim_device_id >= 0 else 'cpu'),
+			rl_device=torch.device(f'cuda:{cfg.rl_device_id}' if cfg.rl_device_id >= 0 else 'cpu'),
 			# isaac
 			physics_engine=getattr(gymapi, cfg.physics_engine),
 			# steps
@@ -1313,7 +1313,8 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id = 0, num_goals = 1, inhand_rate=0.0)
+	# env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=True, bound_robot=True, sim_device_id=1, rl_device_id=1, num_goals=1, inhand_rate=0.0)
+	env = FrankaCube(num_envs=1, num_robots=2, num_cameras=0, headless=True, bound_robot=True, sim_device_id=1, rl_device_id=1, num_goals=1, inhand_rate=0.0)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
