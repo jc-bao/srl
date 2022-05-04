@@ -1138,6 +1138,7 @@ class FrankaCube(gym.Env):
 			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
 		)
 		# robot control
+		print(cfg.sim_device)
 		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
 		# table size
 		cfg.table_size = [cfg.robot_gap-cfg.table_gap, cfg.table_size[1], cfg.table_size[2]]
