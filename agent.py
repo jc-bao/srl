@@ -89,7 +89,7 @@ class AgentBase:
       self.EP.num_envs, device=self.cfg.device)
     self.num_traj = self.EP.num_envs
     if self.cfg.wandb:
-      wandb.config.update(self.cfg)
+      wandb.config.update(self.cfg, allow_val_change=True)
 
     ''' data '''
     # tmp buffer
