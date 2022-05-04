@@ -21,6 +21,8 @@ def train(config):
 		elif config.resume_mode == 'continue':
 			print('[Wandb] resume old run...')
 			wandb.init(project=config.project, id=config.wid, resume="allow", config=config)
+		else:
+			raise NotImplementedError('[Wandb] resume mode {} not implemented'.format(config.resume_mode))
 	exp_agent:agent.AgentBase = getattr(agent, config.agent_name)(config)
 	if 'load_path' in config:
 		print('[Load] resume from local')
