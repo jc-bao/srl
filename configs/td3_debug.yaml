@@ -10,6 +10,7 @@ random_seed: 0
 
 # replay
 her_rate: 0.8
+her_decay: 0.5
 random_relabel_rate: 1.0
 if_use_per: false
 buffer_size: 1000
