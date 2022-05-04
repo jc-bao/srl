@@ -3,14 +3,14 @@ wandb: true
 resume_mode: null
 wid: null
 project: TD3_debug 
-name: pnp_partial 
+name: pnp_midterm 
 
 # seed 
 random_seed: 0
 
 # replay
 her_rate: 0.8
-random_relabel_rate: 1.0
+random_relabel_rate: 0.0
 if_use_per: false
 buffer_size: 2500000
 
