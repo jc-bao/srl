@@ -35,12 +35,9 @@ class AgentBase:
     '''env setup'''
     print('[Agent] env setup')
     self.env = gym.make(cfg.env_name, **cfg.env_kwargs)
-    self.cfg.update(env_params=self.env.env_params())
+    self.cfg.update(env_params=self.env.env_params(), env_cfg=self.env.cfg)
     # alias for env_params
     self.EP = self.cfg.env_params
-    # batch size
-    if self.cfg.batch_size < self.EP.num_envs:
-      print('[Agent] WARNING: batch_size < num_envs')
     # rollout steps
     if self.cfg.steps_per_rollout is None:
       self.cfg.update(steps_per_rollout=self.EP.num_envs * self.EP.max_env_step)
@@ -360,10 +357,11 @@ class AgentBase:
     def load_torch_file(model_or_optim, _path=None):
       if self.cfg.wid is not None:
         file_name = _path.split('/')[-1]
-        _path = wandb.restore(f'model/{file_name}', f'jc-bao/{self.cfg.project}/{self.cfg.wid}')
+        _path = wandb.restore(f'model/{file_name}', f'jc-bao/{self.cfg.project}/{self.cfg.wid}').name
         # TODO make it resumable
-      state_dict = torch.load(
-        _path, map_location=lambda storage, loc: storage)
+      with open(_path, 'rb') as f:
+        state_dict = torch.load(
+          f, map_location=lambda storage, loc: storage)
       model_or_optim.load_state_dict(state_dict)
 
     name_obj_list = [('actor', self.act), ('act_target', self.act_target), ('act_optim', self.act_optimizer),
