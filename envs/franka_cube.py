@@ -44,9 +44,9 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-self.cfg.goal_space[0], -self.cfg.goal_space[1], self.cfg.block_size/2],
+			low=torch.tensor([-self.cfg.goal_space[0], -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
 											 device=self.device),
-			high=torch.tensor([self.cfg.goal_space[0], self.cfg.goal_space[1], self.cfg.block_size/2+self.cfg.goal_space[2]*2], device=self.device))
+			high=torch.tensor([self.cfg.goal_space[0], self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*2], device=self.device))
 		# goal space
 		self.torch_goal_space = torch.distributions.uniform.Uniform(
 			low=torch.tensor([-self.cfg.goal_space[0]/2, -self.cfg.goal_space[1]/2, self.cfg.block_size/2], device=self.device),
