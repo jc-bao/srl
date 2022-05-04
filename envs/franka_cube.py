@@ -1123,8 +1123,8 @@ class FrankaCube(gym.Env):
 			goal_dim=cfg.per_goal_dim * cfg.num_goals,
 			# device
 			# when not need render, close graph device, else share with sim
-			graphics_device_id=- \
-			1 if ((not cfg.enable_camera_sensors)
+			graphics_device_id=-1 \
+				if ((not cfg.enable_camera_sensors)
 						and cfg.headless) else cfg.sim_device_id,
 			sim_device=f'cuda:{cfg.sim_device_id}' if cfg.sim_device_id >= 0 else 'cpu',
 			rl_device=f'cuda:{cfg.rl_device_id}' if cfg.rl_device_id >= 0 else 'cpu',

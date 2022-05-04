@@ -2,8 +2,8 @@
 name: FrankaCube
 
 # device
-sim_device_id: 0
-rl_device_id: 0
+sim_device_id: null
+rl_device_id: null 
 headless: True 
 # set to True if you use camera sensors in the environment
 enable_camera_sensors: False 
