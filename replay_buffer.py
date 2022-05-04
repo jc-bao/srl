@@ -10,6 +10,7 @@ class ReplayBuffer:  # for off-policy
 		self.now_len = 0
 		self.next_idx = 0
 		self.prev_idx = 0
+		self.random_relabel_rate = 0
 		self.if_full = False
 		self.max_len = cfg.buffer_size
 		self.cfg = cfg
@@ -61,12 +62,12 @@ class ReplayBuffer:  # for off-policy
 			fut_ag = self.data_parser(fut_trans,'info.ag')
 			# random relabel
 			unmoved_ag_idx = info_dict.ag_unmoved_steps > self.EP.max_ag_unmoved_steps 
-			random_relabel_idx = torch.rand(unmoved_ag_idx.shape, device=self.device) < self.cfg.random_relabel_rate
-			print(fut_ag[random_relabel_idx[0,0,0]])
-			fut_ag = fut_ag.view(fut_ag.shape[0],self.EP.num_goals,-1)
-			fut_ag[random_relabel_idx] = self.EP.sample_goal(size=random_relabel_idx.sum())
-			fut_ag = fut_ag.view(fut_ag.shape[0],-1)
-			print(fut_ag[random_relabel_idx[0,0,0]])
+			random_relabel_idx = unmoved_ag_idx & (torch.rand(unmoved_ag_idx.shape, device=self.device) < self.cfg.random_relabel_rate)
+			random_relabel_num = random_relabel_idx.sum()
+			if random_relabel_num > 0:
+				fut_ag = fut_ag.view(fut_ag.shape[0],self.EP.num_goals,-1)
+				fut_ag[random_relabel_idx] = self.EP.sample_goal(size=random_relabel_idx.sum())
+				fut_ag = fut_ag.view(fut_ag.shape[0],-1)
 			# NOTE: need sample next state
 			# relabel NOTE: as the indice is not continous, inplace op not apply
 			self.EP.obs_updater(trans_dict.state[:her_batch_size], AttrDict(g=fut_ag))
@@ -74,13 +75,15 @@ class ReplayBuffer:  # for off-policy
 			# recompute
 			trans_dict.rew[:her_batch_size] = self.EP.compute_reward(
 					info_dict.ag, fut_ag, None)
+		self.random_relabel_rate = random_relabel_num/her_batch_size
 		return AttrDict(
 			rew=trans_dict.rew,
 			mask=trans_dict.mask,  # mask
 			action=trans_dict.action,  # action
 			state=trans_dict.state,  # state
 			next_state=next_trans_state,  # next_state
-			info=trans_dict.info)  # info
+			info=trans_dict.info,   # info
+		)
 
 	def sample_batch_r_m_a_s(self):
 		if self.prev_idx <= self.next_idx:
