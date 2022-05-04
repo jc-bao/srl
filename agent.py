@@ -34,9 +34,10 @@ class AgentBase:
 
     '''env setup'''
     print('[Agent] env setup')
-    cfg.env_kwargs.sim_device_id = self.cfg.gpu_id
-    cfg.env_kwargs.rl_device_id = self.cfg.gpu_id
-    self.env = gym.make(cfg.env_name, **cfg.env_kwargs)
+    kwargs = cfg.env_kwargs
+    kwargs.sim_device_id = self.cfg.gpu_id
+    kwargs.rl_device_id = self.cfg.gpu_id
+    self.env = gym.make(cfg.env_name, **kwargs)
     self.cfg.update(env_params=self.env.env_params(), env_cfg=self.env.cfg)
     # alias for env_params
     self.EP = self.cfg.env_params
