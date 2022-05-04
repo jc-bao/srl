@@ -37,6 +37,8 @@ class AgentBase:
     kwargs = cfg.env_kwargs
     kwargs.sim_device_id = self.cfg.gpu_id
     kwargs.rl_device_id = self.cfg.gpu_id
+    if not self.cfg.render:
+      kwargs.num_cameras = 0
     self.env = gym.make(cfg.env_name, **kwargs)
     self.cfg.update(env_params=self.env.env_params(), env_cfg=self.env.cfg)
     # alias for env_params
