@@ -1,5 +1,7 @@
 # wandb
 wandb: true
+resume_mode: null
+wid: null
 project: PPO_debug 
 name: FrankaPNP_default
 
