@@ -50,7 +50,7 @@ policy_noise: 0.15
 # eval
 eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
-render: false
+render: true
 render_per_eval: 0.05
 
 curri:
