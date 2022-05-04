@@ -20,6 +20,7 @@ env_params: null
 env_kwargs:
   num_envs: 8192 
   num_robots: 2
+  base_steps: 25 # wired, need investigation
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
 
