@@ -361,7 +361,6 @@ class AgentBase:
       if self.cfg.wid is not None:
         file_name = _path.split('/')[-1]
         _path = wandb.restore(f'model/{file_name}', f'jc-bao/{self.cfg.project}/{self.cfg.wid}').name
-        # TODO make it resumable
       with open(_path, 'rb') as f:
         state_dict = torch.load(
           f, map_location=lambda storage, loc: storage)

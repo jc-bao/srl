@@ -58,12 +58,12 @@ curri:
     now: 0
     end: 0.2
     step: 0.05
-    bar: -0.3
+    bar: -0.2
   os_rate: 
     now: 0.2
     end: 0.8
     step: 0.3
-    bar: -0.4
+    bar: -0.3
 
 # save
 cwd: results

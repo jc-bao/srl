@@ -18,6 +18,9 @@ def train(config):
 		if config.resume_mode is None or config.resume_mode == 'restart':
 			print('[Wandb] start new run...')
 			wandb.init(name=config.name, project=config.project, config=config)
+		elif config.resume_mode == 'load_only':
+			print('[Wandb] start load only mode... set wandb to false')
+			config.wandb = False
 		elif config.resume_mode == 'continue':
 			print('[Wandb] resume old run...')
 			wandb.init(project=config.project, id=config.wid, resume="allow", config=config)
@@ -63,7 +66,7 @@ def train(config):
 			result = exp_agent.eval_vec_env(render = (num_eval % int(1/config.render_per_eval) == 0))
 			log(result)
 
-			if result.final_rew > best_rew and (i%config.rollout_per_save)==0:
+			if result.final_rew > best_rew and (i % int(1/config.rollout_per_save))==0:
 				best_rew = result.final_rew 
 				exp_agent.save_or_load_agent(file_tag = f'rew{best_rew:.2f}', if_save=True)
 				exp_agent.save_or_load_agent(file_tag = 'best', if_save=True)
