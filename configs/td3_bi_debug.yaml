@@ -1,5 +1,5 @@
 # wandb
-wandb: true
+wandb: false
 resume_mode: null
 wid: null
 project: TD3_debug 
@@ -13,13 +13,14 @@ her_rate: 0.8
 her_decay: 0.0
 random_relabel_rate: 0.0
 if_use_per: false
-buffer_size: 4000000
+buffer_size: 400
 
 # env_params
 env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
-  num_envs: 8192 
+  num_envs: 1 
+  num_cameras: 0
   num_robots: 2
   base_steps: 25 # wired, need investigation
 reward_scale: 1
@@ -40,7 +41,7 @@ max_collect_steps: !!float 1e9
 reuse: 10
 steps_per_rollout: null 
 updates_per_rollout: null # calulate with reuse
-batch_size: 2048
+batch_size: 20
 gamma: 0.98
 lr: 0.00048
 soft_update_tau: 0.005

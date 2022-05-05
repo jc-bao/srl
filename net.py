@@ -9,12 +9,19 @@ class Actor(nn.Module):
 	def __init__(self, cfg):
 		self.cfg, EP = filter_cfg(cfg)
 		super().__init__()
-		self.net = nn.Sequential(
-			nn.Linear(EP.state_dim, cfg.net_dim),nn.ReLU(),
-			nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
-			nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
-			nn.Linear(cfg.net_dim, EP.action_dim),
-		)
+		if cfg.net_type == 'deepset':
+			self.net = nn.Sequential(
+				ActorDeepsetBlock(cfg),
+				nn.Linear(cfg.net_dim, EP.action_dim))
+		elif cfg.net_type == 'mlp':
+			self.net = nn.Sequential(
+				nn.Linear(EP.state_dim, cfg.net_dim),nn.ReLU(),
+				nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
+				nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
+				nn.Linear(cfg.net_dim, EP.action_dim),
+			)
+		else:
+			raise NotImplementedError(f'net_type {cfg.net_type} not implemented')
 		self.explore_noise = cfg.explore_noise  # standard deviation of exploration action noise
 
 	def forward(self, state):
@@ -234,8 +241,13 @@ class CriticTwin(nn.Module):  # shared parameter
 	def __init__(self, cfg):
 		self.cfg, EP = filter_cfg(cfg)
 		super().__init__()
-		self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
-																nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
+		if self.cfg.net_type == 'deepset':
+			self.net_sa = CriticDeepsetBlock(cfg)
+		elif self.cfg.net_type == 'mlp':
+			self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+																	nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
+		else:
+			raise NotImplementedError
 		self.net_q1 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
 																nn.Linear(cfg.net_dim, 1))  # q1 value
 		self.net_q2 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
@@ -328,6 +340,37 @@ class ActorDeepsetBlock(nn.Module):
 		x = F.relu(self.fc2(x))
 		return x.mean(dim=1)
 
+
+class CriticDeepsetBlock(nn.Module):
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.shared_dim = EP.shared_dim
+		self.seperate_dim = EP.seperate_dim
+		self.goal_dim = EP.goal_dim
+		self.num_goals = EP.num_goals
+		self.action_dim = EP.action_dim
+		assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
+		self.single_goal_dim = self.goal_dim // self.num_goals
+		assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
+		self.single_seperate_dim = self.seperate_dim // self.num_goals
+		self.net_in = nn.Sequential(
+			nn.Linear(self.shared_dim+self.single_seperate_dim +
+								self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU(),
+			nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),)
+
+	def forward(self, state, action=None):
+		if action is None:
+			action = state[..., -self.action_dim:]
+		obj = state[..., self.shared_dim:self.shared_dim +
+								self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
+		g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim +
+							self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
+		grip = state[..., :self.shared_dim].unsqueeze(
+			1).repeat(1, self.num_goals, 1)
+		action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
+		x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
+		return self.net_in(x).mean(dim=1)
 
 class CriticDeepset(nn.Module):
 	def __init__(self, cfg):

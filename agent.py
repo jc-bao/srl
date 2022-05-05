@@ -24,7 +24,7 @@ class AgentBase:
         cwd=f'{wandb.run.dir}/model')
     else:
       self.cfg.update(
-        cwd=f'./{cfg.cwd}/model')
+        cwd=f'./results/{cfg.cwd}/model')
     os.makedirs(self.cfg.cwd, exist_ok=True)
 
     '''seed '''

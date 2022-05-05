@@ -17,6 +17,7 @@ runs/
 # JetBrains folder
 .idea/
 results/
+model/
 wandb/
 
 .DS_Store
