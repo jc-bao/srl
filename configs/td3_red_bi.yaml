@@ -14,6 +14,7 @@ her_decay: 0.0
 random_relabel_rate: 0.0
 if_use_per: false
 buffer_size: 4000000
+dropout_early_termin: false
 
 # env_params
 env_name: 'FrankaPNP-v0'
@@ -37,17 +38,17 @@ gpu_id: 0
 # algorithm
 agent_name: AgentTD3
 max_collect_steps: !!float 1e9
-reuse: 100
+reuse: 400
 steps_per_rollout: null 
 updates_per_rollout: null # calulate with reuse
-batch_size: 2048
+batch_size: 4096
 gamma: 0.98
 lr: 0.00048
 soft_update_tau: 0.005
 explore_noise: 0.2
 # TD3
 update_freq: 2
-policy_noise: 0.15
+policy_noise: 0.3
 policy_update_gap: 20 # update actor every n critic update
 random_q_num: 2
 q_num: 8
