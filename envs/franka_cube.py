@@ -435,6 +435,7 @@ class FrankaCube(gym.Env):
 		self.block_states = self.root_state_tensor[:, self.cfg.num_robots*2:self.cfg.num_robots*2+self.cfg.num_goals]
 		# goal
 		self.init_ag = torch.zeros_like(self.block_states[..., :3], device=self.device, dtype=torch.float)
+		self.init_ag_normed = torch.zeros_like(self.init_ag, device=self.device, dtype=torch.float) 
 		self.last_step_ag = torch.zeros_like(self.block_states[..., :3], device=self.device, dtype=torch.float)
 		self.ag_unmoved_steps = torch.zeros((self.cfg.num_envs, self.cfg.num_goals,), device=self.device, dtype=torch.float)
 		self.goal = self.root_state_tensor[:, self.cfg.num_robots*2 +
@@ -517,7 +518,7 @@ class FrankaCube(gym.Env):
 				# TODO move this to general update
 			else:
 				print(f'[Curriculum] config has no attribute {k}')
-		# resample original pos
+		# resample original dof pos
 		random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
 		self.franka_default_dof_state[:,:,0] = self.predefined_dof_pos[random_idx]
 		# step first to init params
@@ -589,7 +590,7 @@ class FrankaCube(gym.Env):
 			self.block_states[reset_idx] = self.default_block_states[reset_idx]
 			in_hand = torch.rand((self.cfg.num_envs,),
 													 device=self.device) < self.cfg.inhand_rate
-			inhand_idx = reset_idx & in_hand
+			self.inhand_idx = reset_idx & in_hand
 			if self.cfg.obj_sample_mode == 'uniform':
 				block_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 			elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
@@ -600,15 +601,16 @@ class FrankaCube(gym.Env):
 			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[block_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
 			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
 			self.ag_unmoved_steps[reset_idx] = 0
-			if inhand_idx.any():
+			if self.inhand_idx.any():
 				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
 				# NOTE can only choose block 0 in hand now TODO fix it
 				choosed_block = 0 
-				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(inhand_idx.sum().item(),))
-				self.init_ag[inhand_idx, choosed_block] = self.default_grip_pos[inhand_idx, choosed_robot] + \
-					(torch.rand_like(self.default_grip_pos[inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
-				# self.init_ag[inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
+				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(self.inhand_idx.sum().item(),))
+				self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
+					(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
+				# self.init_ag[self.inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
 			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
+			self.init_ag_normed[reset_idx] = ((self.init_ag[reset_idx]-self.goal_mean)/self.goal_std)
 			# change to hand or random pos
 			self.gym.set_actor_root_state_tensor_indexed(
 				self.sim,
@@ -731,16 +733,19 @@ class FrankaCube(gym.Env):
 			self.reset_buf[:] = False
 		done = self.reset_buf.clone().type(torch.float)
 		# info
+		self.ag_normed = ((self.block_states[..., :3]-self.goal_mean)/self.goal_std)
 		info = torch.cat((
 			success_env.type(torch.float).unsqueeze(-1),
 			self.progress_buf.type(torch.float).unsqueeze(-1),
 			early_termin.unsqueeze(-1),
-			torch.empty((self.cfg.num_envs, 3), device=self.device, dtype=torch.float),# traj_idx, traj_len, tleft
-			((self.block_states[..., :3]-self.goal_mean)/self.goal_std).view(
+			# traj_idx, traj_len, tleft
+			torch.empty((self.cfg.num_envs, 3), device=self.device, dtype=torch.float),
+			# ag
+			self.ag_normed.view(
 				self.cfg.num_envs, 3*self.cfg.num_goals).type(torch.float),
 			# grip pos
 			self.grip_pos.view(self.cfg.num_envs, -1), 
-			# ag reached state
+			# ag reached state 0, 1
 			reached_ag.float(),
 			# ag unmoved steps
 			self.ag_unmoved_steps,
@@ -816,17 +821,18 @@ class FrankaCube(gym.Env):
 			self.block_states[reset_idx] = self.default_block_states[reset_idx]
 			in_hand = torch.rand((self.cfg.num_envs,),
 													 device=self.device) < self.cfg.inhand_rate
-			inhand_idx = reset_idx & in_hand
+			self.inhand_idx = reset_idx & in_hand
 			block_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[block_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
-			if inhand_idx.any():
+			if self.inhand_idx.any():
 				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
 				# NOTE can only choose block 0 in hand now
 				choosed_block = 0 
-				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(inhand_idx.sum().item(),))
-				self.init_ag[inhand_idx, choosed_block] = self.default_grip_pos[inhand_idx, choosed_robot]
-				# self.init_ag[inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
+				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(self.inhand_idx.sum().item(),))
+				self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot]
+				# self.init_ag[self.inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
 			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
+			self.init_ag_normed[reset_idx] = ((self.init_ag[reset_idx]-self.goal_mean)/self.goal_std)
 			# change to hand or random pos
 			self.gym.set_actor_root_state_tensor_indexed(
 				self.sim,
@@ -1316,7 +1322,7 @@ if __name__ == '__main__':
 	run policy
 	'''
 	# env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=True, bound_robot=True, sim_device_id=1, rl_device_id=1, num_goals=1, inhand_rate=0.0)
-	env = FrankaCube(num_envs=1, num_robots=2, num_cameras=0, headless=True, bound_robot=True, sim_device_id=1, rl_device_id=1, num_goals=1, inhand_rate=0.0)
+	env = FrankaCube(num_envs=1, num_robots=1, num_cameras=0, headless=True, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.0)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1336,8 +1342,9 @@ if __name__ == '__main__':
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
 			env.render(mode='human')
-			info_dict = env.info_parser(info)
-			print(info_dict.ag_unmoved_steps.item(), info_dict.step.item())
+			print(env.init_ag_normed, torch.norm(env.init_ag_normed - env.ag_normed, dim=-1))
+			# info_dict = env.info_parser(info)
+			# print(info_dict.ag_unmoved_steps.item(), info_dict.step.item())
 		# Image.fromarray(images[0]).save('foo.png')
 
 	print(time.time()-start)

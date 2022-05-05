@@ -254,14 +254,14 @@ class CriticTwin(nn.Module):  # shared parameter
 																nn.Linear(cfg.net_dim, 1))  # q2 value
 
 	def forward(self, state, action):
-		return torch.add(*self.get_q_all(state, action)) / 2.  # mean Q value
+		return torch.mean(self.get_q_all(state, action))
 
 	def get_q_min(self, state, action):
-		return torch.min(*self.get_q_all(state, action))  # min Q value
+		return torch.min(self.get_q_all(state, action), dim=-1, keepdim=True)[0]  # min Q value
 
 	def get_q_all(self, state, action):
 		tmp = self.net_sa(torch.cat((state, action), dim=1))
-		return self.net_q1(tmp), self.net_q2(tmp)  # two Q values
+		return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)  # two Q values
 
 class CriticRed(nn.Module):  # shared parameter
 	def __init__(self, cfg):
@@ -284,7 +284,7 @@ class CriticRed(nn.Module):  # shared parameter
 		return torch.mean(self.get_q_all(state, action))  # mean Q value
 
 	def get_q_min(self, state, action):
-		rand_idx = np.random.randint(low=0, high=self.cfg.q_num, size=(self.cfg.random_q_num,),)
+		rand_idx = np.random.choice(self.cfg.q_num, size=(self.cfg.random_q_num,), replace=False)
 		return torch.min(self.get_q_all(state, action, idx=rand_idx), dim=-1, keepdim=True)[0]  # min Q value
 
 	def get_q_all(self, state, action, idx = None):

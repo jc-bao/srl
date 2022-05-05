@@ -116,6 +116,7 @@ class AgentBase:
                           device=self.cfg.device)
     final_rew = torch.zeros(
       self.EP.num_envs, device=self.cfg.device)
+    ag_moved_dist_count = torch.zeros((10,),device=self.cfg.device)
     # reset
     ten_s = self.env.reset()
     if self.cfg.render and render:
@@ -136,6 +137,15 @@ class AgentBase:
       ep_rew += ten_rewards
       ep_step += 1
       final_rew[ten_dones] += ten_rewards[ten_dones]
+      try:
+        # TODO make it more elegant
+        ag_moved_dist = torch.norm(self.env.init_ag_normed[ten_dones&(~self.env.inhand_idx)] - \
+          self.env.ag_normed[ten_dones&(~self.env.inhand_idx)], dim=-1).flatten()
+        ag_moved_dist_discrete = (ag_moved_dist/0.4).floor()
+        for i in range(10):
+          ag_moved_dist_count[i] += (ag_moved_dist_discrete==i).sum()
+      except Exception as e:
+        print(f'{e}, fail to calcuate ag_moved_dist')
       collected_steps = (ep_step).sum()
       ten_s = ten_s_next
     # return
@@ -152,7 +162,7 @@ class AgentBase:
         self.cfg.curri[k]['now'] += v['step']
       reset_params[k] = self.cfg.curri[k]['now']
     self.env.reset(config=reset_params)
-    return AttrDict(
+    record_info = AttrDict(
       steps=self.total_step,
       ep_rew=torch.mean(ep_rew/num_ep).item(),
       final_rew=final_rew,
@@ -160,6 +170,13 @@ class AgentBase:
       video=video,
       **reset_params  # record curriculum
     )
+    try:
+      ag_moved_dist_count /= ag_moved_dist_count.sum()
+      for i in range(10):
+        record_info[f'eval/ag_moved_dist_{i*0.6:.1f} success rate'] = ag_moved_dist_count[i].item()
+    except Exception:
+      print('fail to record ag_moved_dist')
+    return record_info
 
   def explore_vec_env(self, target_steps=None):
     # auto set target steps

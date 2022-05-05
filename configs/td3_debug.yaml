@@ -48,6 +48,7 @@ explore_noise: 0.2
 # TD3
 update_freq: 2
 policy_noise: 0.15
+policy_update_gap: 1
 
 # eval
 eval_per_rollout: 1
