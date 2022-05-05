@@ -1,0 +1,75 @@
+# wandb
+wandb: true
+resume_mode: null
+wid: null
+project: TD3Red_debug 
+name: handover_default
+
+# seed 
+random_seed: 0
+
+# replay
+her_rate: 0.8
+her_decay: 0.0
+random_relabel_rate: 0.0
+if_use_per: false
+buffer_size: 4000000
+
+# env_params
+env_name: 'FrankaPNP-v0'
+env_params: null
+env_kwargs:
+  num_envs: 8192 
+  num_robots: 2
+  base_steps: 25 # wired, need investigation
+reward_scale: 1
+extra_info_dim: 0 # extra info get from agent
+
+# network
+act_net: Actor
+critic_net: CriticRed
+net_dim: 128
+net_type: deepset
+if_act_target: true
+if_cri_target: true
+gpu_id: 0
+
+# algorithm
+agent_name: AgentTD3
+max_collect_steps: !!float 1e9
+reuse: 100
+steps_per_rollout: null 
+updates_per_rollout: null # calulate with reuse
+batch_size: 2048
+gamma: 0.98
+lr: 0.00048
+soft_update_tau: 0.005
+explore_noise: 0.2
+# TD3
+update_freq: 2
+policy_noise: 0.15
+policy_update_gap: 20 # update actor every n critic update
+random_q_num: 2
+q_num: 8
+
+# eval
+eval_per_rollout: 0.1
+eval_steps: null # set with steps per rollout
+render: true
+render_per_eval: 0.05
+
+curri:
+  table_gap: 
+    now: 0
+    end: 0.2
+    step: 0.05
+    bar: -0.2
+  os_rate: 
+    now: 0.2
+    end: 0.8
+    step: 0.3
+    bar: -0.3
+
+# save
+cwd: results
+rollout_per_save: 0.1
