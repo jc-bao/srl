@@ -1,9 +1,9 @@
 # wandb
 wandb: true
-resume_mode: null
-wid: null
+resume_mode: restart
+wid: i7uqhhug
 project: TD3_debug 
-name: handover_default 
+name: handover_obj2_default 
 
 # seed 
 random_seed: 0
@@ -14,6 +14,7 @@ her_decay: 0.0
 random_relabel_rate: 0.0
 if_use_per: false
 buffer_size: 4000000
+dropout_early_termin: false
 
 # env_params
 env_name: 'FrankaPNP-v0'
@@ -44,7 +45,7 @@ max_collect_steps: !!float 1e9
 reuse: 10
 steps_per_rollout: null 
 updates_per_rollout: null # calulate with reuse
-batch_size: 2048
+batch_size: 4096
 gamma: 0.98
 lr: 0.00048
 soft_update_tau: 0.005
@@ -52,12 +53,13 @@ explore_noise: 0.2
 # TD3
 update_freq: 2
 policy_noise: 0.15
+policy_update_gap: 1
 
 # eval
 eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
 render: true
-render_per_eval: 0.05
+render_per_eval: 0.1
 
 curri: {}
 
