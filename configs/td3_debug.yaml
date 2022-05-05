@@ -19,7 +19,7 @@ buffer_size: 1000
 env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
-  num_envs: 4
+  num_envs: 1
   num_cameras: 1
   headless: true
 reward_scale: 1
