@@ -3,7 +3,7 @@ wandb: true
 resume_mode: null
 wid: null
 project: TD3_debug 
-name: handover_tuned
+name: handover_store_early_termin
 
 # seed 
 random_seed: 0
@@ -14,6 +14,7 @@ her_decay: 0.0
 random_relabel_rate: 0.0
 if_use_per: false
 buffer_size: 4000000
+dropout_early_termin: false
 
 # env_params
 env_name: 'FrankaPNP-v0'
