@@ -254,15 +254,45 @@ class CriticTwin(nn.Module):  # shared parameter
 																nn.Linear(cfg.net_dim, 1))  # q2 value
 
 	def forward(self, state, action):
-		return torch.add(*self.get_q1_q2(state, action)) / 2.  # mean Q value
+		return torch.add(*self.get_q_all(state, action)) / 2.  # mean Q value
 
 	def get_q_min(self, state, action):
-		return torch.min(*self.get_q1_q2(state, action))  # min Q value
+		return torch.min(*self.get_q_all(state, action))  # min Q value
 
-	def get_q1_q2(self, state, action):
+	def get_q_all(self, state, action):
 		tmp = self.net_sa(torch.cat((state, action), dim=1))
 		return self.net_q1(tmp), self.net_q2(tmp)  # two Q values
 
+class CriticRed(nn.Module):  # shared parameter
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		if self.cfg.net_type == 'deepset':
+			self.net_sa = CriticDeepsetBlock(cfg)
+		elif self.cfg.net_type == 'mlp':
+			self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+																	nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
+		else:
+			raise NotImplementedError
+		self.all_idx = torch.arange(self.cfg.q_num, device=self.cfg.device)
+		self.net_q = nn.ModuleList()
+		for _ in range(self.cfg.q_num):
+			self.net_q.append(nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+																nn.Linear(cfg.net_dim, 1)))  # q values
+
+	def forward(self, state, action):
+		return torch.mean(self.get_q_all(state, action))  # mean Q value
+
+	def get_q_min(self, state, action):
+		rand_idx = np.random.randint(low=0, high=self.cfg.q_num, size=(self.cfg.random_q_num,),)
+		return torch.min(self.get_q_all(state, action, idx=rand_idx), dim=-1, keepdim=True)[0]  # min Q value
+
+	def get_q_all(self, state, action, idx = None):
+		tmp = self.net_sa(torch.cat((state, action), dim=1))
+		if idx is None:
+			return torch.cat([self.net_q[i](tmp) for i in range(self.cfg.q_num)], dim=-1)
+		else:
+			return torch.cat([self.net_q[i](tmp) for i in idx], dim=-1)  # all Q values 
 
 class CriticREDq(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-learning)
 	def __init__(self, cfg):

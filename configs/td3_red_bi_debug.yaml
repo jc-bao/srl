@@ -50,7 +50,7 @@ explore_noise: 0.2
 update_freq: 2
 policy_noise: 0.15
 # redq
-actor_update_gap: 20 # update actor every n critic update
+policy_update_gap: 20 # update actor every n critic update
 random_q_num: 2
 q_num: 8
 

@@ -438,7 +438,7 @@ class AgentSAC(AgentBase):
       alpha = self.alpha_log.exp().detach()
       q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
         (next_q + next_log_prob * alpha)
-    q1, q2 = self.cri.get_q1_q2(trans.state, trans.action)
+    q1, q2 = self.cri.get_q_all(trans.state, trans.action)
     obj_critic = (self.criterion(q1, q_label) +
                   self.criterion(q2, q_label)) / 2
     return obj_critic, trans.state
@@ -454,7 +454,7 @@ class AgentSAC(AgentBase):
 
       alpha = self.alpha_log.exp().detach()
       q_label = reward + mask * (next_q + next_log_prob * alpha)
-    q1, q2 = self.cri.get_q1_q2(state, action)
+    q1, q2 = self.cri.get_q_all(state, action)
     td_error = (self.criterion(q1, q_label) +
                 self.criterion(q2, q_label)) / 2.
     obj_critic = (td_error * is_weights).mean()
@@ -666,9 +666,10 @@ class AgentTD3(AgentDDPG):
         self.buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
 
-      action_pg = self.act(state)  # policy gradient
-      obj_actor = -self.cri_target(state, action_pg).mean()
-      self.optimizer_update(self.act_optimizer, obj_actor)
+      if update_c % self.cfg.policy_update_gap == 0:  # delay update
+        action_pg = self.act(state)  # policy gradient
+        obj_actor = -self.cri_target(state, action_pg).mean()
+        self.optimizer_update(self.act_optimizer, obj_actor)
       if update_c % self.cfg.update_freq == 0:  # delay update
         self.soft_update(self.cri_target, self.cri,
                          self.cfg.soft_update_tau)
@@ -685,12 +686,12 @@ class AgentTD3(AgentDDPG):
       trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
       next_a = self.act_target.get_action_noise(
         trans.next_state, self.cfg.policy_noise)
-      next_q = torch.min(
-        *self.cri_target.get_q1_q2(trans.next_state, next_a))
-      q_label = trans.rew.unsqueeze(-1) + \
-        trans.mask.unsqueeze(-1) * next_q
-    q1, q2 = self.cri.get_q1_q2(trans.state, trans.action)
-    obj_critic = self.criterion(q1, q_label) + self.criterion(q2, q_label)
+      next_q = self.cri_target.get_q_min(trans.next_state, next_a)
+      q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * next_q
+    # q1, q2 = self.cri.get_q_all(trans.state, trans.action)
+    # obj_critic = self.criterion(q1, q_label) + self.criterion(q2, q_label)
+    qs = self.cri.get_q_all(trans.state, trans.action)
+    obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
     return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
@@ -702,11 +703,11 @@ class AgentTD3(AgentDDPG):
         next_s, self.policy_noise
       )  # policy noise
       next_q = torch.min(
-        *self.cri_target.get_q1_q2(next_s, next_a)
+        *self.cri_target.get_q_all(next_s, next_a)
       )  # twin critics
       q_label = reward + mask * next_q
 
-    q1, q2 = self.cri.get_q1_q2(state, action)
+    q1, q2 = self.cri.get_q_all(state, action)
     td_error = self.criterion(q1, q_label) + self.criterion(q2, q_label)
     obj_critic = (td_error * is_weights).mean()
 
