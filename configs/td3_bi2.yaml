@@ -3,7 +3,7 @@ wandb: true
 resume_mode: null
 wid: null
 project: TD3_debug 
-name: handover_obj2_default 
+name: handover_obj2_default(2obj in hand) 
 
 # seed 
 random_seed: 0
@@ -11,7 +11,7 @@ random_seed: 0
 # replay
 her_rate: 0.8
 her_decay: 0.0
-random_relabel_rate: 0.0
+random_relabel_rate: 0.8
 if_use_per: false
 buffer_size: 4000000
 dropout_early_termin: false
@@ -27,6 +27,7 @@ env_kwargs:
   goal_space: [0.3,0.3,0.005]
   os_rate: 0.2
   table_gap: 0.0
+  inhand_rate: 0.5
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
 
@@ -66,12 +67,12 @@ curri:
     now: 0
     end: 0.2
     step: 0.05
-    bar: -0.2
+    bar: -0.3
   os_rate: 
     now: 0.2
     end: 0.8
     step: 0.3
-    bar: -0.3
+    bar: -0.4
 
 # save
 cwd: results
