@@ -12,7 +12,7 @@ class Actor(nn.Module):
 		if cfg.net_type == 'deepset':
 			self.net = nn.Sequential(
 				ActorDeepsetBlock(cfg),
-				*[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-3),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-self.cfg.shared_net_layer-1),
 				# *[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-4),
 				nn.Linear(cfg.net_dim, EP.action_dim))
 		elif cfg.net_type == 'mlp':
@@ -362,9 +362,10 @@ class ActorDeepsetBlock(nn.Module):
 		self.single_goal_dim = self.goal_dim // self.num_goals
 		assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
 		self.single_seperate_dim = self.seperate_dim // self.num_goals
-		self.fc1 = nn.Linear(
-			self.shared_dim+self.single_seperate_dim+self.single_goal_dim, cfg.net_dim)
-		self.fc2 = nn.Linear(cfg.net_dim, cfg.net_dim)
+		self.fc = nn.Sequential(
+			nn.Linear(self.shared_dim + self.single_seperate_dim + self.single_goal_dim, cfg.net_dim), nn.ReLU(),
+			*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1),
+		)
 
 	def forward(self, state):
 		grip = state[..., :self.shared_dim]
@@ -374,8 +375,7 @@ class ActorDeepsetBlock(nn.Module):
 							self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
 		grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
 		x = torch.cat((grip, obj, g), -1)
-		x = F.relu(self.fc1(x))
-		x = F.relu(self.fc2(x))
+		x = self.fc(x)
 		return x.mean(dim=1)
 
 

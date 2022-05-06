@@ -1,8 +1,8 @@
 # wandb
-wandb: true 
-resume_mode: load_only
+wandb: false 
+resume_mode: null
 load_path: null 
-wid: 63mqndv5
+wid: null
 project: TD3_debug 
 name: hello
 
@@ -25,7 +25,7 @@ env_kwargs:
   num_robots: 2
   num_cameras: 1
   num_goals: 2
-  headless: false
+  headless: true
   base_steps: 25
   table_gap: 0.2
   os_rate: 0.8
