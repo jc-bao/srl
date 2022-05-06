@@ -248,12 +248,12 @@ class CriticTwin(nn.Module):  # shared parameter
 			self.net_sa = CriticDeepsetBlock(cfg)
 		elif self.cfg.net_type == 'mlp':
 			self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
-																	nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
+																	*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1))  # concat(state, action)
 		else:
 			raise NotImplementedError
-		self.net_q1 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+		self.net_q1 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
 																nn.Linear(cfg.net_dim, 1))  # q1 value
-		self.net_q2 = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+		self.net_q2 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
 																nn.Linear(cfg.net_dim, 1))  # q2 value
 
 	def forward(self, state, action):
@@ -273,7 +273,7 @@ class CriticRed(nn.Module):  # shared parameter
 		if self.cfg.net_type == 'deepset':
 			self.net_sa = nn.Sequential(
 				CriticDeepsetBlock(cfg),
-				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-4)
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer)	
 				)
 		elif self.cfg.net_type == 'mlp':
 			self.net_sa = nn.Sequential(
@@ -395,7 +395,7 @@ class CriticDeepsetBlock(nn.Module):
 		self.net_in = nn.Sequential(
 			nn.Linear(self.shared_dim+self.single_seperate_dim +
 								self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU(),
-			nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),)
+			*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1),)
 
 	def forward(self, state, action=None):
 		if action is None:
