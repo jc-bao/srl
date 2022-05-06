@@ -14,6 +14,7 @@ her_decay: 0.5
 random_relabel_rate: 1.0
 if_use_per: false
 buffer_size: 1000
+dropout_early_termin: false
 
 # env_params
 env_name: 'FrankaPNP-v0'
