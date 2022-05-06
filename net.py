@@ -12,20 +12,29 @@ class Actor(nn.Module):
 		if cfg.net_type == 'deepset':
 			self.net = nn.Sequential(
 				ActorDeepsetBlock(cfg),
-				*[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-self.cfg.shared_net_layer-1),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
+				(self.cfg.net_layer-self.cfg.shared_net_layer-1),
 				# *[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-4),
+				nn.Linear(cfg.net_dim, EP.action_dim))
+		elif cfg.net_type == 'attn':
+			self.net = nn.Sequential(
+				ActorAttnBlock(cfg),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
+				(self.cfg.net_layer-self.cfg.shared_net_layer-1),
 				nn.Linear(cfg.net_dim, EP.action_dim))
 		elif cfg.net_type == 'mlp':
 			self.net = nn.Sequential(
-				nn.Linear(EP.state_dim, cfg.net_dim),nn.ReLU(),
+				nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
 				# nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
 				# nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
-				*[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-2), 
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] * \
+				(self.cfg.net_layer-2),
 				nn.Linear(cfg.net_dim, EP.action_dim),
 			)
 		else:
 			raise NotImplementedError(f'net_type {cfg.net_type} not implemented')
-		self.explore_noise = cfg.explore_noise  # standard deviation of exploration action noise
+		# standard deviation of exploration action noise
+		self.explore_noise = cfg.explore_noise
 
 	def forward(self, state):
 		return self.net(state).tanh()  # action.tanh()
@@ -35,11 +44,12 @@ class Actor(nn.Module):
 		noise = (torch.randn_like(action) *
 						 self.explore_noise).clamp(-0.5, 0.5)
 		return (action + noise).clamp(-1.0, 1.0)
-	
+
 	def get_action_noise(self, state, action_std):
 		action = self.net(state).tanh()
 		noise = (torch.randn_like(action) * action_std).clamp(-0.5, 0.5)
 		return (action + noise).clamp(-1.0, 1.0)
+
 
 class ActorSAC(nn.Module):
 	def __init__(self, cfg):
@@ -246,6 +256,8 @@ class CriticTwin(nn.Module):  # shared parameter
 		super().__init__()
 		if self.cfg.net_type == 'deepset':
 			self.net_sa = CriticDeepsetBlock(cfg)
+		elif self.cfg.net_type == 'attn':
+				self.net_sa = CriticAttnBlock(cfg)
 		elif self.cfg.net_type == 'mlp':
 			self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
 																	*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1))  # concat(state, action)
@@ -260,11 +272,14 @@ class CriticTwin(nn.Module):  # shared parameter
 		return torch.mean(self.get_q_all(state, action))
 
 	def get_q_min(self, state, action):
-		return torch.min(self.get_q_all(state, action), dim=-1, keepdim=True)[0]  # min Q value
+		# min Q value
+		return torch.min(self.get_q_all(state, action), dim=-1, keepdim=True)[0]
 
 	def get_q_all(self, state, action):
 		tmp = self.net_sa(torch.cat((state, action), dim=1))
-		return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)  # two Q values
+		# two Q values
+		return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)
+
 
 class CriticRed(nn.Module):  # shared parameter
 	def __init__(self, cfg):
@@ -273,8 +288,8 @@ class CriticRed(nn.Module):  # shared parameter
 		if self.cfg.net_type == 'deepset':
 			self.net_sa = nn.Sequential(
 				CriticDeepsetBlock(cfg),
-				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer)	
-				)
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer)
+			)
 		elif self.cfg.net_type == 'mlp':
 			self.net_sa = nn.Sequential(
 				nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
@@ -292,15 +307,19 @@ class CriticRed(nn.Module):  # shared parameter
 		return torch.mean(self.get_q_all(state, action))  # mean Q value
 
 	def get_q_min(self, state, action):
-		rand_idx = np.random.choice(self.cfg.q_num, size=(self.cfg.random_q_num,), replace=False)
-		return torch.min(self.get_q_all(state, action, idx=rand_idx), dim=-1, keepdim=True)[0]  # min Q value
+		rand_idx = np.random.choice(self.cfg.q_num, size=(
+			self.cfg.random_q_num,), replace=False)
+		# min Q value
+		return torch.min(self.get_q_all(state, action, idx=rand_idx), dim=-1, keepdim=True)[0]
 
-	def get_q_all(self, state, action, idx = None):
+	def get_q_all(self, state, action, idx=None):
 		tmp = self.net_sa(torch.cat((state, action), dim=1))
 		if idx is None:
 			return torch.cat([self.net_q[i](tmp) for i in range(self.cfg.q_num)], dim=-1)
 		else:
-			return torch.cat([self.net_q[i](tmp) for i in idx], dim=-1)  # all Q values 
+			# all Q values
+			return torch.cat([self.net_q[i](tmp) for i in idx], dim=-1)
+
 
 class CriticREDq(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-learning)
 	def __init__(self, cfg):
@@ -363,8 +382,10 @@ class ActorDeepsetBlock(nn.Module):
 		assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
 		self.single_seperate_dim = self.seperate_dim // self.num_goals
 		self.fc = nn.Sequential(
-			nn.Linear(self.shared_dim + self.single_seperate_dim + self.single_goal_dim, cfg.net_dim), nn.ReLU(),
-			*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1),
+			nn.Linear(self.shared_dim + self.single_seperate_dim +
+								self.single_goal_dim, cfg.net_dim), nn.ReLU(),
+			*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
+			(self.cfg.shared_net_layer-1),
 		)
 
 	def forward(self, state):
@@ -378,6 +399,35 @@ class ActorDeepsetBlock(nn.Module):
 		x = self.fc(x)
 		return x.mean(dim=1)
 
+class ActorAttnBlock(nn.Module):
+	def __init__(self, cfg):
+		# state_dim=[shared_dim, seperate_dim, goal_dim, num_goals]
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.shared_dim = EP.shared_dim
+		self.seperate_dim = EP.seperate_dim
+		self.goal_dim = EP.goal_dim
+		self.num_goals = EP.num_goals
+		assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
+		self.single_goal_dim = self.goal_dim // self.num_goals
+		assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
+		self.single_seperate_dim = self.seperate_dim // self.num_goals
+		self.embed = nn.Sequential(
+			nn.Linear(self.shared_dim + self.single_seperate_dim +
+								self.single_goal_dim, cfg.net_dim), nn.ReLU())
+		self.enc = nn.Sequential(*[EncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
+														 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
+
+	def forward(self, state):
+		grip = state[..., :self.shared_dim]
+		obj = state[..., self.shared_dim:self.shared_dim +
+								self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
+		g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim +
+							self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
+		grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
+		x = torch.cat((grip, obj, g), -1)
+		x = self.embed(x).transpose(0, 1)
+		return self.enc(x).mean(dim=0)
 
 class CriticDeepsetBlock(nn.Module):
 	def __init__(self, cfg):
@@ -409,6 +459,78 @@ class CriticDeepsetBlock(nn.Module):
 		action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
 		x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
 		return self.net_in(x).mean(dim=1)
+
+
+class CriticAttnBlock(nn.Module):
+	def __init__(self, cfg):
+		self.cfg, EP = filter_cfg(cfg)
+		super().__init__()
+		self.shared_dim = EP.shared_dim
+		self.seperate_dim = EP.seperate_dim
+		self.goal_dim = EP.goal_dim
+		self.num_goals = EP.num_goals
+		self.action_dim = EP.action_dim
+		assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
+		self.single_goal_dim = self.goal_dim // self.num_goals
+		assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
+		self.single_seperate_dim = self.seperate_dim // self.num_goals
+		self.embed = nn.Sequential(nn.Linear(self.shared_dim+self.single_seperate_dim +
+													 self.single_goal_dim+EP.action_dim, self.cfg.net_dim), nn.ReLU())
+		self.enc = nn.Sequential(*[EncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
+														 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
+
+	def forward(self, state, action=None):
+		if action is None:
+			action = state[..., -self.action_dim:]
+		obj = state[..., self.shared_dim:self.shared_dim +
+								self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
+		g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim +
+							self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
+		grip = state[..., :self.shared_dim].unsqueeze(
+			1).repeat(1, self.num_goals, 1)
+		action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
+		x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
+		x = self.embed(x).transpose(0, 1)
+		return self.enc(x).mean(dim=0)
+
+
+class EncoderLayer(nn.Module):
+	"""Adapted from: https://github.com/jwang0306/transformer-pytorch."""
+
+	def __init__(self, hidden_size, n_head, dim_ff, pre_lnorm, dropout=0.0):
+		super(EncoderLayer, self).__init__()
+		# self-attention part
+		self.self_attn = nn.MultiheadAttention(
+			hidden_size, n_head, dropout=dropout)
+		self.dropout = nn.Dropout(dropout)
+		self.self_attn_norm = nn.LayerNorm(hidden_size)
+
+		# feed forward network part
+		self.pff = nn.Sequential(
+			nn.Linear(hidden_size, dim_ff),
+			nn.ReLU(inplace=True),
+			nn.Dropout(dropout),
+			nn.Linear(dim_ff, hidden_size),
+			nn.Dropout(dropout)
+		)
+		self.pff_norm = nn.LayerNorm(hidden_size)
+		self.pre_lnorm = pre_lnorm
+
+	def forward(self, src, src_mask=None):
+		if self.pre_lnorm:
+			pre = self.self_attn_norm(src)
+			# residual connection
+			src = src + self.dropout(self.self_attn(pre, pre, pre, src_mask)[0])
+			pre = self.pff_norm(src)
+			src = src + self.pff(pre)  # residual connection
+		else:
+			# residual connection + layerNorm
+			src2 = self.dropout(self.self_attn(src, src, src, src_mask)[0])
+			src = self.self_attn_norm(src + src2)
+			# residual connection + layerNorm
+			src = self.pff_norm(src + self.pff(src))
+		return src
+
 
 class CriticDeepset(nn.Module):
 	def __init__(self, cfg):
@@ -445,6 +567,7 @@ class CriticDeepset(nn.Module):
 		x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
 		x = self.net_in(x).mean(dim=1)
 		return self.net_out(x)
+
 
 def filter_cfg(config):
 	cfg, EP = AttrDict(), AttrDict()

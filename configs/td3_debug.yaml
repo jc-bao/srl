@@ -37,8 +37,9 @@ act_net: Actor
 critic_net: CriticTwin
 net_dim: 256
 net_layer: 4
-shared_net_layer: 2
-net_type: deepset
+shared_net_layer: 3
+n_head: 4
+net_type: attn
 if_act_target: true 
 if_cri_target: true 
 gpu_id: 0
