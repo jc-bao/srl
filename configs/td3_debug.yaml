@@ -1,8 +1,8 @@
 # wandb
-wandb: false 
-resume_mode: null
-load_path: /home/pcy/rl/srl/wandb/latest-run/files/model
-wid: null
+wandb: true 
+resume_mode: load_only
+load_path: null 
+wid: 63mqndv5
 project: TD3_debug 
 name: hello
 
@@ -49,7 +49,7 @@ reuse: 1
 steps_per_rollout: 40
 updates_per_rollout: null # calulate with reuse
 batch_size: 200
-gamma: 0.99
+gamma: 0.98
 lr: 0.00024
 soft_update_tau: 0.005
 explore_noise: 0.2

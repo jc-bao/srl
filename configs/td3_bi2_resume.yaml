@@ -1,9 +1,9 @@
 # wandb
 wandb: true
 resume_mode: restart
-wid: i7uqhhug
+wid: 63mqndv5
 project: TD3_debug 
-name: handover_obj2_default 
+name: handover_obj2_resume_256*4
 
 # seed 
 random_seed: 0
@@ -25,7 +25,7 @@ env_kwargs:
   num_goals: 2
   base_steps: 25 # wired, need investigation
   goal_space: [0.3,0.3,0.005]
-  os_rate: 0.8
+  os_rate: 0.2
   table_gap: 0.2
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
@@ -33,7 +33,8 @@ extra_info_dim: 0 # extra info get from agent
 # network
 act_net: Actor
 critic_net: CriticTwin
-net_dim: 128
+net_dim: 256
+net_layer: 4
 net_type: deepset
 if_act_target: true
 if_cri_target: true
@@ -61,7 +62,12 @@ eval_steps: null # set with steps per rollout
 render: true
 render_per_eval: 0.1
 
-curri: {}
+curri:
+  os_rate: 
+    now: 0.2
+    end: 0.8
+    step: 0.3
+    bar: -0.4
 
 # save
 cwd: results
