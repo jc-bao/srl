@@ -13,6 +13,7 @@ class Actor(nn.Module):
 			self.net = nn.Sequential(
 				ActorDeepsetBlock(cfg),
 				*[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-3),
+				# *[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-4),
 				nn.Linear(cfg.net_dim, EP.action_dim))
 		elif cfg.net_type == 'mlp':
 			self.net = nn.Sequential(
