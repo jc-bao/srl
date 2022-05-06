@@ -1,7 +1,7 @@
 # wandb
-wandb: true 
-resume_mode: restart
-wid: u4ick8dh
+wandb: false 
+resume_mode: null
+wid: null
 project: TD3_debug 
 name: hello
 
@@ -31,8 +31,9 @@ extra_info_dim: 0 # extra info get from agent
 # network
 act_net: Actor
 critic_net: CriticTwin
-net_dim: 128
-net_type: mlp
+net_dim: 256
+net_layer: 4
+net_type: deepset
 if_act_target: true 
 if_cri_target: true 
 gpu_id: 0

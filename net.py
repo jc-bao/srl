@@ -12,12 +12,14 @@ class Actor(nn.Module):
 		if cfg.net_type == 'deepset':
 			self.net = nn.Sequential(
 				ActorDeepsetBlock(cfg),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-3),
 				nn.Linear(cfg.net_dim, EP.action_dim))
 		elif cfg.net_type == 'mlp':
 			self.net = nn.Sequential(
 				nn.Linear(EP.state_dim, cfg.net_dim),nn.ReLU(),
-				nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
-				nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
+				# nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
+				# nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-2), 
 				nn.Linear(cfg.net_dim, EP.action_dim),
 			)
 		else:
@@ -268,17 +270,22 @@ class CriticRed(nn.Module):  # shared parameter
 		self.cfg, EP = filter_cfg(cfg)
 		super().__init__()
 		if self.cfg.net_type == 'deepset':
-			self.net_sa = CriticDeepsetBlock(cfg)
+			self.net_sa = nn.Sequential(
+				CriticDeepsetBlock(cfg),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-4)
+				)
 		elif self.cfg.net_type == 'mlp':
-			self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
-																	nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())  # concat(state, action)
+			self.net_sa = nn.Sequential(
+				nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-3))  # concat(state, action)
 		else:
 			raise NotImplementedError
 		self.all_idx = torch.arange(self.cfg.q_num, device=self.cfg.device)
 		self.net_q = nn.ModuleList()
 		for _ in range(self.cfg.q_num):
-			self.net_q.append(nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-																nn.Linear(cfg.net_dim, 1)))  # q values
+			self.net_q.append(nn.Sequential(
+				nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
+				nn.Linear(cfg.net_dim, 1)))  # q values
 
 	def forward(self, state, action):
 		return torch.mean(self.get_q_all(state, action))  # mean Q value
