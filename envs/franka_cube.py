@@ -608,7 +608,11 @@ class FrankaCube(gym.Env):
 				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(self.inhand_idx.sum().item(),))
 				self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
 					(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
-				# self.init_ag[self.inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
+				if self.cfg.num_goals > 1 and self.cfg.num_robots > 1 and torch.rand(1)[0] < 0.5:
+					choosed_block = (choosed_block+1)%self.cfg.num_goals 
+					choosed_robot = (choosed_robot+1)%self.cfg.num_robots
+					self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
+						(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
 			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
 			self.init_ag_normed[reset_idx] = ((self.init_ag[reset_idx]-self.goal_mean)/self.goal_std)
 			# change to hand or random pos
@@ -1322,7 +1326,7 @@ if __name__ == '__main__':
 	run policy
 	'''
 	# env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=True, bound_robot=True, sim_device_id=1, rl_device_id=1, num_goals=1, inhand_rate=0.0)
-	env = FrankaCube(num_envs=1, num_robots=1, num_cameras=0, headless=True, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.0)
+	env = FrankaCube(num_envs=1, num_robots=2, num_goals=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, inhand_rate=1.0)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1334,7 +1338,8 @@ if __name__ == '__main__':
 		for j in range(env.cfg.max_steps):
 			if args.random:
 				act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)
-				# act[..., -1] = -1
+				act[..., 3] = -1
+				act[..., 7] = -1
 			elif args.ezpolicy:
 				act = env.ezpolicy(obs)
 			else:
@@ -1342,7 +1347,6 @@ if __name__ == '__main__':
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
 			env.render(mode='human')
-			print(env.init_ag_normed, torch.norm(env.init_ag_normed - env.ag_normed, dim=-1))
 			# info_dict = env.info_parser(info)
 			# print(info_dict.ag_unmoved_steps.item(), info_dict.step.item())
 		# Image.fromarray(images[0]).save('foo.png')
