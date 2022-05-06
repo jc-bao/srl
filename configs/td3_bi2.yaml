@@ -3,7 +3,7 @@ wandb: true
 resume_mode: null
 wid: null
 project: TD3_debug 
-name: handover_obj2_default(2obj in hand) 
+name: handover_obj2_default(2obj in hand, attn) 
 
 # seed 
 random_seed: 0
@@ -36,7 +36,9 @@ act_net: Actor
 critic_net: CriticTwin
 net_dim: 256
 net_layer: 4
-net_type: deepset
+shared_net_layer: 3
+n_head: 4
+net_type: attn
 if_act_target: true
 if_cri_target: true
 gpu_id: 0
