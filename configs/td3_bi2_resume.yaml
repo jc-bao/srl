@@ -1,9 +1,9 @@
 # wandb
 wandb: true
-resume_mode: continue
-wid: 1fh2dbnb
+resume_mode: restart
+wid: 269v0q4f
 project: TD3_debug 
-name: handover_obj2_resume_256*4
+name: obj2_resumel_attn
 
 # seed 
 random_seed: 0
@@ -11,7 +11,7 @@ random_seed: 0
 # replay
 her_rate: 0.8
 her_decay: 0.0
-random_relabel_rate: 0.0
+random_relabel_rate: 0.8
 if_use_per: false
 buffer_size: 4000000
 dropout_early_termin: false
@@ -35,8 +35,9 @@ act_net: Actor
 critic_net: CriticTwin
 net_dim: 256
 net_layer: 4
-shared_net_layer: 2
-net_type: deepset
+shared_net_layer: 3
+n_head: 4
+net_type: attn
 if_act_target: true
 if_cri_target: true
 gpu_id: 0
@@ -54,7 +55,7 @@ soft_update_tau: 0.005
 explore_noise: 0.2
 # TD3
 update_freq: 2
-policy_noise: 0.15
+policy_noise: 0.3
 policy_update_gap: 1
 
 # eval
