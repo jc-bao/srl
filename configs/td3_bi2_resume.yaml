@@ -3,7 +3,7 @@ wandb: true
 resume_mode: restart
 wid: 269v0q4f
 project: TD3_debug 
-name: obj2_resumel_attn
+name: obj2_resume_attn
 
 # seed 
 random_seed: 0
@@ -61,7 +61,7 @@ policy_update_gap: 1
 eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
 render: true
-render_per_eval: 0.1
+render_per_eval: 0.2
 
 curri:
   table_gap: 
