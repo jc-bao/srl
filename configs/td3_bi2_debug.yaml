@@ -1,7 +1,7 @@
 # wandb
-wandb: true
-resume_mode: load_only 
-wid: 3nvpzcgs
+wandb: false
+resume_mode: null 
+wid: null
 project: TD3_debug 
 name: handover_default 
 
@@ -11,9 +11,11 @@ random_seed: 0
 # replay
 her_rate: 0.8
 her_decay: 0.0
-random_relabel_rate: 0.0
+g_random_relabel_rate: 1.0
+ag_random_relabel_rate: 1.0
 if_use_per: false
 buffer_size: 4000
+dropout_early_termin: false
 
 # env_params
 env_name: 'FrankaPNP-v0'
@@ -27,6 +29,7 @@ env_kwargs:
   goal_space: [0.3,0.3,0.005]
   os_rate: 0.8
   table_gap: 0.2
+  inhand_rate: 0.0
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
 
@@ -34,6 +37,8 @@ extra_info_dim: 0 # extra info get from agent
 act_net: Actor
 critic_net: CriticTwin
 net_dim: 128
+net_layer: 4
+shared_net_layer: 2
 net_type: deepset
 if_act_target: true
 if_cri_target: true
@@ -53,11 +58,12 @@ explore_noise: 0.2
 # TD3
 update_freq: 2
 policy_noise: 0.15
+policy_update_gap: 1
 
 # eval
 eval_per_rollout: 0.1
 eval_steps: null # set with steps per rollout
-render: true
+render: false
 render_per_eval: 0.05
 
 curri: {}

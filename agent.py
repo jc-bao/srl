@@ -695,7 +695,8 @@ class AgentTD3(AgentDDPG):
     return AttrDict(
       critic_loss=obj_critic.item()/2,
       actor_loss=-obj_actor.item(),
-      random_relabel_rate=self.buffer.random_relabel_rate.item(),
+      ag_random_relabel_rate=self.buffer.ag_random_relabel_rate.item(),
+      g_random_relabel_rate=self.buffer.g_random_relabel_rate.item(),
     )
 
   def get_obj_critic_raw(self, buffer, batch_size):

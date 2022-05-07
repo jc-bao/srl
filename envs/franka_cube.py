@@ -1292,6 +1292,7 @@ class FrankaCube(gym.Env):
 		return AttrDict(
 			# info for relable
 			max_ag_unmoved_steps = self.cfg.max_ag_unmoved_steps, 
+			ag_moved_threshold = self.cfg.ag_moved_threshold,
 			# dims
 			action_dim=self.cfg.action_dim,
 			state_dim=self.cfg.state_dim,
