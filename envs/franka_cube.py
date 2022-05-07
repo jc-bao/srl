@@ -440,6 +440,8 @@ class FrankaCube(gym.Env):
 		self.ag_unmoved_steps = torch.zeros((self.cfg.num_envs, self.cfg.num_goals,), device=self.device, dtype=torch.float)
 		self.goal = self.root_state_tensor[:, self.cfg.num_robots*2 +
 																			 self.cfg.num_goals:self.cfg.num_robots*2+self.cfg.num_goals*2, :3]
+		self.goal_workspace = torch.zeros((self.cfg.num_envs, self.cfg.num_goals), device=self.device, dtype=torch.long)
+		self.block_workspace = torch.zeros((self.cfg.num_envs, self.cfg.num_goals), device=self.device, dtype=torch.long)
 		# table
 		self.table_states = self.root_state_tensor[:, self.cfg.num_robots:self.cfg.num_robots*2]
 
@@ -579,9 +581,12 @@ class FrankaCube(gym.Env):
 		reset_idx = self.reset_buf.clone()
 		done_env_num = reset_idx.sum()
 		# reset goals
-		goal_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[goal_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
-		ground_goal_idx = reset_idx & (torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) 
+		self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
+		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
+		for i in range(self.cfg.num_robots):
+			multi_goal_in_same_ws |= ((self.goal_workspace==i).sum(dim=-1) > 1)
+		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.goal_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
+		ground_goal_idx = reset_idx & ((torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) | multi_goal_in_same_ws)
 		self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
 		# reset blocks
 		if done_env_num > 0:
@@ -592,13 +597,13 @@ class FrankaCube(gym.Env):
 													 device=self.device) < self.cfg.inhand_rate
 			self.inhand_idx = reset_idx & in_hand
 			if self.cfg.obj_sample_mode == 'uniform':
-				block_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
+				self.block_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 			elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
-				block_workspace = goal_workspace + torch.bernoulli(torch.ones_like(goal_workspace, device=self.device)*self.cfg.os_rate).long()
-				block_workspace %= self.cfg.num_robots
+				self.block_workspace[reset_idx] = self.goal_workspace[reset_idx] + torch.bernoulli(torch.ones_like(self.goal_workspace[reset_idx], device=self.device, dtype=torch.float)*self.cfg.os_rate).long()
+				self.block_workspace %= self.cfg.num_robots
 			else:
 				raise NotImplementedError
-			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[block_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
+			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.block_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
 			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
 			self.ag_unmoved_steps[reset_idx] = 0
 			if self.inhand_idx.any():
@@ -1327,7 +1332,7 @@ if __name__ == '__main__':
 	run policy
 	'''
 	# env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=True, bound_robot=True, sim_device_id=1, rl_device_id=1, num_goals=1, inhand_rate=0.0)
-	env = FrankaCube(num_envs=1, num_robots=2, num_goals=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, inhand_rate=1.0)
+	env = FrankaCube(num_envs=1, num_robots=2, num_goals=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, inhand_rate=1.0, os_rate=0)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
