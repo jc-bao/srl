@@ -48,7 +48,7 @@ gpu_id: 0
 agent_name: AgentTD3
 max_collect_steps: !!float 1e9
 reuse: 10
-steps_per_rollout: null 
+steps_per_rollout: 409600
 updates_per_rollout: null # calulate with reuse
 batch_size: 4096
 gamma: 0.98
@@ -61,9 +61,9 @@ policy_noise: 0.3
 policy_update_gap: 1
 
 # eval
-eval_per_rollout: 0.1
+eval_per_rollout: 0.25
 eval_steps: null # set with steps per rollout
-render: true
+render: false
 render_per_eval: 0.2
 
 curri:
