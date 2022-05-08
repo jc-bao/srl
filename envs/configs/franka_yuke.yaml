@@ -57,7 +57,7 @@ os_rate: 0.5
 # robot
 num_robots: 1
 bound_robot: true
-action_shift: [0,0,-0.1,0]
+action_shift: [0,0,0,0]
 asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
