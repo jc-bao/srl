@@ -3,7 +3,7 @@ wandb: true
 resume_mode: null
 wid: null
 project: TD3_debug 
-name: handover_obj2_default(2obj in hand, attn) 
+name: objn_attn
 
 # seed 
 random_seed: 0
@@ -23,21 +23,20 @@ env_params: null
 env_kwargs:
   num_envs: 8192 
   num_robots: 2
-  num_goals: 2
+  num_goals: 1
   base_steps: 50 # wired, need investigation
   os_rate: 0.2
   table_gap: 0.0
-  inhand_rate: 0.2
-  max_ag_unmoved_steps: 25
+  max_ag_unmoved_steps: 30
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
 
 # network
 act_net: Actor
 critic_net: CriticTwin
-net_dim: 256
-net_layer: 4
-shared_net_layer: 3
+net_dim: 512
+net_layer: 6
+shared_net_layer: 4
 n_head: 4
 net_type: attn
 if_act_target: true
@@ -61,12 +60,17 @@ policy_noise: 0.3
 policy_update_gap: 1
 
 # eval
-eval_per_rollout: 0.1
+eval_per_rollout: 0.2
 eval_steps: null # set with steps per rollout
 render: true
 render_per_eval: 0.2
 
 curri:
+  num_goals:
+    now: 1
+    end: 4
+    step: 1
+    bar: -0.4
   table_gap: 
     now: 0
     end: 0.2
@@ -75,8 +79,8 @@ curri:
   os_rate: 
     now: 0.2
     end: 0.8
-    step: 0.3
-    bar: -0.4
+    step: 0.1
+    bar: -0.35
 
 # save
 cwd: results
