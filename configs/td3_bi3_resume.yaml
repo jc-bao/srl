@@ -1,9 +1,9 @@
 # wandb
 wandb: true
 resume_mode: restart
-wid: 2jrcgm1n
-project: TD3_debug 
-name: obj3_resume_attn
+wid: 2cnxdywl
+project: handover2 
+name: obj3_resume(reuse100)_attn
 
 # seed 
 random_seed: 0
@@ -21,13 +21,11 @@ dropout_early_termin: false
 env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
-  num_envs: 4096 
+  num_envs: 1024 
   num_robots: 2
   num_goals: 3
-  base_steps: 25 # wired, need investigation
   os_rate: 0.2
   table_gap: 0.0
-  max_ag_unmoved_steps: 20
 reward_scale: 1
 extra_info_dim: 0 # extra info get from agent
 
@@ -46,7 +44,7 @@ gpu_id: 0
 # algorithm
 agent_name: AgentTD3
 max_collect_steps: !!float 1e9
-reuse: 10
+reuse: 100
 steps_per_rollout: null 
 updates_per_rollout: null # calulate with reuse
 batch_size: 4096
@@ -61,7 +59,7 @@ policy_update_gap: 1
 
 # eval
 eval_per_rollout: 0.1
-eval_steps: null # set with steps per rollout
+eval_eps: null # set with steps per rollout
 render: true
 render_per_eval: 0.2
 
