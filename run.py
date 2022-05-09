@@ -32,6 +32,7 @@ def train(config):
 		exp_agent.save_or_load_agent(file_tag = 'best', cwd=config.load_path, if_save=False)
 	elif (config.wid is not None):
 		print('[Load] resume from cloud')
+		agent.total_step = wandb.summary['steps']
 		exp_agent.save_or_load_agent(file_tag = 'best', if_save=False)
 		# exp_agent.save_or_load_agent(file_tag = 'rew-0.08', if_save=False)
 	def log(msg):
