@@ -3,7 +3,7 @@ wandb: true
 resume_mode: null
 wid: null
 project: TD3_debug
-name: 1obj_red
+name: 2obj_red
 
 # seed 
 random_seed: 0
@@ -21,8 +21,9 @@ dropout_early_termin: false
 env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
-  num_envs: 8192 
+  num_envs: 4096 
   num_robots: 2
+  num_goals: 2
   os_rate: 0.2
   table_gap: 0.0
   inhand_rate: 0.5

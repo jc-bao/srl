@@ -290,6 +290,8 @@ class CriticRed(nn.Module):  # shared parameter
 				CriticDeepsetBlock(cfg),
 				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer)
 			)
+		elif self.cfg.net_type == 'attn':
+			self.net_sa = CriticAttnBlock(cfg)
 		elif self.cfg.net_type == 'mlp':
 			self.net_sa = nn.Sequential(
 				nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
