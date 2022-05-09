@@ -2,7 +2,7 @@
 wandb: true
 resume_mode: null
 wid: null
-project: TD3_debug 
+project: handover1 
 name: 1obj_baseline
 
 # seed 

@@ -18,6 +18,8 @@ class ReplayBuffer:  # for off-policy
 		self.device = cfg.device
 
 		# reward_dim + mask_dim + action_dim + info
+		self.ag_random_relabel_rate = torch.zeros(1, dtype=torch.float32, device=self.device)[0]
+		self.g_random_relabel_rate = torch.zeros(1, dtype=torch.float32, device=self.device)[0]
 		self.total_other_dim = 1 + 1 + self.EP.action_dim + self.EP.info_dim
 		self.total_dim = self.total_other_dim+self.EP.state_dim
 		self.data = torch.empty(
@@ -98,8 +100,8 @@ class ReplayBuffer:  # for off-policy
 			# recompute
 			trans_dict.rew[:her_batch_size] = self.EP.compute_reward(
 					info_dict.ag, fut_ag, None)
-		self.ag_random_relabel_rate = ag_random_relabel_num/her_batch_size
-		self.g_random_relabel_rate = g_random_relabel_num/her_batch_size
+			self.ag_random_relabel_rate = ag_random_relabel_num/her_batch_size
+			self.g_random_relabel_rate = g_random_relabel_num/her_batch_size
 		return AttrDict(
 			rew=trans_dict.rew,
 			mask=trans_dict.mask,  # mask
