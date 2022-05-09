@@ -61,7 +61,7 @@ policy_update_gap: 1
 
 # eval
 eval_per_rollout: 0.1
-eval_steps: null # set with steps per rollout
+eval_eps: null # set with steps per rollout
 render: true
 render_per_eval: 0.2
 
