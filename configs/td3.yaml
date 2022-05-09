@@ -2,8 +2,8 @@
 wandb: true
 resume_mode: null
 wid: null
-project: isaac_debug 
-name: pnp_debug
+project: TD3_debug 
+name: pnp
 
 # seed 
 random_seed: 0
@@ -21,8 +21,7 @@ dropout_early_termin: false
 env_name: 'FrankaPNP-v0'
 env_params: null
 env_kwargs:
-  cfg_file: 'franka_yuke.yaml'
-  num_envs: 16384 
+  num_envs: 512 
 reward_scale: 1 
 extra_info_dim: 0 # extra info get from agent
 
@@ -40,7 +39,7 @@ gpu_id: 0
 # algorithm
 agent_name: AgentTD3
 max_collect_steps: !!float 1e9
-reuse: 10
+reuse: 100
 steps_per_rollout: null
 updates_per_rollout: null # calulate with reuse
 batch_size: 4096
@@ -54,7 +53,7 @@ policy_noise: 0.3
 policy_update_gap: 1
 
 # eval
-eval_per_rollout: 0.5
+eval_per_rollout: 0.1
 eval_eps: null # set with steps per rollout
 render: false
 render_per_eval: 0.1
