@@ -45,11 +45,14 @@ class AgentBase:
     self.EP = self.cfg.env_params
     # rollout steps
     if self.cfg.steps_per_rollout is None:
-      self.cfg.update(steps_per_rollout=self.EP.num_envs * self.EP.max_env_step)
-      print(f'[Params] change step per rollout to {self.cfg.steps_per_rollout}')
+      self.cfg.update(steps_per_rollout=int(
+        self.EP.num_envs * self.EP.early_termin_step * 1.5))
+      print(
+        f'[Params] change step per rollout to {self.cfg.steps_per_rollout}')
     # eval steps
-    if self.cfg.eval_steps is None:
-      self.cfg.update(eval_steps=cfg.steps_per_rollout)
+    if self.cfg.eval_eps is None:
+      self.cfg.update(eval_eps=self.EP.num_envs)
+      print(f'[Params] change epoches per eval to {self.cfg.eval_eps}')
     # update times
     if self.cfg.updates_per_rollout is None:
       self.cfg.update(updates_per_rollout=cfg.reuse *
@@ -100,13 +103,13 @@ class AgentBase:
     self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step,
                                  self.buffer.total_dim), device=self.cfg.device, dtype=torch.float32)
 
-  def eval_vec_env(self, target_steps=None, render=False):
+  def eval_vec_env(self, target_eps=None, render=False):
     # auto set target steps
-    if target_steps is None:
-      target_steps = self.cfg.eval_steps
+    if target_eps is None:
+      target_eps = self.cfg.eval_eps
     else:
       logging.warn(
-        f'eval_env: target_steps is not None, forced to {target_steps}')
+        f'eval_env: target_steps is not None, forced to {target_eps}')
     # log data
     num_ep = torch.zeros(self.EP.num_envs,
                          device=self.cfg.device)
@@ -116,15 +119,15 @@ class AgentBase:
                           device=self.cfg.device)
     final_rew = torch.zeros(
       self.EP.num_envs, device=self.cfg.device)
-    ag_moved_dist_count = torch.zeros((10,),device=self.cfg.device)
+    ag_moved_dist_count = torch.zeros((10,), device=self.cfg.device)
     # reset
     ten_s = self.env.reset()
     if self.cfg.render and render:
       images = self.env.render(mode='rgb_array')
       videos = [[im] for im in images]
     # loop
-    collected_steps = 0
-    while collected_steps < target_steps:
+    collected_eps = 0
+    while collected_eps < target_eps or (num_ep < 1).any():
       ten_a = self.act(ten_s).detach()
       ten_s_next, ten_rewards, ten_dones, _ = self.env.step(
         ten_a)  # different
@@ -137,16 +140,16 @@ class AgentBase:
       ep_rew += ten_rewards
       ep_step += 1
       final_rew[ten_dones] += ten_rewards[ten_dones]
-      try:
-        # TODO make it more elegant
-        ag_moved_dist = torch.norm(self.env.init_ag_normed[ten_dones&(~self.env.inhand_idx)] - \
-          self.env.ag_normed[ten_dones&(~self.env.inhand_idx)], dim=-1).flatten()
-        ag_moved_dist_discrete = (ag_moved_dist/0.4).floor()
-        for i in range(10):
-          ag_moved_dist_count[i] += (ag_moved_dist_discrete==i).sum()
-      except Exception as e:
-        print(f'{e}, fail to calcuate ag_moved_dist')
-      collected_steps = (ep_step).sum()
+      # try:
+      #   # TODO make it more elegant
+      #   ag_moved_dist = torch.norm(self.env.init_ag_normed[ten_dones & (~self.env.inhand_idx)] -
+      #                              self.env.ag_normed[ten_dones & (~self.env.inhand_idx)], dim=-1).flatten()
+      #   ag_moved_dist_discrete = (ag_moved_dist/0.4).floor()
+      #   for i in range(10):
+      #     ag_moved_dist_count[i] += (ag_moved_dist_discrete == i).sum()
+      # except Exception as e:
+      #   print(f'{e}, fail to calcuate ag_moved_dist')
+      collected_eps = num_ep.sum()
       ten_s = ten_s_next
     # return
     video = None
@@ -162,21 +165,19 @@ class AgentBase:
         self.cfg.curri[k]['now'] += v['step']
       reset_params[k] = self.cfg.curri[k]['now']
     self.env.reset(config=reset_params)
-    record_info = AttrDict(
-      steps=self.total_step,
-      ep_rew=torch.mean(ep_rew/num_ep).item(),
-      final_rew=final_rew,
-      ep_steps=torch.mean(ep_step/num_ep).item(),
-      video=video,
-      **reset_params  # record curriculum
-    )
-    try:
-      ag_moved_dist_count /= ag_moved_dist_count.sum()
-      for i in range(10):
-        record_info[f'eval/ag_moved_dist_{i*0.6:.1f} success rate'] = ag_moved_dist_count[i].item()
-    except Exception:
-      print('fail to record ag_moved_dist')
-    return record_info
+    # try:
+    #   ag_moved_dist_count /= ag_moved_dist_count.sum()
+    #   for i in range(10):
+    #     record_info[f'eval/ag_moved_dist_{i*0.6:.1f} success rate'] = ag_moved_dist_count[i].item()
+    # except Exception:
+    #   print('fail to record ag_moved_dist')
+    return AttrDict(
+        steps=self.total_step,
+        ep_rew=torch.mean(ep_rew / num_ep).item(),
+        final_rew=final_rew,
+        ep_steps=torch.mean(ep_step / num_ep).item(),
+        video=video,
+        **reset_params)  # record curriculum
 
   def explore_vec_env(self, target_steps=None):
     # auto set target steps
@@ -188,6 +189,8 @@ class AgentBase:
     # reset tmp buffer status
     traj_start_ptr = torch.zeros(
       self.EP.num_envs, dtype=torch.long, device=self.cfg.device)
+    num_ep = torch.zeros(
+      self.EP.num_envs, dtype=torch.long, device=self.cfg.device)
     traj_lens = torch.zeros(self.EP.num_envs,
                             dtype=torch.long, device=self.cfg.device)
     data_ptr = 0  # where to store data
@@ -195,12 +198,13 @@ class AgentBase:
     useless_steps = 0  # data explored but dropped
     # loop
     ten_s = self.env.reset()
-    while collected_steps < target_steps:
+    while collected_steps < target_steps or (num_ep < 1).any():
       ten_a = self.act.get_action(ten_s).detach()  # different
       if isinstance(ten_a, tuple):
         ten_a, ten_n = ten_a  # record noise for no-policy
       ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
+      num_ep[ten_dones.type(torch.bool)] += 1
       # preprocess info, add [1]trajectory index, [2]traj len, [3]to left
       ten_info = self.EP.info_updater(
         ten_info, AttrDict(traj_idx=self.traj_idx))
@@ -379,7 +383,8 @@ class AgentBase:
     def load_torch_file(model_or_optim, _path=None):
       if self.cfg.wid is not None:
         file_name = _path.split('/')[-1]
-        _path = wandb.restore(f'model/{file_name}', f'jc-bao/{self.cfg.project}/{self.cfg.wid}').name
+        _path = wandb.restore(
+          f'model/{file_name}', f'jc-bao/{self.cfg.project}/{self.cfg.wid}').name
       with open(_path, 'rb') as f:
         state_dict = torch.load(
           f, map_location=lambda storage, loc: storage)

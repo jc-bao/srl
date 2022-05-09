@@ -1,3 +1,4 @@
+from socket import EAI_OVERFLOW
 import numpy as np
 import os
 import sys
@@ -1309,6 +1310,7 @@ class FrankaCube(gym.Env):
 			num_goals=self.cfg.num_goals,
 			num_envs=self.cfg.num_envs,
 			max_env_step=self.cfg.max_steps,
+			early_termin_step=self.cfg.early_termin_step,
 			# functions
 			sample_goal=self.sample_goal, 
 			compute_reward=self.compute_reward,
