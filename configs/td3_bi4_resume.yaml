@@ -24,7 +24,6 @@ env_kwargs:
   num_envs: 4096 
   num_robots: 2
   num_goals: 4
-  base_steps: 25 # wired, need investigation
   os_rate: 0.2
   table_gap: 0.0
   max_ag_unmoved_steps: 20
@@ -46,7 +45,7 @@ gpu_id: 0
 # algorithm
 agent_name: AgentTD3
 max_collect_steps: !!float 1e9
-reuse: 10
+reuse: 100
 steps_per_rollout: null 
 updates_per_rollout: null # calulate with reuse
 batch_size: 4096
@@ -70,12 +69,12 @@ curri:
     now: 0
     end: 0.2
     step: 0.05
-    bar: -0.3
+    bar: -0.4
   os_rate: 
     now: 0.2
     end: 0.8
     step: 0.3
-    bar: -0.4
+    bar: -0.6
 
 # save
 cwd: results

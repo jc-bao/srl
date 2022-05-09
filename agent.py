@@ -398,6 +398,8 @@ class AgentBase:
       for name, obj in name_obj_list:
         save_path = f"{cwd}/{file_tag+name}.pth"
         torch.save(obj.state_dict(), save_path)
+        if self.cfg.wandb:
+          wandb.save(save_path) # upload now
     else:
       for name, obj in name_obj_list:
         save_path = f"{cwd}/{file_tag+name}.pth"
