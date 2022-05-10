@@ -12,7 +12,8 @@ random_seed: 0
 # replay
 her_rate: 0.8
 her_decay: 0.5
-random_relabel_rate: 1.0
+g_random_relabel_rate: 0.0
+ag_random_relabel_rate: 0.0
 if_use_per: false
 buffer_size: 1000
 dropout_early_termin: false
@@ -62,7 +63,7 @@ policy_update_gap: 1
 
 # eval
 eval_per_rollout: 1
-eval_steps: 4000 # set with steps per rollout
+eval_eps: 4000 # set with steps per rollout
 render: true
 render_per_eval: 1
 

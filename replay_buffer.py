@@ -59,10 +59,7 @@ class ReplayBuffer:  # for off-policy
 			tleft = info_dict.tleft.long()
 			indices_her_global = indices[:her_batch_size]
 			# get future idx
-			if torch.rand((1,))[0] < self.cfg.her_decay:
-				idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft/2)).long() + 1
-			else:
-				idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft)).long() + 1
+			idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft)).long() + 1
 			fut_trans = self.data[(indices_her_global+idx_shift) % self.max_len]
 			fut_ag = self.data_parser(fut_trans,'info.ag')
 			# random relabel

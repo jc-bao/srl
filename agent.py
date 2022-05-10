@@ -253,7 +253,7 @@ class AgentBase:
         collected_steps += results.collected_steps
         useless_steps += results.useless_steps
         # reset record params
-        traj_start_ptr[done_idx] = (data_ptr+1) % self.EP.max_env_step
+        # traj_start_ptr[done_idx] = (data_ptr+1) % self.EP.max_env_step
         traj_lens[done_idx] = 0
       # setup next state
       ten_s = ten_s_next
@@ -273,7 +273,6 @@ class AgentBase:
       end_data = self.traj_list[i, (end_point-1) % self.EP.max_env_step]
       end_info = self.buffer.data_parser(end_data, 'info')
       end_info_dict = self.EP.info_parser(end_info)
-      # TODO merge buffer and add parser
       # dropout unmoved experience
       if getattr(end_info_dict, 'early_termin', False) and self.cfg.dropout_early_termin:
         useless_steps += traj_lens[i]
