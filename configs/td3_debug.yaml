@@ -27,7 +27,6 @@ env_kwargs:
   num_cameras: 1
   num_goals: 2
   headless: true
-  base_steps: 25
   table_gap: 0.2
   os_rate: 0.8
 reward_scale: 1
@@ -49,7 +48,7 @@ gpu_id: 0
 agent_name: AgentTD3
 max_collect_steps: !!float 1e9
 reuse: 1
-steps_per_rollout: 40
+steps_per_rollout: 4000
 updates_per_rollout: null # calulate with reuse
 batch_size: 200
 gamma: 0.98
@@ -62,9 +61,9 @@ policy_noise: 0.15
 policy_update_gap: 1
 
 # eval
-eval_per_rollout: 1
-eval_eps: 4000 # set with steps per rollout
-render: true
+eval_per_rollout: 0.01
+eval_eps: 1 # set with steps per rollout
+render: false
 render_per_eval: 1
 
 curri: {}
