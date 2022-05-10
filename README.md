@@ -36,7 +36,7 @@ python run.py +exp=3ho_resume wid=LOAD_RUN_WID entity=YOUR_WANDB_NAME
 python run.py +exp=3ho_resume load_path=PATH_TO_FILE
 
 '''eval'''
-# load handover 1 object from remove WID and show isaac GUI to eval
+# load handover 1 object from remote WID and show isaac GUI to eval
 python run.py +exp=1ho_eval wid=YOUR_WANDB_RUN_WID entity=YOUR_WANDB_NAME
 
 '''env'''
