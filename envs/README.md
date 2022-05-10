@@ -14,8 +14,7 @@
 
 | FrankaPNP-v0                                                 |      |      |
 | ------------------------------------------------------------ | ---- | ---- |
-| ![isaac_demo](https://tva1.sinaimg.cn/large/e6c9d24ely1h1jm00od1lg20dk0cme84.gif) |      |      |
-| ![isaac_random](https://tva1.sinaimg.cn/large/e6c9d24ely1h1kxtks4xwg20ca0bu7wk.gif) |      |      |
+| ![isaac_demo](https://tva1.sinaimg.cn/large/e6c9d24ely1h1jm00od1lg20dk0cme84.gif) | ![](https://tva1.sinaimg.cn/large/e6c9d24ely1h23j8nb28rg208w06k7wh.gif) |      |
 | ![fast_ik](https://tva1.sinaimg.cn/large/e6c9d24ely1h1l1qibvbvj20je0igjsr.jpg)|      |      |
 
 

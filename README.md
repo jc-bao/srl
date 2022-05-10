@@ -1,8 +1,14 @@
 # Sparse-RL
 
+## Features
+  
+* Fast: Fully GPU-Based Pipeline  (isaac support, fast buffer indexing, fast batch relabeling)
+* Designed for Sparse Reward (HER)
+* Easy to use: single config file, multi-algorithm support(Red-Q, SAC, TD3, DDPG, PPO), resume from cloud, etc.
+
 ## Use Cases
 
-#### Basics
+### Basics
 
 ``` bash
 python run.py
@@ -14,33 +20,16 @@ python run.py
 
 `-e`, `--envargs` : key-value pairs to override env config, e.g. `python run.py -e '{"num_goals":2}'`
 
-Example: train pick and place:
+### Examples: 
 
 ``` bash
+# train pick and place:
 python run.py -k td3
 ```
 
-train
+### Curriculum Learning
 
-```
-python run.py -k '{"env_name":"PandaPNP-v0"}'
-``` 
-
-show viewer when train:
-
-```
-python run.py -k '{"env_name":"PandaPNP-v0","wandb":false,"render":false,"steps_per_rollout":400}' -e '{"num_envs":4,"num_cameras":0,"headless":false}'
-```
-
-change episode length to debug:
-
-```
-python run.py -k '{"env_name":"PandaPNP-v0","wandb":false,"render":false,"steps_per_rollout":20,"batch_size":8}' -e '{"num_envs":1,"num_cameras":0,"headless":true,"base_steps":20}'
-```
-
-#### Curriculum Learning
-
-add these line to config file to run automatically curriculum:
+add these line to config file to run automatic curriculum:
 
 ```yaml
 curri:
@@ -48,7 +37,7 @@ curri:
     now: 0
     end: 0.2
     step: 0.05
-    bar: -0.2 # reward bar to 
+    bar: -0.2 # reward bar to change curriculum params
 ```
 
 ## Issues
@@ -58,12 +47,6 @@ curri:
   - [x] check relabel reward, mask
   - [ ] check trajectory buffer
   - [ ] check 
-
-
-## Features
-  
-* Fast: Fully GPU-Based Pipeline  (isaac support, fast buffer indexing, fast batch relabeling)
-* Designed for Sparse Reward (HER, Red-Q)
 
 ## TODO
 
@@ -117,10 +100,4 @@ curri:
 
 ## Requirements
 
-'''
-isaacgym
-torch
-attrdict
-gym
-pytorch_kinematics
-'''
+see `requirements.txt`.
