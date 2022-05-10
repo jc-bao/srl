@@ -289,7 +289,7 @@ class AgentBase:
       traj_data = torch.cat(traj_data, dim=0)
       # tleft = self.buffer.data_parser(traj_data, 'info.tleft')
       # if tleft[-1] != 0:
-      #   print(start_point, end_point, tleft)
+      # print(start_point, end_point, self.buffer.data_parser(traj_data, 'mask')[-1])
       self.buffer.extend_buffer(traj_data)
     return AttrDict(
       collected_steps=len(traj_data),
