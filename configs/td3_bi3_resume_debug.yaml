@@ -1,0 +1,82 @@
+# wandb
+wandb: true
+resume_mode: load_only
+wid: 2nmbalr0
+project: TD3_debug 
+name: obj3_resume(reuse100)_attn
+
+# seed 
+random_seed: 0
+
+# replay
+her_rate: 0.8
+her_decay: 0.0
+g_random_relabel_rate: 0.8
+ag_random_relabel_rate: 0.0
+if_use_per: false
+buffer_size: 400
+dropout_early_termin: false
+
+# env_params
+env_name: 'FrankaPNP-v0'
+env_params: null
+env_kwargs:
+  num_envs: 1 
+  num_cameras: 0
+  headless: false
+  num_robots: 2
+  num_goals: 3
+  os_rate: 0.8
+  table_gap: 0.2
+reward_scale: 1
+extra_info_dim: 0 # extra info get from agent
+
+# network
+act_net: Actor
+critic_net: CriticTwin
+net_dim: 256
+net_layer: 4
+shared_net_layer: 3
+n_head: 4
+net_type: attn
+if_act_target: true
+if_cri_target: true
+gpu_id: 0
+
+# algorithm
+agent_name: AgentTD3
+max_collect_steps: !!float 1e9
+reuse: 100
+steps_per_rollout: 10 
+updates_per_rollout: 0 # calulate with reuse
+batch_size: 4
+gamma: 0.98
+lr: 0.00048
+soft_update_tau: 0.005
+explore_noise: 0.2
+# TD3
+update_freq: 2
+policy_noise: 0.3
+policy_update_gap: 1
+
+# eval
+eval_per_rollout: 0.1
+eval_eps: 1000 # set with steps per rollout
+render: false
+render_per_eval: 0.2
+
+curri:
+  table_gap: 
+    now: 0
+    end: 0.2
+    step: 0.05
+    bar: -0.3
+  os_rate: 
+    now: 0.2
+    end: 0.8
+    step: 0.3
+    bar: -0.4
+
+# save
+cwd: results
+rollout_per_save: 0.1
