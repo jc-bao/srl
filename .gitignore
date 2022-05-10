@@ -19,5 +19,6 @@ runs/
 results/
 model/
 wandb/
+outputs/
 
 .DS_Store
