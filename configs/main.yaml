@@ -1,0 +1,95 @@
+# wandb
+wandb: false
+entity: jc-bao
+# set load path to load locally
+load_path: null
+# set wandb wid to load remotely
+wid: null
+# resume mode {null, 'continue', 'restart', 'load_only'}
+resume_mode: null 
+project: debug 
+name: debug
+
+# seed 
+random_seed: 0
+
+# replay
+her_rate: 0.8
+# random relabel umoved objects' goal
+g_random_relabel_rate: 0.0
+# random relabel umoved objects' pos
+ag_random_relabel_rate: 0.0
+# prioterity replay
+if_use_per: false
+buffer_size: 4000000
+# if store the early terminated experience (recommend: false)
+dropout_early_termin: false
+
+# env_params
+env_name: 'FrankaPNP-v0'
+# env_params to use in agent, set to false to load automatically (recommend: false)
+env_params: null
+# env kwargs to pass into env
+env_kwargs:
+  num_envs: 1024 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
+  num_robots: 2
+  num_goals: 1
+  os_rate: 0.2
+  table_gap: 0.0
+  inhand_rate: 0.2 # init obj in hand
+reward_scale: 1
+
+# network
+act_net: Actor
+critic_net: CriticTwin
+net_dim: 256
+net_layer: 4
+# attention block number
+shared_net_layer: 3
+n_head: 4 # attention params
+net_type: attn # {'mlp', 'dense', 'attn'}
+if_act_target: true
+if_cri_target: true
+gpu_id: 0
+
+# algorithm
+agent_name: AgentTD3
+max_collect_steps: !!float 1e9
+reuse: 100
+# steps collect between updates, set to null to calculate automatically(minimum steps * env number)
+steps_per_rollout: null # recommend: null
+# network repeat update times between updates, set to null to calculate automatically(use reuse)
+updates_per_rollout: null
+batch_size: 4096
+gamma: 0.98
+lr: 0.00048
+soft_update_tau: 0.005
+explore_noise: 0.2
+# TD3
+update_freq: 2
+policy_noise: 0.3
+policy_update_gap: 1 # after $ of Q updates, update policy
+
+# eval
+eval_per_rollout: 0.25
+eval_eps: null # set automatically with steps per rollout
+# if upload render to wandb
+render: false
+render_per_eval: 0.2
+
+# curriculum params
+curri:
+  table_gap: # env properties
+    now: 0
+    end: 0.2
+    step: 0.05
+    bar: -0.3 # reward bar to change curriculum
+  os_rate: 
+    now: 0.2
+    end: 0.8
+    step: 0.3
+    bar: -0.4
+
+# save
+cwd: results
+rollout_per_save: 0.1

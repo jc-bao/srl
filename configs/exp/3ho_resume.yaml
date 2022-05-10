@@ -1,0 +1,15 @@
+# @package _global_
+
+wandb: true
+resume_mode: restart
+load_path: null
+wid: 2cnxdywl # your wandb wid here
+project: handover3
+name: resume_from_2
+
+env_kwargs:
+  num_envs: 1024
+  num_robots: 2
+  num_goals: 3
+
+render: true

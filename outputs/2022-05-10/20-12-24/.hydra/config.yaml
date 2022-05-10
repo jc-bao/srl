@@ -1,0 +1,64 @@
+wandb: false
+load_path: null
+wid: null
+resume_mode: null
+project: debug
+name: debug
+random_seed: 0
+her_rate: 0.8
+g_random_relabel_rate: 0.0
+ag_random_relabel_rate: 0.0
+if_use_per: false
+buffer_size: 400
+dropout_early_termin: false
+env_name: FrankaPNP-v0
+env_params: null
+env_kwargs:
+  num_envs: 1
+  num_robots: 2
+  num_goals: 1
+  os_rate: 0.2
+  table_gap: 0.0
+  inhand_rate: 0.2
+  num_cameras: 0
+reward_scale: 1
+act_net: Actor
+critic_net: CriticTwin
+net_dim: 256
+net_layer: 4
+shared_net_layer: 3
+n_head: 4
+net_type: attn
+if_act_target: true
+if_cri_target: true
+gpu_id: 0
+agent_name: AgentTD3
+max_collect_steps: 1000000000.0
+reuse: 100
+steps_per_rollout: null
+updates_per_rollout: null
+batch_size: 20
+gamma: 0.98
+lr: 0.00048
+soft_update_tau: 0.005
+explore_noise: 0.2
+update_freq: 2
+policy_noise: 0.3
+policy_update_gap: 1
+eval_per_rollout: 1
+eval_eps: 1
+render: false
+render_per_eval: 0.2
+curri:
+  table_gap:
+    now: 0
+    end: 0.2
+    step: 0.05
+    bar: -0.3
+  os_rate:
+    now: 0.2
+    end: 0.8
+    step: 0.3
+    bar: -0.4
+cwd: results
+rollout_per_save: 0.1

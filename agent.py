@@ -160,11 +160,12 @@ class AgentBase:
     # curriculum
     final_rew = torch.mean(final_rew/num_ep).item()
     reset_params = {}
-    for k, v in self.cfg.curri.items():
-      if final_rew > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
-        self.cfg.curri[k]['now'] += v['step']
-      reset_params[k] = self.cfg.curri[k]['now']
-    self.env.reset(config=reset_params)
+    if self.cfg.curri is not None:
+      for k, v in self.cfg.curri.items():
+        if final_rew > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
+          self.cfg.curri[k]['now'] += v['step']
+        reset_params[k] = self.cfg.curri[k]['now']
+      self.env.reset(config=reset_params)
     # try:
     #   ag_moved_dist_count /= ag_moved_dist_count.sum()
     #   for i in range(10):
@@ -386,7 +387,7 @@ class AgentBase:
       if self.cfg.wid is not None:
         file_name = _path.split('/')[-1]
         _path = wandb.restore(
-          f'model/{file_name}', f'jc-bao/{self.cfg.project}/{self.cfg.wid}').name
+          f'model/{file_name}', f'{self.cfg.entity}/{self.cfg.project}/{self.cfg.wid}').name
       with open(_path, 'rb') as f:
         state_dict = torch.load(
           f, map_location=lambda storage, loc: storage)
@@ -401,7 +402,7 @@ class AgentBase:
         save_path = f"{cwd}/{file_tag+name}.pth"
         torch.save(obj.state_dict(), save_path)
         if self.cfg.wandb:
-          wandb.save(save_path) # upload now
+          wandb.save(save_path, base_path=cwd) # upload now
     else:
       for name, obj in name_obj_list:
         save_path = f"{cwd}/{file_tag+name}.pth"

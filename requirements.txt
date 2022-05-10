@@ -3,7 +3,7 @@
 conda create --name rlgpu python=3.8
 pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu113
 pip install -e . (isaacgym)
-pip install attrdict gym matplotlib wandb moviepy ffmpeg
+pip install attrdict gym matplotlib wandb moviepy ffmpeg hydra-core
 
 [optional]
 pip install 'ray[all]'

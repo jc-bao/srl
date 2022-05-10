@@ -14,17 +14,36 @@
 python run.py
 ```
 
-`-f`, `--file`: config file to load in ./config
-
-`-k`, `--kwargs`: key-value pairs to override config, e.g. `python run.py -k '{"lr":1e-3}'`
-
-`-e`, `--envargs` : key-value pairs to override env config, e.g. `python run.py -e '{"num_goals":2}'`
-
 ### Examples: 
 
 ``` bash
-# train pick and place:
-python run.py -k td3
+'''debug'''
+# do the environment check
+python run.py +exp=1ho_debug
+
+'''train'''
+# train 1 object pick and place
+python run.py +exp=1pnp entity=YOUR_WANDB_NAME
+# train handover 1 object
+python run.py +exp=1ho entity=YOUR_WANDB_NAME
+# train handover 1 object without upload render videos
+python run.py +exp=1ho render=false entity=YOUR_WANDB_NAME
+# train handover 2 object
+python run.py +exp=2ho entity=YOUR_WANDB_NAME
+# resume from remote and train handover 3 object
+python run.py +exp=3ho_resume wid=LOAD_RUN_WID entity=YOUR_WANDB_NAME
+# resume from local and train handover 3 object
+python run.py +exp=3ho_resume load_path=PATH_TO_FILE
+
+'''eval'''
+# load handover 1 object from remove WID and show isaac GUI to eval
+python run.py +exp=1ho_eval wid=YOUR_WANDB_RUN_WID entity=YOUR_WANDB_NAME
+
+'''env'''
+# render env with handwriting policy
+python envs/franka_cube.py -e 
+# render env with random policy
+python envs/franka_cube.py -r
 ```
 
 ### Curriculum Learning
@@ -67,7 +86,7 @@ curri:
 - [x] logger
 - [x] check buffer function for multi done collect
 - [x] env reset function 
-- [ ] Add Hydra
+- [x] Add Hydra
 
 ### L2
 

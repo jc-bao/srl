@@ -1,0 +1,14 @@
+# @package _global_
+
+wandb: true
+project: pnp1
+name: default
+
+env_kwargs:
+  num_envs: 1024
+  num_robots: 1
+  num_goals: 1
+
+curri: null
+
+render: true

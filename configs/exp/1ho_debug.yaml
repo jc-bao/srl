@@ -1,0 +1,10 @@
+# @package _global_
+
+env_kwargs:
+  num_envs: 1 
+  num_robots: 2
+
+buffer_size: 400
+batch_size: 20
+eval_per_rollout: 1
+eval_eps: 1

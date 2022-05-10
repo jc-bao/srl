@@ -14,7 +14,7 @@ import pathlib
 
 
 class FrankaCube(gym.Env):
-	def __init__(self, cfg_file='franka_yuke.yaml', **kwargs):
+	def __init__(self, cfg_file='Franka.yaml', **kwargs):
 		# get config and setup base class
 		self.cfg_path = pathlib.Path(__file__).parent.resolve()/'configs'
 		with open(self.cfg_path/cfg_file) as config_file:
@@ -529,7 +529,7 @@ class FrankaCube(gym.Env):
 		obs, _, _, _ = self.step(act) # TODO try to remove this
 		# for _ in range(5):
 		# change params here TODO more elegant way
-		if 'table_gap' in config:
+		if 'table_gap' in config and self.cfg.num_robots == 2:
 			v = config['table_gap']
 			self.table_states[:,:,0] = torch.tensor([-(v+self.cfg.table_size[0])/2,(v+self.cfg.table_size[0])/2], device=self.device)
 		self.reset_buf[:] = True
