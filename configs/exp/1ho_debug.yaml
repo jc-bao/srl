@@ -5,6 +5,7 @@ env_kwargs:
   num_robots: 2
 
 buffer_size: 400
-batch_size: 20
+batch_size: 100
+steps_per_rollout: 100
 eval_per_rollout: 1
 eval_eps: 1

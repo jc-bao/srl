@@ -57,15 +57,18 @@ class ReplayBuffer:  # for off-policy
 		her_batch_size = int(batch_size * her_rate)
 		if her_batch_size > 0:
 			info_dict = self.EP.info_parser(trans_dict.info[:her_batch_size])
-			# next_info_dict = self.EP.info_parser(next_trans_dict.info[:her_batch_size])
 			tleft = info_dict.tleft.long()
 			indices_her_global = indices[:her_batch_size]
 			# get future idx
 			idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft)).long()
 			fut_trans = self.data[(indices_her_global+idx_shift) % self.max_len]
+			# assert (self.data_parser(fut_trans, 'info.traj_idx') == self.data_parser(trans[:her_batch_size], 'info.traj_idx')).all()
 			fut_ag = self.data_parser(fut_trans,'info.ag')
 			# random relabel
-			unmoved_ag_idx = info_dict.ag_unmoved_steps > self.EP.max_ag_unmoved_steps 
+			unmoved_ag_idx = info_dict.ag_unmoved_steps > self.EP.max_ag_unmoved_steps
+			# filter_close_goal = self.EP.compute_reward(fut_ag, info_dict.ag, None) > -0.001
+			# fut_ag[filter_close_goal.squeeze(-1)] = self.data_parser(trans[:her_batch_size],'state.g')[filter_close_goal.squeeze(-1)]
+			# fut_ag[filter_close_goal.squeeze(-1)] = self.EP.sample_goal(size=filter_close_goal.sum()) 
 			g_random_relabel_idx = unmoved_ag_idx & (torch.rand(unmoved_ag_idx.shape, device=self.device) < self.cfg.g_random_relabel_rate)
 			g_random_relabel_num = g_random_relabel_idx.sum()
 			if g_random_relabel_num > 0:
@@ -95,7 +98,7 @@ class ReplayBuffer:  # for off-policy
 			# 	next_ag[ag_random_relabel_idx] = sampled_ag
 			# 	next_ag = next_ag.view(fut_ag.shape[0],-1)
 			# 	self.EP.obs_updater(trans_dict.state[:her_batch_size], AttrDict(ag=info_dict.ag))
-			# 	self.EP.obs_updater(next_trans_state[:her_batch_size], AttrDict(ag=next_ag))
+			# 	self.EP.obs_updater(next_trans_dict.state[:her_batch_size], AttrDict(ag=next_ag))
 			# recompute
 			trans_dict.rew[:her_batch_size] = self.EP.compute_reward(
 					info_dict.ag, fut_ag, None)

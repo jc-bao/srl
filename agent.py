@@ -173,12 +173,12 @@ class AgentBase:
     # except Exception:
     #   print('fail to record ag_moved_dist')
     return AttrDict(
-        steps=self.total_step,
-        ep_rew=torch.mean(ep_rew / num_ep).item(),
-        final_rew=final_rew,
-        ep_steps=torch.mean(ep_step / num_ep).item(),
-        video=video,
-        **reset_params)  # record curriculum
+      steps=self.total_step,
+      ep_rew=torch.mean(ep_rew / num_ep).item(),
+      final_rew=final_rew,
+      ep_steps=torch.mean(ep_step / num_ep).item(),
+      video=video,
+      **reset_params)  # record curriculum
 
   def explore_vec_env(self, target_steps=None):
     # auto set target steps
@@ -211,11 +211,11 @@ class AgentBase:
         ten_info, AttrDict(traj_idx=self.traj_idx))
       # add data to tmp buffer
       self.traj_list[:, data_ptr, :] = torch.cat((
-        ten_s,  # state
-        ten_rewards.unsqueeze(1)*self.cfg.reward_scale,  # reward
-        ((1-ten_dones)*self.cfg.gamma).unsqueeze(1),  # mask
-        ten_a,  # action
-        ten_info,  # info
+        ten_s,  # state(t)
+        ten_rewards.unsqueeze(1)*self.cfg.reward_scale,  # reward(t)
+        ((1-ten_dones)*self.cfg.gamma).unsqueeze(1),  # mask(t)
+        ten_a,  # action(t)
+        ten_info,  # info(t+1)
       ), dim=-1)
       # update ptr for tmp buffer
       data_ptr = (data_ptr+1) % self.EP.max_env_step
@@ -402,7 +402,7 @@ class AgentBase:
         save_path = f"{cwd}/{file_tag+name}.pth"
         torch.save(obj.state_dict(), save_path)
         if self.cfg.wandb:
-          wandb.save(save_path, base_path=cwd) # upload now
+          wandb.save(save_path, base_path=cwd)  # upload now
     else:
       for name, obj in name_obj_list:
         save_path = f"{cwd}/{file_tag+name}.pth"

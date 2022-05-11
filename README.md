@@ -87,6 +87,8 @@ curri:
 - [x] check buffer function for multi done collect
 - [x] env reset function 
 - [x] Add Hydra
+- [ ] sub task evaluation
+- [ ] hand write normalizer data check
 
 ### L2
 
