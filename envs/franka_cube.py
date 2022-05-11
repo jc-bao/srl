@@ -724,8 +724,8 @@ class FrankaCube(gym.Env):
 		self.ag_unmoved_steps[~unmoved_ag | reached_ag] = 0
 		early_termin = ((self.progress_buf >= self.cfg.early_termin_step) & \
 			(
-				# not touch the object
-				torch.all(torch.max(self.init_ag - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_termin_bar, dim=-1)|
+				# not touch all the object
+				# torch.all(torch.any(torch.abs(self.init_ag - self.block_states[..., :3])<self.cfg.early_termin_bar, dim=-1), dim=-1)|
 				# all ag long time unmoved
 				torch.all(self.ag_unmoved_steps > self.cfg.max_ag_unmoved_steps, dim=-1) |
 				# hit the ground
@@ -733,6 +733,7 @@ class FrankaCube(gym.Env):
 				# block droped
 				torch.any(self.block_states[..., 2].view(self.cfg.num_envs, self.cfg.num_goals) < self.cfg.table_size[2],dim=-1)
 			))
+		# print(torch.any(torch.abs(self.init_ag - self.block_states[..., :3])<self.cfg.early_termin_bar, dim=-1))
 		success_env = rew > self.cfg.success_bar
 		self.success_step_buf[~success_env] = self.progress_buf[~success_env]
 		if self.cfg.auto_reset:
@@ -1338,7 +1339,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1359,8 +1360,8 @@ if __name__ == '__main__':
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
 			# env.render(mode='human')
-			# info_dict = env.info_parser(info)
-			# print(info_dict.ag_unmoved_steps.item(), info_dict.step.item())
+			info_dict = env.info_parser(info)
+			print(info_dict.step.item())
 		# Image.fromarray(images[0]).save('foo.png')
 
 	print(time.time()-start)

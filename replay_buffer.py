@@ -65,6 +65,7 @@ class ReplayBuffer:  # for off-policy
 			fut_trans = self.data[(indices_her_global+idx_shift) % self.max_len]
 			# assert (self.data_parser(fut_trans, 'info.traj_idx') == self.data_parser(trans[:her_batch_size], 'info.traj_idx')).all()
 			fut_ag = self.data_parser(fut_trans,'info.ag')
+			# assert (self.data_parser(fut_trans,'info.step') >= info_dict.step).all()
 			# random relabel
 			unmoved_ag_idx = info_dict.ag_unmoved_steps > self.EP.max_ag_unmoved_steps
 			# filter_close_goal = self.EP.compute_reward(fut_ag, info_dict.ag, None) > -0.001
