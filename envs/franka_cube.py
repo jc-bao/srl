@@ -725,8 +725,7 @@ class FrankaCube(gym.Env):
 		early_termin = ((self.progress_buf >= self.cfg.early_termin_step) & \
 			(
 				# not touch all the object
-				torch.all(torch.max(self.init_ag - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_term
-in_bar, dim=-1) |
+				torch.all(torch.max(self.init_ag - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_termin_bar, dim=-1) |
 				# all ag long time unmoved
 				torch.all(self.ag_unmoved_steps > self.cfg.max_ag_unmoved_steps, dim=-1) |
 				# hit the ground
