@@ -725,7 +725,8 @@ class FrankaCube(gym.Env):
 		early_termin = ((self.progress_buf >= self.cfg.early_termin_step) & \
 			(
 				# not touch all the object
-				# torch.all(torch.any(torch.abs(self.init_ag - self.block_states[..., :3])<self.cfg.early_termin_bar, dim=-1), dim=-1)|
+				torch.all(torch.max(self.init_ag - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_term
+in_bar, dim=-1) |
 				# all ag long time unmoved
 				torch.all(self.ag_unmoved_steps > self.cfg.max_ag_unmoved_steps, dim=-1) |
 				# hit the ground
@@ -1339,7 +1340,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.2)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 

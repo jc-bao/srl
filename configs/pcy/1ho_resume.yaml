@@ -11,7 +11,7 @@ her_rate: 0.8
 g_random_relabel_rate: 0.0
 
 env_kwargs:
-  num_envs: 128
+  num_envs: 1024
   num_robots: 2
   num_goals: 1
   os_rate: 0.8
