@@ -837,10 +837,10 @@ class FrankaCube(gym.Env):
 			if self.inhand_idx.any():
 				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
 				# NOTE can only choose block 0 in hand now
-				choosed_block = 0 
+				choosed_block = 0
 				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(self.inhand_idx.sum().item(),))
-				self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot]
-				# self.init_ag[self.inhand_idx, choosed_block] = self.franka_default_pos[choosed_robot, choosed_block] + self.origin_shift[choosed_robot] 
+				self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
+					(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
 				if self.cfg.num_goals > 1 and self.cfg.num_robots > 1 and torch.rand(1)[0] < 0.5:
 					choosed_block = (choosed_block+1)%self.cfg.num_goals 
 					choosed_robot = (choosed_robot+1)%self.cfg.num_robots
