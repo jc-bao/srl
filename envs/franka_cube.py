@@ -573,9 +573,8 @@ class FrankaCube(gym.Env):
 			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
 		print('end:', self.hand_pos_tensor - pos_target)
 		'''
-		self.progress_buf[:] = 0  # NOTE: make sure step start from 0
 		self.default_grip_pos = self.grip_pos.clone()
-		return obs
+		return obs, rew, done, info
 
 	def step(self, actions: torch.Tensor):
 		# apply actions

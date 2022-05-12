@@ -1,3 +1,4 @@
+from re import S
 import torch
 import numpy as np
 from copy import deepcopy
@@ -121,7 +122,7 @@ class AgentBase:
       self.EP.num_envs, device=self.cfg.device)
     ag_moved_dist_count = torch.zeros((10,), device=self.cfg.device)
     # reset
-    ten_s = self.env.reset()
+    ten_s, ten_rewards, ten_dones, ten_info = self.env.reset()
     if self.cfg.render and render:
       images = self.env.render(mode='rgb_array')
       videos = [[im] for im in images]
@@ -198,31 +199,31 @@ class AgentBase:
     collected_steps = 0  # data added to buffer
     useless_steps = 0  # data explored but dropped
     # loop
-    ten_s = self.env.reset()
+    s, rew, done, info = self.env.reset()
+    act = self.act.get_action(s).detach()
     while collected_steps < target_steps or (num_ep < 1).any():
-      ten_a = self.act.get_action(ten_s).detach()  # different
-      if isinstance(ten_a, tuple):
-        ten_a, ten_n = ten_a  # record noise for no-policy
-      ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
-        ten_a)  # different
-      num_ep[ten_dones.type(torch.bool)] += 1
+      # setup next state
+      s, rew, done, info = self.env.step(act)  # different
+      act = self.act.get_action(s).detach()
+
+      # update buffer
+      num_ep[done.type(torch.bool)] += 1
       # preprocess info, add [1]trajectory index, [2]traj len, [3]to left
-      ten_info = self.EP.info_updater(
-        ten_info, AttrDict(traj_idx=self.traj_idx))
+      info = self.EP.info_updater(info, AttrDict(traj_idx=self.traj_idx))
       # add data to tmp buffer
       self.traj_list[:, data_ptr, :] = torch.cat((
-        ten_s,  # state(t)
-        ten_rewards.unsqueeze(1)*self.cfg.reward_scale,  # reward(t)
-        ((1-ten_dones)*self.cfg.gamma).unsqueeze(1),  # mask(t)
-        ten_a,  # action(t)
-        ten_info,  # info(t+1)
+        s,  # state(t)
+        rew.unsqueeze(1)*self.cfg.reward_scale,  # reward(t)
+        ((1-done)*self.cfg.gamma).unsqueeze(1),  # mask(t)
+        act,  # action(t)
+        info,  # info(t+1)
       ), dim=-1)
       # update ptr for tmp buffer
       data_ptr = (data_ptr+1) % self.EP.max_env_step
       # update trajectory info
       traj_lens += 1
-      done_idx = torch.where(ten_dones)[0]
-      done_num_envs = torch.sum(ten_dones).type(torch.int32)
+      done_idx = torch.where(done)[0]
+      done_num_envs = torch.sum(done).type(torch.int32)
       # update traj index
       self.traj_idx[done_idx] = (
         self.num_traj+torch.arange(done_num_envs, device=self.cfg.device))
@@ -232,8 +233,8 @@ class AgentBase:
       # reset traj recorder and add extra traj info
       if done_idx.shape[0] > 0:
         # tile traj len for later use
-        tiled_traj_len = traj_lens[done_idx].unsqueeze(1)\
-          .tile(1, self.EP.max_env_step).float()
+        tiled_traj_len = traj_lens[done_idx].unsqueeze(
+          1).tile(1, self.EP.max_env_step).float()
         # get data
         data = self.traj_list[done_idx]
         # calculate to left distance
@@ -244,9 +245,8 @@ class AgentBase:
           AttrDict(
             info=AttrDict(
               tleft=tiled_traj_len - info_step,
-              traj_len=tiled_traj_len))
-        )
-        # add to big buffer
+              traj_len=tiled_traj_len)))
+        # add to data buffer
         results = self.save_to_buffer(
           done_idx, traj_start_ptr, traj_lens)
         self.total_step += (results.collected_steps +
@@ -254,11 +254,9 @@ class AgentBase:
         collected_steps += results.collected_steps
         useless_steps += results.useless_steps
         # reset record params
-        traj_start_ptr[done_idx] = (data_ptr + 1) % self.EP.max_env_step
+        traj_start_ptr[done_idx] = data_ptr
         # traj_start_ptr[done_idx] = data_ptr
         traj_lens[done_idx] = 0
-      # setup next state
-      ten_s = ten_s_next
 
     return AttrDict(
       steps=self.total_step,
@@ -290,9 +288,6 @@ class AgentBase:
     if traj_data:
       traj_data = torch.cat(traj_data, dim=0)
       # tleft = self.buffer.data_parser(traj_data, 'info.tleft')
-      # print(tleft)
-      # if tleft[-1] != 0:
-      # print(start_point, end_point, self.buffer.data_parser(traj_data, 'mask')[-1])
       self.buffer.extend_buffer(traj_data)
     return AttrDict(
       collected_steps=len(traj_data),
