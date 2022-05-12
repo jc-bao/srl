@@ -1,0 +1,15 @@
+# @package _global_
+
+wandb: true
+project: handover1
+name: default
+
+env_kwargs:
+          num_envs: 128 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
+          num_robots: 2
+          num_goals: 1
+          os_rate: 0.2
+          table_gap: 0.0
+          inhand_rate: 0.2 # init obj in hand
+
+render: true
