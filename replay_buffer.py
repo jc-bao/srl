@@ -53,7 +53,6 @@ class ReplayBuffer:  # for off-policy
 		trans_dict = self.data_parser(trans)
 		next_trans = self.data[indices+1]
 		next_trans_dict = self.data_parser(next_trans)
-		# next_trans_state = self.data_parser(next_trans, 'state')
 		# get state
 		batch_size = indices.shape[0]
 		her_batch_size = int(batch_size * her_rate)
@@ -62,7 +61,7 @@ class ReplayBuffer:  # for off-policy
 			tleft = info_dict.tleft.long()
 			indices_her_global = indices[:her_batch_size]
 			# get future idx
-			idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft+1)).long()
+			idx_shift = (torch.rand(tleft.shape, device=self.device)*(tleft)).long()
 			fut_trans = self.data[(indices_her_global+idx_shift) % self.max_len]
 			# assert (self.data_parser(fut_trans, 'info.traj_idx') == self.data_parser(trans[:her_batch_size], 'info.traj_idx')).all()
 			fut_ag = self.data_parser(fut_trans,'info.ag')

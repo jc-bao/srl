@@ -255,6 +255,7 @@ class AgentBase:
         useless_steps += results.useless_steps
         # reset record params
         traj_start_ptr[done_idx] = (data_ptr + 1) % self.EP.max_env_step
+        # traj_start_ptr[done_idx] = data_ptr
         traj_lens[done_idx] = 0
       # setup next state
       ten_s = ten_s_next
@@ -289,6 +290,7 @@ class AgentBase:
     if traj_data:
       traj_data = torch.cat(traj_data, dim=0)
       # tleft = self.buffer.data_parser(traj_data, 'info.tleft')
+      # print(tleft)
       # if tleft[-1] != 0:
       # print(start_point, end_point, self.buffer.data_parser(traj_data, 'mask')[-1])
       self.buffer.extend_buffer(traj_data)
