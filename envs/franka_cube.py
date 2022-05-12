@@ -1182,7 +1182,7 @@ class FrankaCube(gym.Env):
 			success_bar={'sparse':-0.01, 'sparse+':0.95, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
 			# block size
 			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
-			max_ag_unmoved_steps=cfg.max_ag_unmoved_steps*cfg.num_blocks,
+			max_ag_unmoved_steps=cfg.max_ag_unmoved_steps*cfg.num_goals,
 		)
 		# robot control
 		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
