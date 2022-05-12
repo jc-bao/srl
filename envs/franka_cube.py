@@ -581,11 +581,22 @@ class FrankaCube(gym.Env):
 		reset_idx = self.reset_buf.clone()
 		done_env_num = reset_idx.sum()
 		# reset goals
-		self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
+		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
+		while True and done_env_num > 0:
+			extra_goal_ws = torch.randint(self.cfg.num_robots,size=(self.cfg.extra_goal_sample, done_env_num.item(),self.cfg.num_goals), device=self.device) 
+			extra_goals = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals)) + \
+				self.origin_shift[extra_goal_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num, self.cfg.num_goals, 3)
+			goal_dist = torch.abs(extra_goals.unsqueeze(-3) - extra_goals.unsqueeze(-2))
+			satisfied_idx = ((goal_dist[...,0] > self.cfg.block_length*1.2) | \
+				(goal_dist[..., 1] > self.cfg.block_size*2) | \
+						torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
+			if satisfied_idx.sum() >= done_env_num:
+				self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
+				self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
+				break
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
 		for i in range(self.cfg.num_robots):
 			multi_goal_in_same_ws |= ((self.goal_workspace==i).sum(dim=-1) > 1)
-		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.goal_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
 		ground_goal_idx = reset_idx & ((torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) | multi_goal_in_same_ws)
 		self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
 		# reset blocks
@@ -596,14 +607,26 @@ class FrankaCube(gym.Env):
 			in_hand = torch.rand((self.cfg.num_envs,),
 													 device=self.device) < self.cfg.inhand_rate
 			self.inhand_idx = reset_idx & in_hand
-			if self.cfg.obj_sample_mode == 'uniform':
-				self.block_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-			elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
-				self.block_workspace[reset_idx] = self.goal_workspace[reset_idx] + torch.bernoulli(torch.ones_like(self.goal_workspace[reset_idx], device=self.device, dtype=torch.float)*self.cfg.os_rate).long()
-				self.block_workspace %= self.cfg.num_robots
-			else:
-				raise NotImplementedError
-			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.block_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
+			while True and done_env_num > 0:
+				if self.cfg.obj_sample_mode == 'uniform':
+					extra_block_ws = torch.randint(self.cfg.num_robots,size=(self.cfg.extra_goal_sample, done_env_num.item(),self.cfg.num_goals), device=self.device)
+				elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
+					tiled_goal_ws = self.goal_workspace[reset_idx].repeat(self.cfg.extra_goal_sample,1,1)
+					extra_block_ws = tiled_goal_ws + torch.bernoulli(torch.ones_like(tiled_goal_ws, device=self.device, dtype=torch.float)*self.cfg.os_rate).long()
+					extra_block_ws %= self.cfg.num_robots
+				else:
+					raise NotImplementedError
+				extra_ags = self.torch_block_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals)) + \
+					self.origin_shift[extra_block_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num, self.cfg.num_goals, 3)
+				ag_dist = torch.abs(extra_ags.unsqueeze(-3) - extra_ags.unsqueeze(-2))
+				satisfied_idx = ((ag_dist[...,0] > self.cfg.block_length*1.2) | \
+					(ag_dist[..., 1] > self.cfg.block_size*2) | \
+							torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
+				if satisfied_idx.sum() >= done_env_num:
+					self.init_ag[reset_idx] = extra_ags[satisfied_idx][:done_env_num]
+					self.block_workspace[reset_idx] = extra_block_ws[satisfied_idx][:done_env_num]
+					break	
+			# self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.block_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
 			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
 			self.ag_unmoved_steps[reset_idx] = 0
 			if self.inhand_idx.any():
@@ -1338,7 +1361,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=6, inhand_rate=0.0, base_steps=4)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 

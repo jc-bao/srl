@@ -4,7 +4,7 @@ wandb: true
 resume_mode: restart
 load_path: null
 wid: 805qpc8q # your wandb wid here
-project: handover3
+project: handover2
 name: resume_from_3
 
 env_kwargs:
