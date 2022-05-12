@@ -1182,6 +1182,7 @@ class FrankaCube(gym.Env):
 			success_bar={'sparse':-0.01, 'sparse+':0.95, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
 			# block size
 			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
+			max_ag_unmoved_steps=cfg.max_ag_unmoved_steps*cfg.num_blocks,
 		)
 		# robot control
 		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
@@ -1381,6 +1382,7 @@ if __name__ == '__main__':
 				act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
+			print(env.info_parser(info, 'ag'))
 			# env.render(mode='human')
 			# info_dict = env.info_parser(info)
 			# print(info_dict.step.item())
