@@ -45,9 +45,9 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-self.cfg.robot_gap/2, -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
+			low=torch.tensor([-self.cfg.robot_gap/2, -self.cfg.goal_space[1]/1.8, self.cfg.block_size/2],
 											 device=self.device),
-			high=torch.tensor([self.cfg.robot_gap/2, self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*1.5], device=self.device))
+			high=torch.tensor([self.cfg.robot_gap/2, self.cfg.goal_space[1]/1.8, self.cfg.block_size/2+self.cfg.goal_space[2]*1.5], device=self.device))
 		# goal space
 		if self.cfg.goal_space[2] > 0.01 and self.cfg.num_robots > 1 and self.cfg.num_goals > 1:
 			print('[Env] Warn: multi robot, multi goal, goal height > 0.01')
