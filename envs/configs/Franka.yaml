@@ -55,6 +55,7 @@ inhand_rate: 0.2
 block_size: 0.04 
 block_length: null 
 obj_sample_mode: bernoulli
+lock_block_orn: true
 os_rate: 0.5
 # robot
 num_robots: 1
@@ -67,12 +68,12 @@ asset:
 # table 
 table_size: [1.0, 0.8, 0.4]
 table_gap: 0.0
-robot_gap: 0.6
+robot_gap: 0.8
 robot_y: 0.5
 # ee_init_pos: [0.0, 0.0, 0.05]
 friction: 0.01
 # goal space
-goal_space: [0.3, 0.3, 0.2]
+goal_space: [0.5, 0.4, 0.2]
 goal_ground_rate: 0.5
 
 # sim:

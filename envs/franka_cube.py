@@ -45,9 +45,9 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-self.cfg.goal_space[0], -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
+			low=torch.tensor([-self.cfg.robot_gap/1.8, -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
 											 device=self.device),
-			high=torch.tensor([self.cfg.goal_space[0], self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*2], device=self.device))
+			high=torch.tensor([self.cfg.robot_gap/1.8, self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*1.5], device=self.device))
 		# goal space
 		if self.cfg.goal_space[2] > 0.01 and self.cfg.num_robots > 1 and self.cfg.num_goals > 1:
 			print('[Env] Warn: multi robot, multi goal, goal height > 0.01')
@@ -191,11 +191,12 @@ class FrankaCube(gym.Env):
 		box_opts.angular_damping = 100
 		box_opts.linear_damping = 10
 		box_opts.thickness = 0.005
-		block_asset = self.gym.load_asset(
-			self.sim, asset_root, 'urdf/cube.urdf', box_opts
-		)
-		# block_asset = self.gym.create_box(
-		# 	self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
+		if self.cfg.lock_block_orn:
+			block_asset = self.gym.load_asset(
+				self.sim, asset_root, 'urdf/cube.urdf', box_opts)
+		else:
+			block_asset = self.gym.create_box(
+				self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
 		goal_opts = gymapi.AssetOptions()
 		goal_opts.density = 0
 		goal_opts.disable_gravity = True
@@ -1366,7 +1367,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.0, block_length=0.16)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, block_length=0.16, robot_gap=0.8,goal_space=[0.5, 0.4, 0.2], table_gap=0.2)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1383,7 +1384,7 @@ if __name__ == '__main__':
 			elif args.ezpolicy:
 				act = env.ezpolicy(obs)
 			else:
-				act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
+				act = torch.tensor(args.action, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
 			# env.render(mode='human')
