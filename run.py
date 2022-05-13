@@ -40,7 +40,7 @@ def train(config):
 	def log(msg, prefix=''):
 		print(msg)
 		if config.wandb:
-			wandb.log({prefix + k: v for k, v in msg.items()}, step=exp_agent.total_step)
+			wandb.log({f'{prefix}/{k}': v for k, v in msg.items()}, step=exp_agent.total_step)
 			if msg.get('video') is not None:
 				wandb.log({"Media/video": wandb.Video(msg.video, fps=30, format="mp4")})
 	torch.set_grad_enabled(False)
