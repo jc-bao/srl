@@ -1,24 +1,20 @@
 # @package _global_
 
-wandb: true
+wandb: false
 project: handover1
 name: her_fix
-resume_mode: restart
-wid: 2pv4p1dz
+resume_mode: load_only
+wid: 18h5t0v0
 entity: jc-bao
 
 her_rate: 0.8
 g_random_relabel_rate: 0.0
 
 env_kwargs:
-  num_envs: 1024
+  num_envs: 1
   num_robots: 2
   num_goals: 1
-  os_rate: 0.8
-  table_gap: 0.2
-  inhand_rate: 0.2 # init obj in hand
-
-curri: null
+  headless: false
 
 render: false
 rollout_per_save: 0.0000001

@@ -136,7 +136,7 @@ class AgentBase:
     collected_eps = 0
     while collected_eps < target_eps or (num_ep < 1).any():
       ten_a = self.act(ten_s).detach()
-      ten_s_next, ten_rewards, ten_dones, _ = self.env.step(
+      ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
       if self.cfg.render and render:
         images = self.env.render(mode='rgb_array')
@@ -147,6 +147,8 @@ class AgentBase:
       ep_rew += ten_rewards
       ep_step += 1
       final_rew[ten_dones] += ten_rewards[ten_dones]
+      if ten_dones.any():
+        print(self.EP.info_parser(ten_info[ten_dones], 'success'), ten_rewards[ten_dones])
       success_rate[ten_dones] += self.EP.info_parser(ten_info[ten_dones], 'success')
       try:
         for i in range(self.EP.num_goals+1):
