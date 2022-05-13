@@ -1367,7 +1367,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, block_length=0.16, robot_gap=0.8,goal_space=[0.5, 0.4, 0.2], table_gap=0.2, auto_reset=False)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0, block_length=0.16, table_gap=0.2, os_rate=0.2)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1379,16 +1379,18 @@ if __name__ == '__main__':
 		for j in range(env.cfg.max_steps):
 			if args.random:
 				act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)*100
-				act[...,0] = 1
-				act[...,4] = -1
-				act[..., 3] = -1
-				act[..., 7] = -1
+				# act[...,0] = 1
+				# act[...,4] = -1
+				# act[..., 3] = -1
+				# act[..., 7] = -1
 			elif args.ezpolicy:
 				act = env.ezpolicy(obs)
 			else:
 				act = torch.tensor(args.action, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
+			if done[0]:
+				print(env.num_handovers)
 			# print(env.info_parser(info, 'ag'))
 			# env.render(mode='human')
 			# info_dict = env.info_parser(info)
