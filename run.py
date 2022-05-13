@@ -37,10 +37,10 @@ def train(config):
 		exp_agent.save_or_load_agent(file_tag='best', if_save=False)
 		# exp_agent.save_or_load_agent(file_tag = 'rew-0.08', if_save=False)
 
-	def log(msg):
+	def log(msg, prefix=''):
 		print(msg)
 		if config.wandb:
-			wandb.log(msg, step=exp_agent.total_step)
+			wandb.log({prefix + k: v for k, v in msg.items()}, step=exp_agent.total_step)
 			if msg.get('video') is not None:
 				wandb.log({"Media/video": wandb.Video(msg.video, fps=30, format="mp4")})
 	torch.set_grad_enabled(False)
@@ -48,7 +48,7 @@ def train(config):
 	# warmup
 	print('warm up...')
 	result = exp_agent.explore_vec_env()
-	log(result)
+	log(result, prefix='explore')
 
 	'''start training'''
 	best_rew = -1000
@@ -56,20 +56,20 @@ def train(config):
 	for i in range(num_rollouts):
 		print(f'========explore{i}==========')
 		result = exp_agent.explore_vec_env()
-		log(result)
+		log(result, prefix='explore')
 
 		print(f'========update{i}...========')
 		torch.set_grad_enabled(True)
 		result = exp_agent.update_net()
 		torch.set_grad_enabled(False)
-		log(result)
+		log(result, prefix='update')
 
 		if i % int(1/config.eval_per_rollout) == 0:
 			num_eval = i // int(1/config.eval_per_rollout)
 			print(f'========eval{num_eval}...===========')
 			result = exp_agent.eval_vec_env(
 				render=(num_eval % int(1/config.render_per_eval) == 0))
-			log(result)
+			log(result, prefix='eval')
 
 			if result.final_rew > best_rew and (i % int(1/config.rollout_per_save)) == 0:
 				best_rew = result.final_rew

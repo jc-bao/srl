@@ -1,3 +1,4 @@
+from gc import get_stats
 from re import S
 import torch
 import numpy as np
@@ -120,7 +121,12 @@ class AgentBase:
                           device=self.cfg.device)
     final_rew = torch.zeros(
       self.EP.num_envs, device=self.cfg.device)
-    ag_moved_dist_count = torch.zeros((10,), device=self.cfg.device)
+    success_rate = torch.zeros(
+      self.EP.num_envs, device=self.cfg.device)
+    handover_success_rate = torch.zeros(
+      self.EP.num_goals+1, device=self.cfg.device)
+    handover_num_ep = torch.ones(self.EP.num_goals+1,
+                         device=self.cfg.device)
     # reset
     ten_s, ten_rewards, ten_dones, ten_info = self.env.reset()
     if self.cfg.render and render:
@@ -141,15 +147,14 @@ class AgentBase:
       ep_rew += ten_rewards
       ep_step += 1
       final_rew[ten_dones] += ten_rewards[ten_dones]
-      # try:
-      #   # TODO make it more elegant
-      #   ag_moved_dist = torch.norm(self.env.init_ag_normed[ten_dones & (~self.env.inhand_idx)] -
-      #                              self.env.ag_normed[ten_dones & (~self.env.inhand_idx)], dim=-1).flatten()
-      #   ag_moved_dist_discrete = (ag_moved_dist/0.4).floor()
-      #   for i in range(10):
-      #     ag_moved_dist_count[i] += (ag_moved_dist_discrete == i).sum()
-      # except Exception as e:
-      #   print(f'{e}, fail to calcuate ag_moved_dist')
+      success_rate[ten_dones] += self.EP.info_parser(ten_info[ten_dones], 'success')
+      try:
+        for i in range(self.EP.num_goals+1):
+          now_done = ten_dones & (self.env.num_handovers==i) 
+          handover_num_ep[i] += now_done.sum()
+          handover_success_rate[i] += self.EP.info_parser(ten_info[now_done], 'success').sum()
+      except Exception as e:
+        print(f'{e}, fail to calcuate handover success rate')
       collected_eps = num_ep.sum()
       ten_s = ten_s_next
     # return
@@ -160,26 +165,29 @@ class AgentBase:
       video = np.moveaxis(video, -1, 1)
     # curriculum
     final_rew = torch.mean(final_rew/num_ep).item()
+    success_rate = torch.mean(success_rate/num_ep).item()
     reset_params = {}
-    if self.cfg.curri is not None:
-      for k, v in self.cfg.curri.items():
-        if final_rew > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
-          self.cfg.curri[k]['now'] += v['step']
-        reset_params[k] = self.cfg.curri[k]['now']
-      self.env.reset(config=reset_params)
-    # try:
-    #   ag_moved_dist_count /= ag_moved_dist_count.sum()
-    #   for i in range(10):
-    #     record_info[f'eval/ag_moved_dist_{i*0.6:.1f} success rate'] = ag_moved_dist_count[i].item()
-    # except Exception:
-    #   print('fail to record ag_moved_dist')
-    return AttrDict(
+    handover_success_rate /= handover_num_ep
+    ho_success_dict = {
+        f'handover{i}_success_rate': handover_success_rate[i].item()
+        for i in range(self.EP.num_goals + 1)
+    }
+    results = AttrDict(
       steps=self.total_step,
       ep_rew=torch.mean(ep_rew / num_ep).item(),
       final_rew=final_rew,
+      success_rate=success_rate,
+      **ho_success_dict,
       ep_steps=torch.mean(ep_step / num_ep).item(),
-      video=video,
-      **reset_params)  # record curriculum
+      video=video)  # record curriculum
+    if self.cfg.curri is not None:
+      for k, v in self.cfg.curri.items():
+        if eval(v['indicator']) > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
+          self.cfg.curri[k]['now'] += v['step']
+        reset_params[k] = self.cfg.curri[k]['now']
+      self.env.reset(config=reset_params)
+    results.update(**reset_params)
+    return results
 
   def explore_vec_env(self, target_steps=None):
     # auto set target steps

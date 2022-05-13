@@ -1,0 +1,21 @@
+# @package _global_
+
+# load the model and run GUI
+
+wid: 2cdgyncd
+project: handover2
+resume_mode: load_only
+
+env_kwargs:
+  num_envs: 1 
+  num_robots: 2
+  num_goals: 2
+  os_rate: 0.8
+  table_gap: 0.2
+  headless: false
+  inhand_rate: 1.0
+
+curri: null
+render: false
+steps_per_rollout: 10
+eval_per_rollout: 1

@@ -2,8 +2,9 @@
 
 env_kwargs:
   num_envs: 10
-  num_robots: 1
-  headless: false
+  num_robots: 2
+  num_goals: 2
+  headless: true
 
 buffer_size: 1000
 batch_size: 20

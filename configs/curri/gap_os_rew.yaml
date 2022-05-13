@@ -1,0 +1,12 @@
+table_gap: # env properties
+  now: 0
+  end: 0.2
+  step: 0.05
+  indicator: results.final_rew
+  bar: -0.3 # reward bar to change curriculum
+os_rate: 
+  now: 0.2
+  end: 0.8
+  step: 0.3
+  indicator: results.final_rew
+  bar: -0.4

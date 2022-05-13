@@ -78,17 +78,8 @@ render: false
 render_per_eval: 0.2
 
 # curriculum params
-curri:
-  table_gap: # env properties
-    now: 0
-    end: 0.2
-    step: 0.05
-    bar: -0.3 # reward bar to change curriculum
-  os_rate: 
-    now: 0.2
-    end: 0.8
-    step: 0.3
-    bar: -0.4
+defaults:
+  - curri: gap_os_ho
 
 # save
 cwd: results

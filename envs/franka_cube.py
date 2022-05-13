@@ -191,8 +191,11 @@ class FrankaCube(gym.Env):
 		box_opts.angular_damping = 100
 		box_opts.linear_damping = 10
 		box_opts.thickness = 0.005
-		block_asset = self.gym.create_box(
-			self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
+		block_asset = self.gym.load_asset(
+			self.sim, asset_root, 'urdf/cube.urdf', box_opts
+		)
+		# block_asset = self.gym.create_box(
+		# 	self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
 		goal_opts = gymapi.AssetOptions()
 		goal_opts.density = 0
 		goal_opts.disable_gravity = True
@@ -626,6 +629,7 @@ class FrankaCube(gym.Env):
 					self.init_ag[reset_idx] = extra_ags[satisfied_idx][:done_env_num]
 					self.block_workspace[reset_idx] = extra_block_ws[satisfied_idx][:done_env_num]
 					break	
+			self.num_handovers = (self.block_workspace != self.goal_workspace).sum(dim=-1)
 			# self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.block_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
 			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
 			self.ag_unmoved_steps[reset_idx] = 0
@@ -1147,7 +1151,7 @@ class FrankaCube(gym.Env):
 					action[env_id, 2:4] = 1
 				elif up_step <= self.progress_buf[env_id] < reach_step:
 					# action[env_id, :3] = (torch.tensor([-0.15,0,0.05],device=self.device) - pos_now)
-					action[env_id, :3] = (obj_now - pos_now)*16
+					action[env_id, :3] = (obj_now - pos_now + torch.tensor([0.06,0,0],device=self.device))*16
 					action[env_id, 3] = 1
 				elif reach_step <= self.progress_buf[env_id] < grasp_step:
 					action[env_id, 3] = -1
@@ -1181,7 +1185,7 @@ class FrankaCube(gym.Env):
 			# judge for success
 			success_bar={'sparse':-0.01, 'sparse+':0.95, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
 			# block size
-			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
+			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*4,
 			max_ag_unmoved_steps=cfg.max_ag_unmoved_steps*cfg.num_goals,
 		)
 		# robot control
@@ -1362,14 +1366,14 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=6, inhand_rate=0.0, base_steps=4)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.0, block_length=0.16)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
 	# 	*([[0,1,0,1]]*4),
 	# 	*([[-1,0,0,1]]*4),
 	# 	*([[0,-1,0,1]]*4),]
-	obs = env.reset()
+	obs = env.reset()[0]
 	for i in range(10):
 		for j in range(env.cfg.max_steps):
 			if args.random:
@@ -1382,7 +1386,6 @@ if __name__ == '__main__':
 				act = torch.tensor([args.action]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
-			print(env.info_parser(info, 'ag'))
 			# env.render(mode='human')
 			# info_dict = env.info_parser(info)
 			# print(info_dict.step.item())
