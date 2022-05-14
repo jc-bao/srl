@@ -5,7 +5,7 @@ import hydra
 from attrdict import AttrDict
 
 import agent
-from envs.franka_cube_old import FrankaCube
+from envs.franka_cube import FrankaCube
 from envs.toy import ReachToyEnv
 
 
