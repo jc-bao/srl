@@ -637,9 +637,9 @@ class FrankaCube(gym.Env):
 					self.block_workspace[reset_idx] = extra_block_ws[satisfied_idx][:done_env_num]
 					break	
 			self.num_handovers = (self.block_workspace != self.goal_workspace).sum(dim=-1)
-			if self.inhand_idx.any():
 			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
 			self.ag_unmoved_steps[reset_idx] = 0
+			if self.inhand_idx.any():
 				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
 				# NOTE can only choose block 0 in hand now TODO fix it
 				choosed_block = 0 
