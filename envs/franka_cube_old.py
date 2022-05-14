@@ -56,10 +56,10 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+self.cfg.goal_space[2]], device=self.device))
 		self.single_goal_mean = self.torch_goal_space.mean
 		self.single_goal_std = self.torch_goal_space.stddev
-		self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.block_size/2], device=self.device)
+		self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device)
 		# self.goal_std = torch.tensor([self.cfg.goal_space[0]*self.cfg.num_robots*0.3, self.cfg.goal_space[1]*0.3, self.cfg.goal_space[2]*0.3], device=self.device)
 		self.goal_std = self.single_goal_std.clone()
-		self.goal_std[0] *= np.sqrt(self.cfg.num_robots)
+		self.goal_std[0] *= (np.sqrt(self.cfg.num_robots)*2)
 
 		# indices
 		self.global_indices = torch.arange(
