@@ -54,8 +54,10 @@ class FrankaCube(gym.Env):
 		self.torch_goal_space = torch.distributions.uniform.Uniform(
 			low=torch.tensor([-self.cfg.goal_space[0]/2, -self.cfg.goal_space[1]/2, self.cfg.block_size/2], device=self.device),
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+self.cfg.goal_space[2]], device=self.device))
+		self.single_goal_mean = torch.tensor([0, 0, self.cfg.block_size/2+self.cfg.goal_space[2]/2], device=self.device)
+		self.single_goal_std = torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.goal_space[2]/2], device=self.device)
 		self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.block_size/2+self.cfg.goal_space[2]/2], device=self.device)
-		self.goal_std = torch.tensor([self.cfg.goal_space[0]*self.cfg.num_robots, self.cfg.goal_space[1], self.cfg.goal_space[2]], device=self.device)
+		self.goal_std = torch.tensor([self.cfg.goal_space[0]*self.cfg.num_robots/2, self.cfg.goal_space[1]/2, self.cfg.goal_space[2]/2], device=self.device)
 
 		# indices
 		self.global_indices = torch.arange(
@@ -731,7 +733,8 @@ class FrankaCube(gym.Env):
 		# update obs, rew, done, info
 		self.grip_pos = (torch.stack(self.franka_lfinger_poses,dim=1) +
 										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
-		grip_pos_normed = (self.grip_pos-self.goal_mean)/self.goal_std
+		grip_pos_normed = (self.grip_pos-self.origin_shift-self.single_goal_mean)/self.single_goal_std
+		print(grip_pos_normed)
 		hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
 		finger_widths_normed = (self.finger_widths.unsqueeze(-1)-self.finger_width_mean) / self.finger_width_std
 		block_pos_normed = (self.block_states[..., :3]-self.goal_mean) / self.goal_std # CHECK multi robot
@@ -955,7 +958,7 @@ class FrankaCube(gym.Env):
 		self.grip_pos = (torch.stack(self.franka_lfinger_poses,dim=1) +
 										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
 		self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
-		grip_pos_normed = (self.grip_pos-self.goal_mean)/self.goal_std
+		grip_pos_normed = (self.grip_pos-self.origin_shift-self.single_goal_mean)/self.single_goal_std
 		hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
 		finger_widths_normed = (self.finger_widths.unsqueeze(-1)-self.finger_width_mean) / self.finger_width_std
 		block_pos_normed = (self.block_states[..., :3]-self.goal_mean) / self.goal_std # CHECK multi robot
@@ -1373,7 +1376,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0, block_length=0.16, table_gap=0.2, os_rate=0.2, robot_gap=0.8, auto_reset=False, goal_space=[0.5,0.4,0.2])
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, block_length=0.16, table_gap=0.2, os_rate=0.2, robot_gap=0.8, auto_reset=True, goal_space=[0.5,0.4,0.2])
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1395,7 +1398,6 @@ if __name__ == '__main__':
 				act = torch.tensor(args.action, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
-			# print(env.info_parser(info, 'ag'))
 			# env.render(mode='human')
 			# info_dict = env.info_parser(info)
 			# print(info_dict.step.item())
