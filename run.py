@@ -71,12 +71,16 @@ def train(config):
 				render=(num_eval % int(1/config.render_per_eval) == 0))
 			log(result, prefix='eval')
 
-			if result.final_rew > best_rew and (i % int(1/config.rollout_per_save)) == 0:
-				best_rew = result.final_rew
-				exp_agent.save_or_load_agent(
-					file_tag=f'rew{best_rew:.2f}', if_save=True)
-				exp_agent.save_or_load_agent(file_tag='best', if_save=True)
+			if (i % int(1/config.rollout_per_save)) == 0:
+				if result.final_rew > best_rew: 
+					best_rew = result.final_rew
+					exp_agent.save_or_load_agent(
+						file_tag=f'rew{best_rew:.2f}', if_save=True)
+					exp_agent.save_or_load_agent(file_tag='best', if_save=True)
+				else:
+					exp_agent.save_or_load_agent(file_tag='latest', if_save=True)
 				print('=========saved!')
+			
 
 
 if __name__ == '__main__':

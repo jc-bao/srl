@@ -9,9 +9,9 @@ headless: True
 enable_camera_sensors: False 
 
 # env
-early_termin_step: 25
+early_termin_step: 35
 early_termin_bar: 0.05
-max_ag_unmoved_steps: 15
+max_ag_unmoved_steps: 25
 ag_moved_threshold: 0.002
 # rew
 reward_type: sparse
