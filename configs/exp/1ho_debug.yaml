@@ -6,3 +6,6 @@ reuse: 0.0001
 steps_per_rollout: 300
 eval_per_rollout: 1
 eval_eps: 1
+
+defaults:
+  - override /env: 1ho_large_ws_debug
