@@ -66,15 +66,15 @@ asset:
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
   assetFileNameSphere: 'urdf/sphere.urdf'
 # table 
-table_size: [1.0, 0.8, 0.4]
+table_size: [1.0, 1.0, 0.4]
 table_gap: 0.0
-rand_table_gap: 0.08
+rand_table_gap: 0.05
 robot_gap: 0.7
 robot_y: 0.5
 # ee_init_pos: [0.0, 0.0, 0.05]
 friction: 0.01
 # goal space
-goal_space: [0.3, 0.3, 0.2]
+goal_space: [0.45, 0.4, 0.2]
 goal_ground_rate: 0.5
 
 # sim:
