@@ -605,7 +605,11 @@ class FrankaCube(gym.Env):
 		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 		while True and done_env_num > 0:
 			extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
-			extra_goals = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals)) + \
+			# TODO fix this
+			sampled_goal = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals))
+			goal_dift = torch.tensor([0,0,self.cfg.block_size/2], device=self.device)
+			sampled_goal = (sampled_goal - goal_dift)*self.cfg.goal_scale + goal_dift
+			extra_goals = sampled_goal + \
 				self.origin_shift[extra_goal_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num, self.cfg.num_goals, 3)
 			goal_dist = torch.abs(extra_goals.unsqueeze(-3) - extra_goals.unsqueeze(-2))
 			satisfied_idx = ((goal_dist[...,0] > self.cfg.block_length*1.2) | \

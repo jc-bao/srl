@@ -1,0 +1,18 @@
+table_gap: # env properties
+  now: 0
+  end: 0.2
+  step: 0.05
+  indicator: torch.mean(handover_success_rate[1:]).item()
+  bar: 0.7 # reward bar to change curriculum
+os_rate: 
+  now: 0.2
+  end: 0.8
+  step: 0.3
+  indicator: results.handover0_success_rate
+  bar: 0.7 
+goal_scale: 
+  now: 0.4
+  end: 1.0 
+  step: 0.1
+  indicator: results.handover0_success_rate
+  bar: 0.6 
