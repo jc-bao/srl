@@ -54,14 +54,20 @@ class FrankaCube(gym.Env):
 		self.torch_goal_space = torch.distributions.uniform.Uniform(
 			low=torch.tensor([-self.cfg.goal_space[0]/2, -self.cfg.goal_space[1]/2, self.cfg.block_size/2], device=self.device),
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+self.cfg.goal_space[2]], device=self.device))
-		self.single_goal_mean = self.torch_goal_space.mean
-		self.single_goal_std = self.torch_goal_space.stddev
+		if self.cfg.norm_method == 'default':
+			self.single_goal_mean = self.torch_goal_space.mean
+			self.single_goal_std = self.torch_goal_space.stddev
+			self.goal_mean = self.torch_goal_space.mean
+			self.goal_std = self.torch_goal_space.stddev 
+		elif self.cfg.norm_method == '0-1':
+			self.single_goal_mean = self.torch_goal_space.mean
+			self.single_goal_std = torch.tensor(np.array(self.cfg.goal_space)/2, device=self.device) 
+			self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device) 
+			self.goal_std = torch.tensor([self.cfg.robot_gap/2+self.cfg.goal_space[0]/2,self.cfg.goal_space[1]/2,self.cfg.goal_space[2]/2], device=self.device)
 		# self.single_goal_std = torch.ones_like(self.torch_goal_space.stddev, device=self.device) 
 		# self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device)
-		self.goal_mean = self.torch_goal_space.mean
 		# self.goal_mean[2] = (self.cfg.table_size[2] + self.cfg.block_size/2)
 		# self.goal_std = torch.tensor([self.cfg.goal_space[0]*self.cfg.num_robots*0.3, self.cfg.goal_space[1]*0.3, self.cfg.goal_space[2]*0.3], device=self.device)
-		self.goal_std = self.torch_goal_space.stddev 
 		# self.goal_std = torch.ones_like(self.single_goal_std, device=self.device)
 		# self.goal_std[0] *= (np.sqrt(self.cfg.num_robots)*2)
 
