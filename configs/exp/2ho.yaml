@@ -4,12 +4,4 @@ wandb: true
 project: handover2
 name: default
 
-env_kwargs:
-  num_envs: 1024
-  num_robots: 2
-  num_goals: 2
-  os_rate: 0.2
-  table_gap: 0.0
-  inhand_rate: 0.2
-
 render: true
