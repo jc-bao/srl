@@ -61,9 +61,11 @@ class FrankaCube(gym.Env):
 			self.goal_std = self.torch_goal_space.stddev 
 		elif self.cfg.norm_method == '0-1':
 			self.single_goal_mean = self.torch_goal_space.mean
-			self.single_goal_std = torch.tensor(np.array(self.cfg.goal_space)/2, device=self.device) 
+			self.single_goal_std = torch.tensor(np.array(self.cfg.goal_space)/2, dtype=torch.float, device=self.device) 
 			self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device) 
 			self.goal_std = torch.tensor([self.cfg.robot_gap/2+self.cfg.goal_space[0]/2,self.cfg.goal_space[1]/2,self.cfg.goal_space[2]/2], device=self.device)
+		else: 
+			raise NotImplementedError('norm_method not implemented')
 		# self.single_goal_std = torch.ones_like(self.torch_goal_space.stddev, device=self.device) 
 		# self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device)
 		# self.goal_mean[2] = (self.cfg.table_size[2] + self.cfg.block_size/2)
