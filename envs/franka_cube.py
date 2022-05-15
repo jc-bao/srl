@@ -1041,7 +1041,7 @@ class FrankaCube(gym.Env):
 			# block size
 			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
 			# goal distribition
-			task_distri = [math.factorial(cfg.num_goals)/(math.factorial(cfg.num_goals-m)*math.factorial(m))*(1-cfg.os_rate)**m*self.cfg.os_rate**(cfg.num_goals-m) for m in range(cfg.num_goals+1)] if cfg.task_distri is None else cfg.task_distri,
+			task_distri = [math.factorial(cfg.num_goals)/(math.factorial(cfg.num_goals-m)*math.factorial(m))*(1-cfg.os_rate)**m*cfg.os_rate**(cfg.num_goals-m) for m in range(cfg.num_goals+1)] if cfg.task_distri is None else cfg.task_distri,
 		)
 		# robot control
 		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
