@@ -199,8 +199,12 @@ class FrankaCube(gym.Env):
 		box_opts.angular_damping = 100
 		box_opts.linear_damping = 10
 		box_opts.thickness = 0.005
-		block_asset = self.gym.create_box(
-			self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
+		if self.cfg.lock_block_orn:
+			block_asset = self.gym.load_asset(
+				self.sim, asset_root, 'urdf/cube.urdf', box_opts)
+		else:
+			block_asset = self.gym.create_box(
+				self.sim, self.cfg.block_length, self.cfg.block_size, self.cfg.block_size, box_opts)
 		goal_opts = gymapi.AssetOptions()
 		goal_opts.density = 0
 		goal_opts.disable_gravity = True
