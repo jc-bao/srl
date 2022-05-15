@@ -58,8 +58,8 @@ class FrankaCube(gym.Env):
 		self.single_goal_std = self.torch_goal_space.stddev
 		# self.single_goal_std = torch.ones_like(self.torch_goal_space.stddev, device=self.device) 
 		# self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device)
-		self.goal_mean = self.torch_goal_space.mean.clone()
-		self.goal_mean[2] = (self.cfg.table_size[2] + self.cfg.block_size/2)
+		self.goal_mean = self.torch_goal_space.mean
+		# self.goal_mean[2] = (self.cfg.table_size[2] + self.cfg.block_size/2)
 		# self.goal_std = torch.tensor([self.cfg.goal_space[0]*self.cfg.num_robots*0.3, self.cfg.goal_space[1]*0.3, self.cfg.goal_space[2]*0.3], device=self.device)
 		self.goal_std = self.torch_goal_space.stddev 
 		# self.goal_std = torch.ones_like(self.single_goal_std, device=self.device)
@@ -541,9 +541,9 @@ class FrankaCube(gym.Env):
 		obs, _, _, _ = self.step(act) # TODO try to remove this
 		# for _ in range(5):
 		# change params here TODO more elegant way
-		if 'table_gap' in config and self.cfg.num_robots == 2:
-			v = config['table_gap']
-			self.table_states[:,:,0] = torch.tensor([-(v+self.cfg.table_size[0])/2,(v+self.cfg.table_size[0])/2], device=self.device)
+		# if 'table_gap' in config and self.cfg.num_robots == 2:
+		# 	v = config['table_gap']
+		# 	self.table_states[:,:,0] = torch.tensor([-(v+self.cfg.table_size[0])/2,(v+self.cfg.table_size[0])/2], device=self.device)
 		self.reset_buf[:] = True
 		obs, rew, done, info = self.step(act)
 		'''
@@ -613,6 +613,10 @@ class FrankaCube(gym.Env):
 		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.goal_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
 		ground_goal_idx = reset_idx & ((torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) | multi_goal_in_same_ws)
 		self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
+		# reset tables
+		new_gap = self.cfg.table_size[0] + self.cfg.table_gap + torch.rand((done_env_num), device=self.device) * self.cfg.rand_table_gap
+		self.table_states[reset_idx,0,0] = -new_gap/2
+		self.table_states[reset_idx,1,0] = new_gap/2
 		# reset blocks
 		if done_env_num > 0:
 			block_indices = self.global_indices[reset_idx, 1:].flatten()
@@ -846,203 +850,6 @@ class FrankaCube(gym.Env):
 					pos.p.x, pos.p.y, pos.p.z = mean[0]+self.origin_shift[j,0], mean[1]+self.origin_shift[j,1], mean[2]+self.origin_shift[j,2]
 					box_geom = gymutil.WireframeBoxGeometry(
 						high[0]-low[0], high[1]-low[1], high[2]-low[2], color=(1, 0, 1))
-					gymutil.draw_lines(box_geom, self.gym, self.viewer, self.envs[i], pos)
-
-		return obs, rew, done, info
-
-	def step_old(self, actions: torch.Tensor):
-		# apply actions
-		self.pre_physics_step(actions)
-		# step physics and render each frame
-		for i in range(self.cfg.control_freq_inv):
-			self.gym.simulate(self.sim)
-		if not self.cfg.headless:
-			self.render(mode='human')
-		if self.device == "cpu":
-			self.gym.fetch_results(self.sim, True)
-		# compute observations, rewards, resets, ...
-		return self.post_physics_step()
-
-	def pre_physics_step(self, actions):
-		reset_idx = self.reset_buf.clone()
-		done_env_num = reset_idx.sum()
-		# reset goals
-		goal_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-		self.goal[reset_idx] = self.torch_goal_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[goal_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
-		# reset blocks
-		if done_env_num > 0:
-			block_indices = self.global_indices[reset_idx, 1:].flatten()
-			# set to default pos
-			self.block_states[reset_idx] = self.default_block_states[reset_idx]
-			in_hand = torch.rand((self.cfg.num_envs,),
-													 device=self.device) < self.cfg.inhand_rate
-			self.inhand_idx = reset_idx & in_hand
-			block_workspace = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-			self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[block_workspace.flatten()].view(done_env_num, self.cfg.num_goals, 3)
-			if self.inhand_idx.any():
-				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
-				# NOTE can only choose block 0 in hand now
-				choosed_block = 0
-				choosed_robot = torch.randint(high=self.cfg.num_robots,size=(self.inhand_idx.sum().item(),))
-				self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
-					(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
-				if self.cfg.num_goals > 1 and self.cfg.num_robots > 1 and torch.rand(1)[0] < 0.5:
-					choosed_block = (choosed_block+1)%self.cfg.num_goals 
-					choosed_robot = (choosed_robot+1)%self.cfg.num_robots
-					self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
-						(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
-			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
-			self.init_ag_normed[reset_idx] = ((self.init_ag[reset_idx]-self.goal_mean)/self.goal_std)
-			# change to hand or random pos
-			self.gym.set_actor_root_state_tensor_indexed(
-				self.sim,
-				gymtorch.unwrap_tensor(self.root_state_tensor),
-				gymtorch.unwrap_tensor(block_indices),
-				len(block_indices),)
-		# reset state buf
-		self.reset_buf[reset_idx] = 0
-		self.progress_buf[reset_idx] = 0
-		self.success_step_buf[reset_idx] = 0
-		# set action here
-		self.actions = torch.clip(
-			actions.clone().view(self.cfg.num_envs,self.cfg.num_robots,4).to(self.device)+self.cfg.action_shift
-			, 
-			-self.cfg.clip_actions, self.cfg.clip_actions)
-		orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
-		pos_errs = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel
-		pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
-		# pos_errs[reset_idx] = self.franka_default_ee_pos.tile(done_env_num,self.cfg.num_robots,1)+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
-		# pos_errs = self.franka_default_ee_pos.tile(self.cfg.num_envs,self.cfg.num_robots,1)+self.origin_shift.tile(self.cfg.num_envs,1,1) - self.grip_pos
-		# clip with bound
-		if self.cfg.bound_robot:
-			pos_errs = torch.clip(pos_errs+self.grip_pos, self.torch_robot_space.low,
-													 self.torch_robot_space.high) - self.grip_pos
-		dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
-		# self.franka_dof_targets[..., :self.franka_hand_index] = self.franka_dof_poses.squeeze(
-		# 	-1)[..., :self.franka_hand_index] + self.control_ik(dposes)
-		self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
-		# grip
-		# grip_acts = (self.actions[..., [3]] + 1) * 0.02
-		grip_acts = self.franka_dof_poses[..., [self.franka_hand_index]] + self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel
-		# reset gripper
-		self.franka_dof_targets[..., self.franka_hand_index:
-														self.franka_hand_index+2] = grip_acts.repeat(1, 1, 2)
-		# limit
-		self.franka_dof_targets[..., :self.num_franka_dofs] = tensor_clamp(
-			self.franka_dof_targets[...,
-															: self.num_franka_dofs], self.franka_dof_lower_limits, self.franka_dof_upper_limits)
-		# Deploy actions
-		# self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(self.franka_dof_targets))
-		if done_env_num < self.cfg.num_envs:
-			# set action
-			act_indices = self.global_indices[~reset_idx, :self.cfg.num_robots].flatten()
-			self.gym.set_dof_position_target_tensor_indexed(
-				self.sim, 
-				gymtorch.unwrap_tensor(self.franka_dof_targets),
-				gymtorch.unwrap_tensor(act_indices),
-				act_indices.shape[0])
-		
-		if done_env_num > 0:
-			# reset positions TODO cannot reset to any pose as ik cannot solve it
-			# franka_dof_states = self.franka_dof_targets.repeat(1,1,1,2) 
-			# franka_dof_states[..., -1]=0.
-			reset_indices = self.global_indices[reset_idx, :self.cfg.num_robots].flatten()
-			self.gym.set_dof_state_tensor_indexed(
-				self.sim, 
-				gymtorch.unwrap_tensor(self.franka_default_dof_state),
-				gymtorch.unwrap_tensor(reset_indices),
-				reset_indices.shape[0])
-
-	def post_physics_step(self):
-		# update state data
-		self.gym.refresh_actor_root_state_tensor(self.sim)
-		self.gym.refresh_dof_state_tensor(self.sim)
-		self.gym.refresh_rigid_body_state_tensor(self.sim)
-		self.gym.refresh_jacobian_tensors(self.sim)
-		# update state buffer
-		self.progress_buf += 1
-
-		# update obs, rew, done, info
-		self.grip_pos = (torch.stack(self.franka_lfinger_poses,dim=1) +
-										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
-		self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
-		# grip_pos_normed = (self.grip_pos-self.origin_shift-self.goal_mean)/self.goal_std
-		grip_pos_normed = (self.grip_pos-self.goal_mean)/self.goal_std
-		hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
-		finger_widths_normed = (self.finger_widths.unsqueeze(-1)-self.finger_width_mean) / self.finger_width_std
-		block_pos_normed = (self.block_states[..., :3]-self.goal_mean) / self.goal_std # CHECK multi robot
-		goal_normed = (self.goal-self.goal_mean)/self.goal_std
-		obs = torch.cat((
-			grip_pos_normed.view(self.cfg.num_envs, self.cfg.num_robots*3),  # mid finger
-			hand_vel_normed.view(self.cfg.num_envs, self.cfg.num_robots*3),
-			finger_widths_normed.view(self.cfg.num_envs, self.cfg.num_robots),  # robot
-			self.block_states[..., 3:].reshape(self.cfg.num_envs, -1),  # objects
-			# achieved goal NOTE make sure it is close to end
-			block_pos_normed.view(self.cfg.num_envs, self.cfg.num_goals*3),
-			goal_normed.view(self.cfg.num_envs, self.cfg.num_goals*3),
-		), dim=-1)
-		# rew
-		rew = self.compute_reward(
-			self.block_states[..., :3], self.goal, None, normed=False)
-		# reset
-		early_termin = ((self.progress_buf >= self.cfg.early_termin_step) & \
-			(
-				# not touch the object
-				torch.all(torch.max(self.init_ag - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_termin_bar)|
-				# hit the ground
-				torch.any(self.grip_pos[..., 2] < (self.cfg.block_size/4+self.cfg.table_size[2]), dim=-1) |
-				# block droped
-				torch.any(self.block_states[..., 2].view(self.cfg.num_envs, self.cfg.num_goals) < self.cfg.table_size[2],dim=-1)
-			))
-		success_env = rew > self.cfg.success_bar
-		self.success_step_buf[~success_env] = self.progress_buf[~success_env]
-		if self.cfg.auto_reset:
-			self.reset_buf = ((self.progress_buf >= (self.cfg.max_steps)) |
-												(self.progress_buf >= self.success_step_buf + self.cfg.extra_steps) |
-												early_termin)
-		else:
-			self.reset_buf[...] = False
-		done = self.reset_buf.clone().type(torch.float)
-		# info
-		info = torch.cat((
-			success_env.type(torch.float).unsqueeze(-1),
-			self.progress_buf.type(torch.float).unsqueeze(-1),
-			early_termin.unsqueeze(-1),
-			torch.empty((self.cfg.num_envs, 3), device=self.device, dtype=torch.float),# traj_idx, traj_len, tleft
-			((self.block_states[..., :3]-self.goal_mean)/self.goal_std).view(
-				self.cfg.num_envs, 3*self.cfg.num_goals).type(torch.float),
-		), dim=-1)
-
-		# debug viz
-		if self.viewer and self.cfg.debug_viz:
-			self.gym.clear_lines(self.viewer)
-
-			for i in range(self.cfg.num_envs):
-				for j in range(self.cfg.num_robots):
-					# draw finger mid
-					finger_mid = (
-						self.franka_lfinger_poses[j][i] + self.franka_rfinger_poses[j][i])/2 + self.finger_shift
-					px = ((finger_mid + quat_apply(self.franka_lfinger_rots[j][i],
-																				to_torch([1, 0, 0], device=self.device) * 0.2,)).cpu().numpy())
-					py = ((finger_mid + quat_apply(self.franka_lfinger_rots[j][i],
-																				to_torch([0, 1, 0], device=self.device) * 0.2,)).cpu().numpy())
-					pz = ((finger_mid + quat_apply(self.franka_lfinger_rots[j][i],
-																				to_torch([0, 0, 1], device=self.device) * 0.2,)).cpu().numpy())
-					p0 = finger_mid.cpu().numpy()
-					self.gym.add_lines(self.viewer, self.envs[i], 1,
-														[p0[0], p0[1], p0[2], px[0], px[1], px[2]], [1, 0, 0],)
-					self.gym.add_lines(self.viewer, self.envs[i], 1,
-														[p0[0], p0[1], p0[2], py[0], py[1], py[2]], [0, 1, 0],)
-					self.gym.add_lines(self.viewer, self.envs[i], 1,
-														[p0[0], p0[1], p0[2], pz[0], pz[1], pz[2]], [0, 0, 1],)
-					# draw goal space
-					low = self.torch_goal_space.low
-					high = self.torch_goal_space.high
-					mean = (high+low)/2
-					pos = gymapi.Transform()
-					pos.p.x, pos.p.y, pos.p.z = mean[0]+self.origin_shift[j,0], mean[1]+self.origin_shift[j,1], mean[2]+self.origin_shift[j,2]
-					box_geom = gymutil.WireframeBoxGeometry(
-						high[0]-low[0], high[1]-low[1], high[2]-low[2], color=(0, 0, 1))
 					gymutil.draw_lines(box_geom, self.gym, self.viewer, self.envs[i], pos)
 
 		return obs, rew, done, info
@@ -1384,7 +1191,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2, robot_gap=0.7, goal_space=[0.6,0.4,0.2], table_size = [1.0, 1.0, 0.4], base_steps=80, max_ag_unmoved_steps=30, early_termin_step=40)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2, robot_gap=0.7, goal_space=[0.6,0.4,0.2], table_size = [1.0, 1.0, 0.4], base_steps=80, max_ag_unmoved_steps=30, early_termin_step=40)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1408,6 +1215,7 @@ if __name__ == '__main__':
 			# info_dict = env.info_parser(info)
 			# print(info_dict.step.item())
 		# Image.fromarray(images[0]).save('foo.png')
+		env.reset(config={'table_gap':0.3})
 
 	print(time.time()-start)
 	env.close()
