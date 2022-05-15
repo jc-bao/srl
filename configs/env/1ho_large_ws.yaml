@@ -5,7 +5,7 @@ os_rate: 0.2
 table_gap: 0.0
 inhand_rate: 0.3 # init obj in hand
 robot_gap: 0.7
-goal_space: [0.6,0.4,0.2]
+goal_space: [0.4,0.4,0.2]
 table_size: [1.0, 1.0, 0.4]
 base_steps: 80
 early_termin_step: 40

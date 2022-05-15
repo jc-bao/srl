@@ -69,7 +69,7 @@ asset:
 table_size: [1.0, 0.8, 0.4]
 table_gap: 0.0
 rand_table_gap: 0.08
-robot_gap: 0.6
+robot_gap: 0.7
 robot_y: 0.5
 # ee_init_pos: [0.0, 0.0, 0.05]
 friction: 0.01
