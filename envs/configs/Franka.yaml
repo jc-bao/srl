@@ -55,6 +55,7 @@ inhand_rate: 0.2
 block_size: 0.04 
 block_length: null 
 obj_sample_mode: bernoulli
+task_distri: null
 lock_block_orn: true
 os_rate: 0.5
 # robot

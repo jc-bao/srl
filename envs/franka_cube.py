@@ -10,6 +10,7 @@ from isaacgym.torch_utils import *
 import torch
 from attrdict import AttrDict
 import pathlib
+import math
 # import pytorch_kinematics as pk
 
 
@@ -653,9 +654,23 @@ class FrankaCube(gym.Env):
 					tiled_goal_ws = self.goal_workspace[reset_idx].repeat(self.cfg.extra_goal_sample,1,1)
 					extra_block_ws = tiled_goal_ws + torch.bernoulli(torch.ones(tiled_goal_ws.shape[1:], device=self.device, dtype=torch.float)*self.cfg.os_rate).long().repeat(self.cfg.extra_goal_sample,1,1)
 					extra_block_ws %= self.cfg.num_robots
+				elif self.cfg.obj_sample_mode == 'task_distri':
+					rand_number = torch.rand((done_env_num,), device=self.device)
+					block_ws = torch.zeros((done_env_num, self.cfg.num_goals), device=self.device, dtype=torch.long)
+					now_prob = self.cfg.task_distri[0] 
+					for i in range(1, self.cfg.num_goals+1):
+						block_ws[now_prob<=rand_number<now_prob+self.cfg.task_distri[i], :i] = 1
+						now_prob += self.cfg.task_distri[i]
+					block_ws += self.goal_workspace[reset_idx] 
+					extra_block_ws = block_ws.repeat(self.cfg.extra_goal_sample,1,1)
+					extra_block_ws %= self.cfg.num_robots
 				else:
 					raise NotImplementedError
-				extra_ags = self.torch_block_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals)) + \
+				# TODO fix this
+				sampled_ag = self.torch_block_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals))
+				goal_dift = torch.tensor([0,0,self.cfg.block_size/2], device=self.device)
+				sampled_ag = (sampled_ag - goal_dift)*self.cfg.goal_scale + goal_dift
+				extra_ags = sampled_ag + \
 					self.origin_shift[extra_block_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num, self.cfg.num_goals, 3)
 				ag_dist = torch.abs(extra_ags.unsqueeze(-3) - extra_ags.unsqueeze(-2))
 				satisfied_idx = ((ag_dist[...,0] > self.cfg.block_length*1.2) | \
@@ -1025,6 +1040,8 @@ class FrankaCube(gym.Env):
 			success_bar={'sparse':-0.01, 'sparse+':0.95, 'dense': 0.94, 'dense+': 0.95}[cfg.reward_type],
 			# block size
 			block_length=cfg.block_size if cfg.num_robots <1.5 else cfg.block_size*5,
+			# goal distribition
+			task_distri = [math.factorial(cfg.num_goals)/(math.factorial(cfg.num_goals-m)*math.factorial(m))*(1-cfg.os_rate)**m*self.cfg.os_rate**(cfg.num_goals-m) for m in range(cfg.num_goals+1)] if cfg.task_distri is None else cfg.task_distri,
 		)
 		# robot control
 		cfg.action_shift=torch.tensor(cfg.action_shift,device=cfg.sim_device)
@@ -1204,7 +1221,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,1,0])
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
