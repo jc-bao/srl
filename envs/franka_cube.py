@@ -622,9 +622,10 @@ class FrankaCube(gym.Env):
 		ground_goal_idx = reset_idx & ((torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) | multi_goal_in_same_ws)
 		self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
 		# reset tables
-		new_gap = self.cfg.table_size[0] + self.cfg.table_gap + torch.rand((done_env_num), device=self.device) * self.cfg.rand_table_gap
-		self.table_states[reset_idx,0,0] = -new_gap/2
-		self.table_states[reset_idx,1,0] = new_gap/2
+		if self.cfg.num_robots == 2:
+			new_gap = self.cfg.table_size[0] + self.cfg.table_gap + torch.rand((done_env_num), device=self.device) * self.cfg.rand_table_gap
+			self.table_states[reset_idx,0,0] = -new_gap/2
+			self.table_states[reset_idx,1,0] = new_gap/2
 		# reset blocks
 		if done_env_num > 0:
 			block_indices = self.global_indices[reset_idx, 1:].flatten()
@@ -964,7 +965,7 @@ class FrankaCube(gym.Env):
 		up_step = 6
 		reach_step = 26
 		grasp_step = 30
-		end_step = 50
+		end_step = 80
 		pos = obs[..., :3]*self.single_goal_std+self.single_goal_mean + self.origin_shift
 		obj = obs[..., 17:20].view(
 			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
@@ -1199,7 +1200,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2, table_gap=0.2)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1212,7 +1213,9 @@ if __name__ == '__main__':
 			if args.random:
 				act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)
 				act[..., 3] = -1
+				act[..., 0] = 1
 				act[..., 7] = -1
+				act[..., 4] = -1
 			elif args.ezpolicy:
 				act = env.ezpolicy(obs)
 			else:
