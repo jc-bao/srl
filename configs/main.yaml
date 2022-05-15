@@ -29,14 +29,7 @@ dropout_early_termin: false
 env_name: 'FrankaPNP-v0'
 # env_params to use in agent, set to false to load automatically (recommend: false)
 env_params: null
-# env kwargs to pass into env
-env_kwargs:
-  num_envs: 1024 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
-  num_robots: 2
-  num_goals: 1
-  os_rate: 0.2
-  table_gap: 0.0
-  inhand_rate: 0.2 # init obj in hand
+  
 reward_scale: 1
 
 # network
@@ -77,9 +70,10 @@ eval_eps: null # set automatically with steps per rollout
 render: false
 render_per_eval: 0.2
 
-# curriculum params
+
 defaults:
   - curri: gap_os_ho
+  - env: 1ho
 
 # save
 cwd: results

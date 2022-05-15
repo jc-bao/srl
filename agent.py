@@ -36,7 +36,7 @@ class AgentBase:
 
     '''env setup'''
     print('[Agent] env setup')
-    kwargs = cfg.env_kwargs
+    kwargs = cfg.env
     kwargs.sim_device_id = self.cfg.gpu_id
     kwargs.rl_device_id = self.cfg.gpu_id
     if not self.cfg.render:

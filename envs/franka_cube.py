@@ -45,9 +45,9 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-self.cfg.goal_space[0], -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
+			low=torch.tensor([-self.cfg.robot_gap/2, -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
 											 device=self.device),
-			high=torch.tensor([self.cfg.goal_space[0], self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*2], device=self.device))
+			high=torch.tensor([self.cfg.robot_gap/2, self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*1.5], device=self.device))
 		# goal space
 		if self.cfg.goal_space[2] > 0.01 and self.cfg.num_robots > 1 and self.cfg.num_goals > 1:
 			print('[Env] Warn: multi robot, multi goal, goal height > 0.01')
@@ -55,12 +55,15 @@ class FrankaCube(gym.Env):
 			low=torch.tensor([-self.cfg.goal_space[0]/2, -self.cfg.goal_space[1]/2, self.cfg.block_size/2], device=self.device),
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+self.cfg.goal_space[2]], device=self.device))
 		self.single_goal_mean = self.torch_goal_space.mean
-		# self.single_goal_std = self.torch_goal_space.stddev
-		self.single_goal_std = torch.ones_like(self.torch_goal_space.stddev, device=self.device) 
-		self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device)
+		self.single_goal_std = self.torch_goal_space.stddev
+		# self.single_goal_std = torch.ones_like(self.torch_goal_space.stddev, device=self.device) 
+		# self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device)
+		self.goal_mean = self.torch_goal_space.mean.clone()
+		self.goal_mean[2] = (self.cfg.table_size[2] + self.cfg.block_size/2)
 		# self.goal_std = torch.tensor([self.cfg.goal_space[0]*self.cfg.num_robots*0.3, self.cfg.goal_space[1]*0.3, self.cfg.goal_space[2]*0.3], device=self.device)
-		self.goal_std = torch.ones_like(self.single_goal_std, device=self.device)
-		self.goal_std[0] *= (np.sqrt(self.cfg.num_robots)*2)
+		self.goal_std = self.torch_goal_space.stddev 
+		# self.goal_std = torch.ones_like(self.single_goal_std, device=self.device)
+		# self.goal_std[0] *= (np.sqrt(self.cfg.num_robots)*2)
 
 		# indices
 		self.global_indices = torch.arange(
@@ -263,7 +266,7 @@ class FrankaCube(gym.Env):
 				franka_pos = franka_start_poses[franka_id]
 				# Key: create Panda
 				franka_actor = self.gym.create_actor(
-					env_ptr, franka_asset, franka_pos, f"franka{franka_id}", i, 1, 0
+					env_ptr, franka_asset, franka_pos, f"franka{franka_id}", i, 0, i
 				)
 				self.gym.set_actor_dof_properties(
 					env_ptr, franka_actor, franka_dof_props)
@@ -1139,11 +1142,11 @@ class FrankaCube(gym.Env):
 		return q_r[..., 0:3] * torch.sign(q_r[..., 3]).unsqueeze(-1)
 
 	def ezpolicy(self, obs):
-		up_step = 4
-		reach_step = 15
-		grasp_step = 17
+		up_step = 6
+		reach_step = 26
+		grasp_step = 30
 		end_step = 50
-		pos = obs[..., :3]*self.goal_std+self.goal_mean + self.origin_shift
+		pos = obs[..., :3]*self.single_goal_std+self.single_goal_mean + self.origin_shift
 		obj = obs[..., 17:20].view(
 			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
 		goal = obs[..., 20:23].view(
@@ -1377,14 +1380,14 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2, robot_y=0.6, robot_gap=0.7, goal_space=[0.5,0.5,0.2], table_size = [1.0, 1.0, 0.4])
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, inhand_rate=0.2, robot_gap=0.7, goal_space=[0.6,0.4,0.2], table_size = [1.0, 1.0, 0.4], base_steps=80, max_ag_unmoved_steps=30, early_termin_step=40)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
 	# 	*([[0,1,0,1]]*4),
 	# 	*([[-1,0,0,1]]*4),
 	# 	*([[0,-1,0,1]]*4),]
-	obs = env.reset()
+	obs = env.reset()[0]
 	for i in range(10):
 		for j in range(env.cfg.max_steps):
 			if args.random:

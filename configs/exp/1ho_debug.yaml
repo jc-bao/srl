@@ -1,11 +1,5 @@
 # @package _global_
 
-env_kwargs:
-  num_envs: 10
-  num_robots: 2
-  num_goals: 1
-  headless: true
-
 buffer_size: 1000
 batch_size: 20
 reuse: 0.0001
