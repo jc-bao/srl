@@ -1,0 +1,14 @@
+# @package _global_
+
+wandb: true
+resume_mode: restart
+load_path: null
+wid: henge8rt # your wandb wid here
+project: handover1
+name: resume_from_1
+
+defaults:
+  - override /env: 2ho_hard
+  - override /curri: os_ho
+
+render: true
