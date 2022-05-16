@@ -2,9 +2,9 @@
 
 wandb: true
 project: handover2
-name: 8kenv_resume
+name: 8kenv_default_resume
 resume_mode: restart
-wid: ail7g7hk
+wid: 1j040lfc
 entity: jc-bao
 
 her_rate: 0.8
@@ -15,20 +15,20 @@ env:
   num_envs: 8192
   num_robots: 2
   num_goals: 2
-  os_rate: 0.9
-  table_gap: 0.0
+  os_rate: 0.95
+  table_gap: 0.2
   inhand_rate: 0.2 # init obj in hand
 
 curri:
   table_gap: # env properties
-    now: 0.1
+    now: 0.2
     end: 0.2
     step: 0.05
-    indicator: torch.mean(handover_success_rate[1:]).item()
+    indicator: '1'
     bar: 0.7 # reward bar to change curriculum
   os_rate: 
-    now: 0.9
-    end: 0.9
+    now: 0.95
+    end: 0.95
     step: 0.2
     indicator: '1'
     bar: 0.7
