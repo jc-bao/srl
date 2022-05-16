@@ -73,7 +73,7 @@ render_per_eval: 0.2
 
 
 defaults:
-  - curri: scale_gap_os_ho
+  - curri: scale_gap_os_goalos_ho
   - env: 1ho
 
 # save
