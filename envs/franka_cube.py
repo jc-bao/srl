@@ -631,8 +631,6 @@ class FrankaCube(gym.Env):
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
 		for i in range(self.cfg.num_robots):
 			multi_goal_in_same_ws |= ((self.goal_workspace==i).sum(dim=-1) > 1)
-		ground_goal_idx = reset_idx & ((torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) | multi_goal_in_same_ws)
-		self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
 		# reset tables
 		if self.cfg.num_robots == 2:
 			new_gap = self.cfg.table_size[0] + self.cfg.table_gap + torch.rand((done_env_num), device=self.device) * self.cfg.rand_table_gap
@@ -704,6 +702,9 @@ class FrankaCube(gym.Env):
 						(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
 			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
 			self.init_ag_normed[reset_idx] = ((self.init_ag[reset_idx]-self.goal_mean)/self.goal_std)
+			# change some goal to the ground
+			ground_goal_idx = reset_idx & ((torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) | multi_goal_in_same_ws | (self.num_handovers > 0))
+			self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
 			# change to hand or random pos
 			self.gym.set_actor_root_state_tensor_indexed(
 				self.sim,
@@ -1181,9 +1182,13 @@ class FrankaCube(gym.Env):
 			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals*2] = new_info.ag_unmoved_steps
 		return old_info
 
-	def sample_goal(self, size):
+	def sample_goal(self, size, norm = True):
 		goal_workspace = torch.randint(self.cfg.num_robots,size=(size, ), device=self.device)
-		return self.torch_goal_space.sample((size,))+self.origin_shift[goal_workspace]
+		goal = self.torch_goal_space.sample((size,))+self.origin_shift[goal_workspace]
+		if norm:
+			return (goal-self.goal_mean)/self.goal_std
+		else:
+			return goal
 
 	def close(self):
 		self.gym.destroy_viewer(self.viewer)
