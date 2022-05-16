@@ -2,7 +2,7 @@
 
 wandb: true
 project: handover2
-name: 8kenv_default_resume
+name: 8kenv_default_resume_goaloscontrol
 resume_mode: restart
 wid: 1j040lfc
 entity: jc-bao
