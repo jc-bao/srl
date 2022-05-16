@@ -605,8 +605,10 @@ class FrankaCube(gym.Env):
 		# reset goals
 		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 		while True and done_env_num > 0:
-			extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
-			# TODO fix this
+			if self.cfg.goal_sample_mode == 'uniform':
+				extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
+			elif self.cfg.goal_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
+				extra_goal_ws = torch.bernoulli(torch.ones((done_env_num.item(),self.cfg.num_goals), device=self.device, dtype=torch.float)*self.cfg.goal_os_rate).long().repeat(self.cfg.extra_goal_sample,1,1)
 			sampled_goal = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals))
 			goal_dift = torch.tensor([0,0,self.cfg.block_size/2], device=self.device)
 			sampled_goal = (sampled_goal - goal_dift)*self.cfg.goal_scale + goal_dift
@@ -1222,7 +1224,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,0,1])
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=0)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
