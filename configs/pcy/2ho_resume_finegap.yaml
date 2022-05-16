@@ -10,7 +10,7 @@ load_tag: best
 
 her_rate: 0.8
 
-render: true 
+render: false 
 
 env: 
   num_envs: 1024
