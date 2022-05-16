@@ -12,8 +12,6 @@ from envs.toy import ReachToyEnv
 @hydra.main(config_name='main', config_path='configs')
 def train(config):
 	config = AttrDict(config)
-	print(config.curri)
-	exit()
 	'''init'''
 	if config.wandb:
 		if config.resume_mode is None or config.resume_mode == 'restart':
