@@ -12,6 +12,8 @@ from envs.toy import ReachToyEnv
 @hydra.main(config_name='main', config_path='configs')
 def train(config):
 	config = AttrDict(config)
+	print(config.curri)
+	exit()
 	'''init'''
 	if config.wandb:
 		if config.resume_mode is None or config.resume_mode == 'restart':
@@ -31,10 +33,10 @@ def train(config):
 	if config.load_path is not None:
 		print('[Load] resume from local')
 		exp_agent.save_or_load_agent(
-			file_tag='best', cwd=config.load_path, if_save=False)
+			file_tag='latest', cwd=config.load_path, if_save=False)
 	elif (config.wid is not None):
 		print('[Load] resume from cloud')
-		exp_agent.save_or_load_agent(file_tag='best', if_save=False)
+		exp_agent.save_or_load_agent(file_tag='latest', if_save=False)
 		# exp_agent.save_or_load_agent(file_tag = 'rew-0.08', if_save=False)
 
 	def log(msg, prefix=''):
