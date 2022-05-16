@@ -17,8 +17,8 @@ os_rate:
   indicator: results.handover0_success_rate
   bar: 0.7 
 goal_scale: 
-  now: 0.4
+  now: 0.6
   end: 1.0 
   step: 0.1
   indicator: results.handover0_success_rate
-  bar: 0.6 
+  bar: 0.6
