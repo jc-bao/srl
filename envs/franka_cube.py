@@ -67,17 +67,34 @@ class FrankaCube(gym.Env):
 			self.goal_std = torch.tensor([self.cfg.robot_gap/2+self.cfg.goal_space[0]/2,self.cfg.goal_space[1]/2,self.cfg.goal_space[2]/2], device=self.device)
 		else: 
 			raise NotImplementedError('norm_method not implemented')
-		# self.single_goal_std = torch.ones_like(self.torch_goal_space.stddev, device=self.device) 
-		# self.goal_mean = torch.tensor([0,0,self.cfg.table_size[2]+self.cfg.goal_space[2]/2+self.cfg.block_size/2], device=self.device)
-		# self.goal_mean[2] = (self.cfg.table_size[2] + self.cfg.block_size/2)
-		# self.goal_std = torch.tensor([self.cfg.goal_space[0]*self.cfg.num_robots*0.3, self.cfg.goal_space[1]*0.3, self.cfg.goal_space[2]*0.3], device=self.device)
-		# self.goal_std = torch.ones_like(self.single_goal_std, device=self.device)
-		# self.goal_std[0] *= (np.sqrt(self.cfg.num_robots)*2)
 
 		# indices
 		self.global_indices = torch.arange(
 			self.cfg.num_envs * (self.cfg.num_robots*2 + self.cfg.num_goals*2), dtype=torch.int32, device=self.device
 		).view(self.cfg.num_envs, -1)
+
+		# rotation metrix
+		robot_pos_rot_mat = torch.tensor([
+			[0,0,0,-1,0,0],
+			[0,0,0,0,-1,0],
+			[0,0,0,0,0,1],
+			[-1,0,0,0,0,0],
+			[0,-1,0,0,0,0],
+			[0,0,1,0,0,0],
+		], device=self.device)
+		pos_rot_mat = torch.tensor([
+			[-1,0,0],
+			[0,-1,0],
+			[0,0,1]
+		], device=self.device)
+		quat_rot_mat = torch.tensor([
+			[0,-1,0,0],
+			[1,0,0,0],
+			[0,0,0,1],
+			[0,0,1,0],
+		], device=self.device)
+		block_other_mat = torch.block_diag(*([quat_rot_mat]+[pos_rot_mat]*2))
+		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0,1],[1,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*2*self.cfg.num_goals))
 
 		self.reset()
 
@@ -1107,6 +1124,9 @@ class FrankaCube(gym.Env):
 		else:
 			raise NotImplementedError
 	
+	def obs_mirror(self, obs):
+		return obs * self.obs_rot_mat
+	
 	def obs_updater(self, old_obs, new_obs:AttrDict):
 		if 'shared' in new_obs:
 			old_obs[..., :self.cfg.shared_dim] = new_obs.shared	
@@ -1218,6 +1238,7 @@ class FrankaCube(gym.Env):
 			info_updater=self.info_updater,
 			obs_parser=self.obs_parser, 
 			obs_updater=self.obs_updater,
+			obs_mirror=self.obs_mirror,
 		)
 
 
@@ -1255,6 +1276,7 @@ if __name__ == '__main__':
 				act = torch.tensor([args.action]*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
+			print(env.obs_mirror(obs)/obs)
 			# env.render(mode='human')
 			# info_dict = env.info_parser(info)
 			# print(info_dict.step.item())

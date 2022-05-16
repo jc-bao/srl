@@ -107,4 +107,4 @@ physx:
 task:
   randomize: False
 auto_reset: True
-norm_method: default
+norm_method: '0-1'
