@@ -9,7 +9,7 @@ headless: True
 enable_camera_sensors: False 
 
 # env
-early_termin_step: 35
+early_termin_step: 30 
 early_termin_bar: 0.05
 max_ag_unmoved_steps: 25
 ag_moved_threshold: 0.002
