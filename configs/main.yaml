@@ -3,6 +3,7 @@ wandb: false
 entity: jc-bao
 # set load path to load locally
 load_path: null
+load_tag: latest
 # set wandb wid to load remotely
 wid: null
 # resume mode {null, 'continue', 'restart', 'load_only'}

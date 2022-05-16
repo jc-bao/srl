@@ -1,0 +1,41 @@
+# @package _global_
+
+wandb: true
+project: handover2
+name: resumefinegap
+resume_mode: restart
+wid: ail7g7hk
+entity: jc-bao
+load_tag: best
+
+her_rate: 0.8
+
+render: true 
+
+env: 
+  num_envs: 1024
+  num_robots: 2
+  num_goals: 2
+  os_rate: 0.9
+  table_gap: 0.0
+  inhand_rate: 0.2 # init obj in hand
+
+curri:
+  table_gap: # env properties
+    now: 0.0
+    end: 0.2
+    step: 0.01
+    indicator: torch.mean(handover_success_rate[1:]).item()
+    bar: 0.5 # reward bar to change curriculum
+  os_rate: 
+    now: 0.9
+    end: 0.9
+    step: 0.2
+    indicator: '1'
+    bar: 0.7
+  goal_scale: 
+    now: 1
+    end: 1
+    step: 0.2
+    indicator: '1'
+    bar: 0.7

@@ -31,10 +31,10 @@ def train(config):
 	if config.load_path is not None:
 		print('[Load] resume from local')
 		exp_agent.save_or_load_agent(
-			file_tag='latest', cwd=config.load_path, if_save=False)
+			file_tag=config.load_tag, cwd=config.load_path, if_save=False)
 	elif (config.wid is not None):
 		print('[Load] resume from cloud')
-		exp_agent.save_or_load_agent(file_tag='latest', if_save=False)
+		exp_agent.save_or_load_agent(file_tag=config.load_tag, if_save=False)
 		# exp_agent.save_or_load_agent(file_tag = 'rew-0.08', if_save=False)
 
 	def log(msg, prefix=''):
