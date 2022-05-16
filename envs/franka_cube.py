@@ -681,6 +681,7 @@ class FrankaCube(gym.Env):
 					self.block_workspace[reset_idx] = extra_block_ws[satisfied_idx][:done_env_num]
 					break	
 			self.num_handovers = (self.block_workspace != self.goal_workspace).sum(dim=-1)
+			self.need_exchange = ((self.num_handovers >=2) & (self.goal_workspace.any(dim=-1) & self.block_workspace.any(dim=-1)))
 			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
 			self.ag_unmoved_steps[reset_idx] = 0
 			if self.inhand_idx.any():
@@ -1221,7 +1222,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,1,0])
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,0,1])
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
