@@ -144,7 +144,7 @@ class FrankaCube(gym.Env):
 		# self.franka_default_dof_pos = to_torch(
 		# 	[[0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164, 0.02, 0.02]],
 		# 	device=self.device,)
-		self.predefined_dof_pos = torch.load(self.cfg_path/'default_joint_pos04.pt').to(self.device)
+		self.predefined_dof_pos = torch.load(self.cfg_path/'default_joint_pos.pt').to(self.device)
 		random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
 		self.franka_default_dof_pos = torch.empty((self.cfg.num_envs*self.cfg.num_robots, self.predefined_dof_pos.shape[-1]), device=self.device)
 		self.franka_default_dof_pos = self.predefined_dof_pos[random_idx]

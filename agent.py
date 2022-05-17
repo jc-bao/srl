@@ -198,7 +198,7 @@ class AgentBase:
           self.cfg.curri[k]['now'] += v['step']
         reset_params[k] = self.cfg.curri[k]['now']
       self.env.reset(config=reset_params)
-    results.update(**reset_params)
+    results.update(curri = reset_params)
     return results
 
   def explore_vec_env(self, target_steps=None):
