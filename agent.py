@@ -126,9 +126,10 @@ class AgentBase:
     handover_success_rate = torch.zeros(
       self.EP.num_goals+1, device=self.cfg.device)
     handover_num_ep = torch.ones(self.EP.num_goals+1,
-                         device=self.cfg.device)
-    exchange_num_ep = torch.ones(self.EP.num_goals,device=self.cfg.device)
-    exchange_success_rate = torch.zeros((self.EP.num_goals,),device=self.cfg.device)
+                                 device=self.cfg.device)
+    exchange_num_ep = torch.ones(self.EP.num_goals, device=self.cfg.device)
+    exchange_success_rate = torch.zeros(
+      (self.EP.num_goals,), device=self.cfg.device)
     # reset
     ten_s, ten_rewards, ten_dones, ten_info = self.env.reset()
     if self.cfg.render and render:
@@ -149,16 +150,20 @@ class AgentBase:
       ep_rew += ten_rewards
       ep_step += 1
       final_rew[ten_dones] += ten_rewards[ten_dones]
-      success_rate[ten_dones] += self.EP.info_parser(ten_info[ten_dones], 'success')
+      success_rate[ten_dones] += self.EP.info_parser(
+        ten_info[ten_dones], 'success')
       try:
         for i in range(self.EP.num_goals+1):
-          now_done = ten_dones & (self.env.num_handovers==i) 
+          now_done = ten_dones & (self.env.num_handovers == i)
           handover_num_ep[i] += now_done.sum()
-          handover_success_rate[i] += self.EP.info_parser(ten_info[now_done], 'success').sum()
+          handover_success_rate[i] += self.EP.info_parser(
+            ten_info[now_done], 'success').sum()
         for i in range(self.EP.num_goals):
-          now_done = ten_dones & (self.env.num_handovers==2) & (self.env.num_os_goal==i)
+          now_done = ten_dones & (self.env.num_handovers == 2) & (
+            self.env.num_os_goal == i)
           exchange_num_ep[i] += now_done.sum()
-          exchange_success_rate[i] += self.EP.info_parser(ten_info[now_done], 'success').sum()
+          exchange_success_rate[i] += self.EP.info_parser(
+            ten_info[now_done], 'success').sum()
       except Exception as e:
         print(f'{e}, fail to calcuate handover success rate')
       collected_eps = num_ep.sum()
@@ -177,11 +182,11 @@ class AgentBase:
     exchange_success_rate /= exchange_num_ep
     ho_success_dict = {
       f'handover{i}_success_rate': handover_success_rate[i].item()
-        for i in range(self.EP.num_goals + 1)
+      for i in range(self.EP.num_goals + 1)
     }
     ex_success_dict = {
       f'exchange{i}_success_rate': exchange_success_rate[i].item()
-        for i in range(self.EP.num_goals)
+      for i in range(self.EP.num_goals)
     }
     results = AttrDict(
       steps=self.total_step,
@@ -198,7 +203,7 @@ class AgentBase:
           self.cfg.curri[k]['now'] += v['step']
         reset_params[k] = self.cfg.curri[k]['now']
       self.env.reset(config=reset_params)
-    results.update(curri = reset_params)
+    results.update(curri=reset_params)
     return results
 
   def explore_vec_env(self, target_steps=None):
@@ -405,16 +410,17 @@ class AgentBase:
     name_obj_list = [(name, obj)
                      for name, obj in name_obj_list if obj is not None]
     if if_save:
-      data = {'step':self.total_step, 'curri': self.cfg.curri}
+      data = {'step': self.total_step, 'curri': self.cfg.curri}
       for name, obj in name_obj_list:
         data[name] = obj.state_dict()
       save_path = f"{cwd}/{file_tag}.pth"
       torch.save(data, save_path)
       if self.cfg.wandb:
-          wandb.save(save_path, base_path=cwd)  # upload now
+        wandb.save(save_path, base_path=cwd)  # upload now
     else:
       if self.cfg.wid is not None:
-        save_path = wandb.restore(f'{file_tag}.pth', f'{self.cfg.entity}/{self.cfg.project}/{self.cfg.wid}').name
+        save_path = wandb.restore(
+          f'{file_tag}.pth', f'{self.cfg.entity}/{self.cfg.project}/{self.cfg.wid}').name
       elif self.cfg.load_path is not None:
         save_path = self.cfg.load_path
       with open(save_path, 'rb') as f:
@@ -422,12 +428,13 @@ class AgentBase:
       if self.cfg.resume_mode == 'continue':
         self.total_step = data['step']
         if self.cfg.load_curri:
-          for k,v in data['curri'].items(): 
+          for k, v in data['curri'].items():
             if k in self.cfg.curri:
-              print(f'set {k} to data['curri']['now']')
+              print(f'set {k} to {v["now"]}')
               self.cfg.curri.now = data['curri']['now']
       for name, obj in name_obj_list:
         obj.load_state_dict(data[name])
+
 
 class AgentSAC(AgentBase):
   def __init__(self, cfg):
