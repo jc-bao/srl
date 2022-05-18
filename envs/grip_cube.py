@@ -14,8 +14,8 @@ import math
 # import pytorch_kinematics as pk
 
 
-class FrankaCube(gym.Env):
-	def __init__(self, cfg_file='Franka.yaml', **kwargs):
+class gripCube(gym.Env):
+	def __init__(self, cfg_file='Grip.yaml', **kwargs):
 		# get config and setup base class
 		self.cfg_path = pathlib.Path(__file__).parent.resolve()/'configs'
 		with open(self.cfg_path/cfg_file) as config_file:
@@ -28,7 +28,7 @@ class FrankaCube(gym.Env):
 		self.device = self.cfg.sim_device
 
 		# setup ik solver
-		# self.chain = pk.build_serial_chain_from_urdf(open("./isaac_assets/urdf/franka_description/robots/franka_panda.urdf").read(), "panda_hand").to(device = self.device)
+		# self.chain = pk.build_serial_chain_from_urdf(open("./isaac_assets/urdf/grip_description/robots/grip_panda.urdf").read(), "panda_hand").to(device = self.device)
 
 		# setup isaac
 		self.gym = gymapi.acquire_gym()
@@ -138,86 +138,68 @@ class FrankaCube(gym.Env):
 		# finger shift
 		self.finger_shift = to_torch(self.cfg.finger_shift, device=self.device)
 		# joint pos
-		# self.franka_default_ee_pos = to_torch(
-		# 	self.cfg.ee_init_pos,
-		# 	device=self.device,) 
-		# self.franka_default_dof_pos = to_torch(
-		# 	[[0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164, 0.02, 0.02]],
-		# 	device=self.device,)
-		self.predefined_dof_pos = torch.load(self.cfg_path/'default_joint_pos.pt').to(self.device)
-		random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
-		self.franka_default_dof_pos = torch.empty((self.cfg.num_envs*self.cfg.num_robots, self.predefined_dof_pos.shape[-1]), device=self.device)
-		self.franka_default_dof_pos = self.predefined_dof_pos[random_idx]
-		# self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(self.cfg.num_envs,self.cfg.num_robots,2)
-		self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(1,1,2)
-		self.franka_default_dof_state[...,-1] = 0.
-		orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
-		# orns = [[1.0, 0., 0., 0.],[-1.0, 0., 0., 0.]]
-		self.franka_default_orn = to_torch(
-			[[orns[i%2] for i in range(self.cfg.num_robots)]], device=self.device).repeat(self.cfg.num_envs, 1, 1)
 		lower = gymapi.Vec3(-self.cfg.env_spacing, -self.cfg.env_spacing, 0.0)
 		upper = gymapi.Vec3(*([self.cfg.env_spacing]*3))
 
 		asset_root = os.path.join(
 			os.path.dirname(os.path.abspath(__file__)), self.cfg.asset.assetRoot)
-		franka_asset_file = self.cfg.asset.assetFileNameFranka
-		# load franka asset
+		grip_asset_file = self.cfg.asset.assetFileNamegrip
+		# load grip asset
 		asset_options = gymapi.AssetOptions()
 		asset_options.flip_visual_attachments = True
-		asset_options.fix_base_link = True
+		asset_options.fix_base_link = False
 		asset_options.collapse_fixed_joints = True
 		asset_options.disable_gravity = True
 		asset_options.thickness = 0.001
 		asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
 		asset_options.use_mesh_materials = True
-		franka_asset = self.gym.load_asset(
-			self.sim, asset_root, franka_asset_file, asset_options
+		grip_asset = self.gym.load_asset(
+			self.sim, asset_root, grip_asset_file, asset_options
 		)
-		franka_dof_stiffness = to_torch(
-			[400, 400, 400, 400, 400, 400, 400, 1.0e6, 1.0e6],
+		grip_dof_stiffness = to_torch(
+			[1.0e6, 1.0e6],
 			dtype=torch.float,
 			device=self.device,
 		)
-		franka_dof_damping = to_torch(
-			[80, 80, 80, 80, 80, 80, 80, 1.0e2, 1.0e2],
+		grip_dof_damping = to_torch(
+			[1.0e2, 1.0e2],
 			dtype=torch.float,
 			device=self.device,
 		)
-		self.num_franka_bodies = self.gym.get_asset_rigid_body_count(
-			franka_asset)
-		self.num_franka_dofs = self.gym.get_asset_dof_count(franka_asset)
-		self.franka_link_dict = self.gym.get_asset_rigid_body_dict(franka_asset)
-		self.franka_hand_index = int(self.franka_link_dict["panda_link7"])
-		print("num franka bodies: ", self.num_franka_bodies)
-		print("num franka dofs: ", self.num_franka_dofs)
+		self.num_grip_bodies = self.gym.get_asset_rigid_body_count(
+			grip_asset)
+		self.num_grip_dofs = self.gym.get_asset_dof_count(grip_asset)
+		self.grip_link_dict = self.gym.get_asset_rigid_body_dict(grip_asset)
+		print("num grip bodies: ", self.num_grip_bodies)
+		print("num grip dofs: ", self.num_grip_dofs)
 
-		# set franka dof properties
-		franka_dof_props = self.gym.get_asset_dof_properties(franka_asset)
-		self.franka_dof_lower_limits = []
-		self.franka_dof_upper_limits = []
-		for i in range(self.num_franka_dofs):
-			franka_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
+		# set grip dof properties
+		grip_dof_props = self.gym.get_asset_dof_properties(grip_asset)
+		self.grip_dof_lower_limits = []
+		self.grip_dof_upper_limits = []
+		for i in range(self.num_grip_dofs):
+			grip_dof_props["driveMode"][i] = gymapi.DOF_MODE_POS
 			if self.cfg.physics_engine == gymapi.SIM_PHYSX:
-				franka_dof_props["stiffness"][i] = franka_dof_stiffness[i]
-				franka_dof_props["damping"][i] = franka_dof_damping[i]
+				grip_dof_props["stiffness"][i] = grip_dof_stiffness[i]
+				grip_dof_props["damping"][i] = grip_dof_damping[i]
 			else:
-				franka_dof_props["stiffness"][i] = 7000.0
-				franka_dof_props["damping"][i] = 50.0
+				grip_dof_props["stiffness"][i] = 7000.0
+				grip_dof_props["damping"][i] = 50.0
 
-			self.franka_dof_lower_limits.append(franka_dof_props["lower"][i])
-			self.franka_dof_upper_limits.append(franka_dof_props["upper"][i])
+			self.grip_dof_lower_limits.append(grip_dof_props["lower"][i])
+			self.grip_dof_upper_limits.append(grip_dof_props["upper"][i])
 
-		self.franka_dof_lower_limits = to_torch(
-			self.franka_dof_lower_limits, device=self.device
+		self.grip_dof_lower_limits = to_torch(
+			self.grip_dof_lower_limits, device=self.device
 		)
-		self.franka_dof_upper_limits = to_torch(
-			self.franka_dof_upper_limits, device=self.device
+		self.grip_dof_upper_limits = to_torch(
+			self.grip_dof_upper_limits, device=self.device
 		)
-		self.franka_dof_speed_scales = torch.ones_like(
-			self.franka_dof_lower_limits)
-		self.franka_dof_speed_scales[[7, 8]] = 0.1
-		franka_dof_props["effort"][7] = 200
-		franka_dof_props["effort"][8] = 200
+		self.grip_dof_speed_scales = torch.ones_like(
+			self.grip_dof_lower_limits)
+		self.grip_dof_speed_scales[[0, 1]] = 0.1
+		grip_dof_props["effort"][0] = 200
+		grip_dof_props["effort"][1] = 200
 
 		# create block assets
 		box_opts = gymapi.AssetOptions()
@@ -246,28 +228,28 @@ class FrankaCube(gym.Env):
 			self.sim, self.cfg.table_size[0], self.cfg.table_size[1], self.cfg.table_size[2], table_opts)
 
 
-		franka_start_poses = []
-		self.franka_roots = []
+		grip_start_poses = []
+		self.grip_roots = []
 		self.origin_shift = []
-		for franka_id in range(self.cfg.num_robots):
-			side = franka_id % 2 * 2 - 1
-			x = self.cfg.robot_gap*(franka_id+0.5-self.cfg.num_robots*0.5)
-			franka_start_pose = gymapi.Transform()
+		for grip_id in range(self.cfg.num_robots):
+			side = grip_id % 2 * 2 - 1
+			x = self.cfg.robot_gap*(grip_id+0.5-self.cfg.num_robots*0.5)
+			grip_start_pose = gymapi.Transform()
 			pos = [x, side*self.cfg.robot_y, self.cfg.table_size[2]]
-			franka_start_pose.p = gymapi.Vec3(*pos)
+			grip_start_pose.p = gymapi.Vec3(*pos)
 			pos[1] = 0
 			self.origin_shift.append(pos)
 			rot = [0.0, 0.0, np.sqrt(2)/2, -side*np.sqrt(2)/2]
-			franka_start_pose.r = gymapi.Quat(*rot)
-			franka_start_poses.append(franka_start_pose)
-			self.franka_roots.append([*pos, *rot])
+			grip_start_pose.r = gymapi.Quat(*rot)
+			grip_start_poses.append(grip_start_pose)
+			self.grip_roots.append([*pos, *rot])
 		self.origin_shift = to_torch(self.origin_shift, device=self.device)
-		self.franka_roots = to_torch(self.franka_roots, device=self.device)
+		self.grip_roots = to_torch(self.grip_roots, device=self.device)
 		self.default_grip_pos = self.origin_shift.unsqueeze(0).repeat(self.cfg.num_envs,1,1).clone()
 
 		# compute aggregate size
-		num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
-		num_franka_shapes = self.gym.get_asset_rigid_shape_count(franka_asset)
+		num_grip_bodies = self.gym.get_asset_rigid_body_count(grip_asset)
+		num_grip_shapes = self.gym.get_asset_rigid_shape_count(grip_asset)
 		num_table_bodies = self.gym.get_asset_rigid_body_count(table_asset)
 		num_table_shapes = self.gym.get_asset_rigid_shape_count(table_asset)
 		num_block_bodies = self.gym.get_asset_rigid_body_count(block_asset)
@@ -275,12 +257,12 @@ class FrankaCube(gym.Env):
 		num_goal_bodies = self.gym.get_asset_rigid_body_count(goal_asset)
 		num_goal_shapes = self.gym.get_asset_rigid_shape_count(goal_asset)
 		max_agg_bodies = (
-			(num_franka_bodies+num_table_bodies)*self.cfg.num_robots+ self.cfg.num_goals * (num_block_bodies+num_goal_bodies))
+			(num_grip_bodies+num_table_bodies)*self.cfg.num_robots+ self.cfg.num_goals * (num_block_bodies+num_goal_bodies))
 		max_agg_shapes = (
-			(num_franka_shapes+num_table_shapes)*self.cfg.num_robots + self.cfg.num_robots + self.cfg.num_goals * (num_block_shapes+num_goal_shapes))
+			(num_grip_shapes+num_table_shapes)*self.cfg.num_robots + self.cfg.num_robots + self.cfg.num_goals * (num_block_shapes+num_goal_shapes))
 
 		self.cameras = []
-		self.frankas = []
+		self.grips = []
 		self.default_block_states = []
 		self.prop_start = []
 		self.envs = []
@@ -291,24 +273,24 @@ class FrankaCube(gym.Env):
 			if self.cfg.aggregate_mode >= 3:
 				self.gym.begin_aggregate(
 					env_ptr, max_agg_bodies, max_agg_shapes, True)
-			franka_actors = []
-			for franka_id in range(self.cfg.num_robots):
-				franka_pos = franka_start_poses[franka_id]
+			grip_actors = []
+			for grip_id in range(self.cfg.num_robots):
+				grip_pos = grip_start_poses[grip_id]
 				# Key: create Panda
-				franka_actor = self.gym.create_actor(
-					env_ptr, franka_asset, franka_pos, f"franka{franka_id}", i, 0, i
+				grip_actor = self.gym.create_actor(
+					env_ptr, grip_asset, grip_pos, f"grip{grip_id}", i, 0, i
 				)
 				self.gym.set_actor_dof_properties(
-					env_ptr, franka_actor, franka_dof_props)
-				franka_actors.append(franka_actor)
-			for franka_id in range(self.cfg.num_robots):
-				franka_pos = franka_start_poses[franka_id]
+					env_ptr, grip_actor, grip_dof_props)
+				grip_actors.append(grip_actor)
+			for grip_id in range(self.cfg.num_robots):
+				grip_pos = grip_start_poses[grip_id]
 				# create table
 				table_state_pose = gymapi.Transform()
-				table_state_pose.p = gymapi.Vec3(franka_pos.p.x, 0, self.cfg.table_size[2]/2)
+				table_state_pose.p = gymapi.Vec3(grip_pos.p.x, 0, self.cfg.table_size[2]/2)
 				table_state_pose.r = gymapi.Quat(0, 0, 0, 1)
 				table_actor = self.gym.create_actor(
-						env_ptr, table_asset, table_state_pose, "table{}".format(franka_id), i, 0, 0,)
+						env_ptr, table_asset, table_state_pose, "table{}".format(grip_id), i, 0, 0,)
 				prop = gymapi.RigidShapeProperties()
 				prop.friction = self.cfg.friction 
 				self.gym.set_actor_rigid_shape_properties(
@@ -355,7 +337,7 @@ class FrankaCube(gym.Env):
 			if self.cfg.aggregate_mode > 0:
 				self.gym.end_aggregate(env_ptr)
 			self.envs.append(env_ptr)
-			self.frankas.append(franka_actors)
+			self.grips.append(grip_actors)
 		for j in range(self.cfg.num_cameras):
 			# create camera
 			camera_properties = gymapi.CameraProperties()
@@ -369,11 +351,11 @@ class FrankaCube(gym.Env):
 			self.cameras.append(h1)
 		# set control data
 		self.hand_handles = [self.gym.find_actor_rigid_body_handle(
-			env_ptr, r, "panda_link7") for r in franka_actors]
+			env_ptr, r, "panda_hand") for r in grip_actors]
 		self.lfinger_handles = [self.gym.find_actor_rigid_body_handle(
-			env_ptr, r, "panda_leftfinger") for r in franka_actors]
+			env_ptr, r, "panda_leftfinger") for r in grip_actors]
 		self.rfinger_handles = [self.gym.find_actor_rigid_body_handle(
-			env_ptr, r, "panda_rightfinger") for r in franka_actors]
+			env_ptr, r, "panda_rightfinger") for r in grip_actors]
 		self.default_block_states = to_torch(
 			self.default_block_states, device=self.device, dtype=torch.float
 		).view(self.cfg.num_envs, self.cfg.num_goals, 13)
@@ -390,77 +372,19 @@ class FrankaCube(gym.Env):
 		self.success_step_buf = torch.zeros(
 			self.cfg.num_envs, device=self.device, dtype=torch.long)
 
-		# hand = self.gym.find_actor_rigid_body_handle(
-		# 	self.envs[0], self.frankas[0], "panda_link7")
-		# lfinger = self.gym.find_actor_rigid_body_handle(
-		# 	self.envs[0], self.frankas[0], "panda_leftfinger")
-		# rfinger = self.gym.find_actor_rigid_body_handle(
-		# 	self.envs[0], self.frankas[0], "panda_rightfinger")
-
-		# hand_pose = self.gym.get_rigid_transform(self.envs[0], hand)
-		# lfinger_pose = self.gym.get_rigid_transform(self.envs[0], lfinger)
-		# rfinger_pose = self.gym.get_rigid_transform(self.envs[0], rfinger)
-
-		# finger_pose = gymapi.Transform()
-		# finger_pose.p = (lfinger_pose.p + rfinger_pose.p) * 0.5
-		# finger_pose.r = lfinger_pose.r
-
-		# hand_pose_inv = hand_pose.inverse()
-		# grasp_pose_axis = 1
-		# franka_local_grasp_pose = hand_pose_inv * finger_pose
-		# franka_local_grasp_pose.p += gymapi.Vec3(
-		# 	*get_axis_params(0.04, grasp_pose_axis))
-		# self.franka_local_grasp_pos = to_torch(
-		# 	[
-		# 		franka_local_grasp_pose.p.x,
-		# 		franka_local_grasp_pose.p.y,
-		# 		franka_local_grasp_pose.p.z,
-		# 	],
-		# 	device=self.device,
-		# ).repeat((self.cfg.num_envs, 1))
-		# self.franka_local_grasp_rot = to_torch(
-		# 	[
-		# 		franka_local_grasp_pose.r.x,
-		# 		franka_local_grasp_pose.r.y,
-		# 		franka_local_grasp_pose.r.z,
-		# 		franka_local_grasp_pose.r.w,
-		# 	],
-		# 	device=self.device,
-		# ).repeat((self.cfg.num_envs, 1))
-
-		# self.gripper_forward_axis = to_torch([0, 0, 1], device=self.device).repeat(
-		# 	(self.cfg.num_envs, 1)
-		# )
-		# self.gripper_up_axis = to_torch([0, 1, 0], device=self.device).repeat(
-		# 	(self.cfg.num_envs, 1)
-		# )
-
-		# self.franka_lfinger_pos = torch.zeros_like(self.franka_local_grasp_pos)
-		# self.franka_rfinger_pos = torch.zeros_like(self.franka_local_grasp_pos)
-		# self.franka_lfinger_rot = torch.zeros_like(self.franka_local_grasp_rot)
-		# self.franka_rfinger_rot = torch.zeros_like(self.franka_local_grasp_rot)
-
-		self.j_eefs = []
-		for franka_id in range(self.cfg.num_robots):
-			# dof
-			_jacobian = self.gym.acquire_jacobian_tensor(self.sim, f"franka{franka_id}")
-			jacobian = (gymtorch.wrap_tensor(_jacobian))
-			self.j_eefs.append(jacobian[:,
-																self.hand_handles[0] - 1, :, :self.franka_hand_index])
-
 		# joint pos
 		dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
 		self.dof_state = gymtorch.wrap_tensor(dof_state_tensor)
 		self.num_dofs = self.gym.get_sim_dof_count(self.sim) // (self.cfg.num_envs*self.cfg.num_robots)
-		self.franka_dof_targets = torch.zeros(
+		self.grip_dof_targets = torch.zeros(
 			(self.cfg.num_envs, self.cfg.num_robots, self.num_dofs), dtype=torch.float, device=self.device
 		)
-		self.franka_dof_states = self.dof_state.view(self.cfg.num_envs, self.cfg.num_robots, -1, 2)[
-			:,:, : self.num_franka_dofs
+		self.grip_dof_states = self.dof_state.view(self.cfg.num_envs, self.cfg.num_robots, -1, 2)[
+			:,:, : self.num_grip_dofs
 		]
-		self.franka_dof_poses = self.franka_dof_states[..., 0]
-		self.franka_dof_vels = self.franka_dof_states[..., 1]
-		self.finger_widths = self.franka_dof_poses[:,:,self.franka_hand_index]
+		self.grip_dof_poses = self.grip_dof_states[..., 0]
+		self.grip_dof_vels = self.grip_dof_states[..., 1]
+		self.finger_widths = self.grip_dof_poses[:,:,0]
 
 		self.finger_width_mean = 0.02
 		self.finger_width_std = 0.04 / 12**0.5
@@ -497,25 +421,26 @@ class FrankaCube(gym.Env):
 		self.hand_pos = []
 		self.hand_vel = []
 		self.hand_rot = []
-		self.franka_lfinger_poses = []
-		self.franka_rfinger_poses = []
-		self.franka_lfinger_rots = []
-		self.franka_rfinger_rots = []
+		self.grip_lfinger_poses = []
+		self.grip_rfinger_poses = []
+		self.grip_lfinger_rots = []
+		self.grip_rfinger_rots = []
 		for i in range(self.cfg.num_robots):
 			# NOTE do not use self.lfinger_handles to indice as it will copy the tensor
 			self.hand_pos.append(self.rigid_body_states[:, self.hand_handles[i]][..., :3])
 			self.hand_rot.append(self.rigid_body_states[:, self.hand_handles[i]][..., 3:7])
 			self.hand_vel.append(self.rigid_body_states[:, self.hand_handles[i]][..., 7:10])
-			self.franka_lfinger_poses.append(self.rigid_body_states[:,
+			self.grip_lfinger_poses.append(self.rigid_body_states[:,
 																											self.lfinger_handles[i]][..., 0:3])
-			self.franka_rfinger_poses.append(self.rigid_body_states[:,
+			self.grip_rfinger_poses.append(self.rigid_body_states[:,
 																											self.rfinger_handles[i]][..., 0:3])
-			self.franka_lfinger_rots.append(self.rigid_body_states[:,
+			self.grip_lfinger_rots.append(self.rigid_body_states[:,
 																											self.lfinger_handles[i]][..., 3:7])
-			self.franka_rfinger_rots.append(self.rigid_body_states[:,
+			self.grip_rfinger_rots.append(self.rigid_body_states[:,
 																											self.rfinger_handles[i]][..., 3:7])
-		self.grip_pos = (torch.stack(self.franka_lfinger_poses,dim=1) +
-										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
+		self.grip_pos = (torch.stack(self.grip_lfinger_poses,dim=1) +
+										 torch.stack(self.grip_rfinger_poses,dim=1))/2 + self.finger_shift
+		self.grip_states = self.root_state_tensor[:, :self.cfg.num_robots]
 		self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
 		self.target_hand_pos = self.hand_pos_tensor.clone()
 
@@ -560,58 +485,11 @@ class FrankaCube(gym.Env):
 				# TODO move this to general update
 			else:
 				print(f'[Curriculum] config has no attribute {k}')
-		# resample original dof pos
-		random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
-		self.franka_default_dof_state[:,:,0] = self.predefined_dof_pos[random_idx]
 		# step first to init params
 		act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
 		obs, _, _, _ = self.step(act) # TODO try to remove this
-		# for _ in range(5):
-		# change params here TODO more elegant way
-		# if 'table_gap' in config and self.cfg.num_robots == 2:
-		# 	v = config['table_gap']
-		# 	self.table_states[:,:,0] = torch.tensor([-(v+self.cfg.table_size[0])/2,(v+self.cfg.table_size[0])/2], device=self.device)
 		self.reset_buf[:] = True
 		obs, rew, done, info = self.step(act)
-		'''
-		reset to any pos (deprecated as it is slow)
-		# pos_target = self.torch_goal_space.sample((self.cfg.num_envs,self.cfg.num_robots))+self.origin_shift - self.finger_shift
-		pos_target = self.torch_goal_space.sample((self.cfg.num_envs,self.cfg.num_robots))+self.origin_shift - self.finger_shift
-		print(pos_target, self.goal)
-		filtered_pos_target = self.hand_pos_tensor.clone()
-		for _ in range(100): # TODO wrap up as a function
-			# setup control params
-			orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
-			# filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
-			filtered_pos_target = pos_target
-			pos_errs = filtered_pos_target - self.hand_pos_tensor 
-			# clip with bound
-			if self.cfg.bound_robot:
-				pos_errs = torch.clip(pos_errs+self.grip_pos, self.torch_robot_space.low,
-														self.torch_robot_space.high) - self.grip_pos
-			dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
-			self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
-			# limit
-			self.franka_dof_targets[..., :self.num_franka_dofs] = tensor_clamp(
-				self.franka_dof_targets[...,
-																: self.num_franka_dofs], self.franka_dof_lower_limits, self.franka_dof_upper_limits)
-			# Deploy actions
-			act_indices = self.global_indices[:, :self.cfg.num_robots].flatten()
-			self.gym.set_dof_position_target_tensor_indexed(
-				self.sim, 
-				gymtorch.unwrap_tensor(self.franka_dof_targets),
-				gymtorch.unwrap_tensor(act_indices),
-				act_indices.shape[0])
-			# simulate
-			self.gym.simulate(self.sim)
-			# update state data
-			self.gym.refresh_actor_root_state_tensor(self.sim)
-			self.gym.refresh_dof_state_tensor(self.sim)
-			self.gym.refresh_rigid_body_state_tensor(self.sim)
-			self.gym.refresh_jacobian_tensors(self.sim)
-			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
-		print('end:', self.hand_pos_tensor - pos_target)
-		'''
 		self.progress_buf[:] = 0  # NOTE: make sure step start from 0
 		self.default_grip_pos = self.grip_pos.clone()
 		return obs, rew, done, info
@@ -621,10 +499,7 @@ class FrankaCube(gym.Env):
 		reset_idx = self.reset_buf.clone()
 		done_env_num = reset_idx.sum()
 		# reset goals
-		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-		for _ in range(5):
-			if done_env_num == 0:
-				break
+		while True and done_env_num > 0:
 			if self.cfg.goal_sample_mode == 'uniform':
 				extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
 			elif self.cfg.goal_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
@@ -656,22 +531,15 @@ class FrankaCube(gym.Env):
 			self.table_states[reset_idx,0,0] = -new_gap/2
 			self.table_states[reset_idx,1,0] = new_gap/2
 		# reset blocks
+		block_indices = torch.tensor([], device=self.device)
 		if done_env_num > 0:
-			block_indices = self.global_indices[reset_idx, 1:].flatten()
+			block_indices = self.global_indices[reset_idx, self.cfg.num_robots:].flatten()
 			# set to default pos
 			self.block_states[reset_idx] = self.default_block_states[reset_idx]
 			in_hand = torch.rand((self.cfg.num_envs,),
 													 device=self.device) < self.cfg.inhand_rate
 			self.inhand_idx = reset_idx & in_hand
-			# if self.cfg.obj_sample_mode == 'uniform':
-			# 	self.block_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-			# elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
-			# 	self.block_workspace[reset_idx] = self.goal_workspace[reset_idx] + torch.bernoulli(torch.ones_like(self.goal_workspace[reset_idx], device=self.device, dtype=torch.float)*self.cfg.os_rate).long()
-			# 	self.block_workspace %= self.cfg.num_robots
-			# else:
-			# 	raise NotImplementedError
-			# self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.block_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
-			for _ in range(5):
+			while True and done_env_num > 0:
 				if self.cfg.obj_sample_mode == 'uniform':
 					extra_block_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
 				elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
@@ -724,12 +592,6 @@ class FrankaCube(gym.Env):
 			# change some goal to the ground
 			ground_goal_idx = reset_idx & ((torch.rand((self.cfg.num_envs,),device=self.device) < self.cfg.goal_ground_rate) | multi_goal_in_same_ws | (self.num_handovers > 0))
 			self.goal[ground_goal_idx, :, -1] = self.cfg.table_size[2]+self.cfg.block_size/2
-			# change to hand or random pos
-			self.gym.set_actor_root_state_tensor_indexed(
-				self.sim,
-				gymtorch.unwrap_tensor(self.root_state_tensor),
-				gymtorch.unwrap_tensor(block_indices),
-				len(block_indices),)
 		# reset state buf
 		self.reset_buf[reset_idx] = 0
 		self.progress_buf[reset_idx] = 0
@@ -738,69 +600,56 @@ class FrankaCube(gym.Env):
 		self.actions = torch.clip(
 			actions.clone().view(self.cfg.num_envs,self.cfg.num_robots,self.cfg.per_action_dim).to(self.device)+self.cfg.action_shift, 
 			-self.cfg.clip_actions, self.cfg.clip_actions)
-		pos_target = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel + self.hand_pos_tensor
-		filtered_pos_target = self.hand_pos_tensor
+		delta_pos = self.actions[..., :3] * self.cfg.dt * self.cfg.control_freq_inv * self.cfg.max_vel / self.cfg.control_freq_inv
+		filtered_pos_target = self.hand_pos_tensor.clone()
 		# step physics and render each frame
 		for i in range(self.cfg.control_freq_inv):
 			# setup control params
-			orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
-			# self.target_hand_pos = self.actions[..., :3] * self.cfg.dt * self.cfg.max_vel + self.target_hand_pos
-			# pos_errs = self.target_hand_pos - self.hand_pos_tensor 
-			filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
-			pos_errs = filtered_pos_target - self.hand_pos_tensor 
-			# pos_errs[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_robots))+self.origin_shift.tile(done_env_num,1,1) - self.grip_pos[reset_idx]
-			# clip with bound
+			filtered_pos_target += delta_pos 
 			if self.cfg.bound_robot:
-				pos_errs = torch.clip(pos_errs+self.grip_pos-self.origin_shift, self.torch_robot_space.low,
-														self.torch_robot_space.high) - self.grip_pos + self.origin_shift
-			dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
-			self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
+				filtered_pos_target = torch.clip(filtered_pos_target, self.torch_robot_space.low,
+														self.torch_robot_space.high)
+			self.grip_states[...,:3] = filtered_pos_target
 			# grip
-			grip_acts = self.franka_dof_poses[..., [self.franka_hand_index]] + self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel
-			# reset gripper
-			self.franka_dof_targets[..., self.franka_hand_index:
-															self.franka_hand_index+2] = grip_acts.repeat(1, 1, 2)
+			self.grip_dof_targets += (self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel).repeat(1, 1, 2)
 			# limit
-			self.franka_dof_targets[..., :self.num_franka_dofs] = tensor_clamp(
-				self.franka_dof_targets[...,
-																: self.num_franka_dofs], self.franka_dof_lower_limits, self.franka_dof_upper_limits)
+			self.grip_dof_targets[..., :self.num_grip_dofs] = tensor_clamp(
+				self.grip_dof_targets[...,
+																: self.num_grip_dofs], self.grip_dof_lower_limits, self.grip_dof_upper_limits)
 			# Deploy actions
-			if done_env_num < self.cfg.num_envs:
-				# set action
-				act_indices = self.global_indices[~reset_idx, :self.cfg.num_robots].flatten()
-				self.gym.set_dof_position_target_tensor_indexed(
-					self.sim, 
-					gymtorch.unwrap_tensor(self.franka_dof_targets),
-					gymtorch.unwrap_tensor(act_indices),
-					act_indices.shape[0])
-			
-			if done_env_num > 0:
-				reset_indices = self.global_indices[reset_idx, :self.cfg.num_robots].flatten()
-				self.gym.set_dof_state_tensor_indexed(
-					self.sim, 
-					gymtorch.unwrap_tensor(self.franka_default_dof_state),
-					gymtorch.unwrap_tensor(reset_indices),
-					reset_indices.shape[0])
+			# set action
+			act_indices = self.global_indices[~reset_idx, :self.cfg.num_robots].flatten()
+			self.gym.set_dof_position_target_tensor_indexed(
+				self.sim, 
+				gymtorch.unwrap_tensor(self.grip_dof_targets),
+				gymtorch.unwrap_tensor(act_indices),
+				act_indices.shape[0])
+			# change to hand or random pos
+			self.gym.set_actor_root_state_tensor_indexed(
+				self.sim,
+				gymtorch.unwrap_tensor(self.root_state_tensor),
+				gymtorch.unwrap_tensor(block_indices),
+				len(block_indices),)
+			block_indices = torch.tensor([], device=self.device, dtype=torch.int32)
 			# simulate
 			self.gym.simulate(self.sim)
 			# update state data
 			self.gym.refresh_actor_root_state_tensor(self.sim)
 			self.gym.refresh_dof_state_tensor(self.sim)
 			self.gym.refresh_rigid_body_state_tensor(self.sim)
-			self.gym.refresh_jacobian_tensors(self.sim)
 			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
 			self.target_hand_pos[reset_idx] = self.hand_pos_tensor[reset_idx] 
 		if not self.cfg.headless:
 			self.render(mode='human')
 		if self.device == "cpu":
 			self.gym.fetch_results(self.sim, True)
-		# compute observations, rewards, resets, ...
+		# compute observations, rewards, reset, ...
 		# update state buffer
 		self.progress_buf += 1
 
 		# update obs, rew, done, info
-		self.grip_pos = (torch.stack(self.franka_lfinger_poses,dim=1) +
-										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
+		self.grip_pos = (torch.stack(self.grip_lfinger_poses,dim=1) +
+										 torch.stack(self.grip_rfinger_poses,dim=1))/2 + self.finger_shift
 		grip_pos_normed = (self.grip_pos-self.goal_mean)/self.goal_std
 		hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
 		finger_widths_normed = (self.finger_widths.unsqueeze(-1)-self.finger_width_mean) / self.finger_width_std
@@ -874,12 +723,12 @@ class FrankaCube(gym.Env):
 				for j in range(self.cfg.num_robots):
 					# draw finger mid
 					finger_mid = (
-						self.franka_lfinger_poses[j][i] + self.franka_rfinger_poses[j][i])/2 + self.finger_shift
-					px = ((finger_mid + quat_apply(self.franka_lfinger_rots[j][i],
+						self.grip_lfinger_poses[j][i] + self.grip_rfinger_poses[j][i])/2 + self.finger_shift
+					px = ((finger_mid + quat_apply(self.grip_lfinger_rots[j][i],
 																				to_torch([1, 0, 0], device=self.device) * 0.2,)).cpu().numpy())
-					py = ((finger_mid + quat_apply(self.franka_lfinger_rots[j][i],
+					py = ((finger_mid + quat_apply(self.grip_lfinger_rots[j][i],
 																				to_torch([0, 1, 0], device=self.device) * 0.2,)).cpu().numpy())
-					pz = ((finger_mid + quat_apply(self.franka_lfinger_rots[j][i],
+					pz = ((finger_mid + quat_apply(self.grip_lfinger_rots[j][i],
 																				to_torch([0, 0, 1], device=self.device) * 0.2,)).cpu().numpy())
 					p0 = finger_mid.cpu().numpy()
 					self.gym.add_lines(self.viewer, self.envs[i], 1,
@@ -944,102 +793,6 @@ class FrankaCube(gym.Env):
 					self.sim, self.envs[idx], handle, gymapi.IMAGE_COLOR)
 				images.append(image.reshape((image.shape[0], -1, 4)))
 			return images
-
-	def control_ik(self, dpose):
-		# solve damped least squares
-		num_it = 0
-		lmbda = torch.eye(6, device=self.device) * (self.cfg.damping ** 2)
-		# init_joint = self.franka_dof_poses[...,:self.franka_hand_index] 
-		current_joint = self.franka_dof_poses[...,:self.franka_hand_index].clone()
-		target_ee_pos = self.chain.forward_kinematics(
-			current_joint.view(-1,self.franka_hand_index),
-			world=pk.Transform3d(
-				pos=[0,-0.5,0.4],
-				rot=[0,0,np.pi/2],device=self.device)
-		).get_matrix()[:,:3,3].view(self.cfg.num_envs, self.cfg.num_robots, 3)+dpose[:,:,:3,0]
-		rot = torch.tensor(
-			[
-				[0,-1,0,0,0,0],
-				[1,0,0,0,0,0],
-				[0,0,1,0,0,0],
-				[0,0,0,0,-1,0],
-				[0,0,0,1,0,0],
-				[0,0,0,0,0,1],
-			],
-			dtype=torch.float,
-			device=self.device)
-		while True:
-			j_eef = rot@self.chain.jacobian(
-				current_joint.view(-1,self.franka_hand_index),
-				).view(self.cfg.num_envs,self.cfg.num_robots,6,self.franka_hand_index) 
-			j_eef_T = j_eef.transpose(-2,-1)
-			current_joint = (j_eef_T @ torch.inverse(j_eef @ j_eef_T + lmbda)@ dpose).view(self.cfg.num_envs, self.cfg.num_robots, self.franka_hand_index) + current_joint
-			current_ee_trans = self.chain.forward_kinematics(
-				current_joint.view(-1,self.franka_hand_index),
-				world=pk.Transform3d(
-					pos=[0,-0.5,0.4],
-					rot=[0,0,np.pi/2],device=self.device)
-			)
-			current_ee_pos = current_ee_trans.get_matrix()[:, :3, 3]
-			current_ee_rot = pk.matrix_to_quaternion(current_ee_trans.get_matrix()[:, :3, :3])
-			current_ee_rot = torch.cat((current_ee_rot[...,1:4], current_ee_rot[...,:1]),dim=-1)
-			orn_errs = self.orientation_error(self.franka_default_orn, current_ee_rot.view(self.cfg.num_envs, self.cfg.num_robots, 4))
-			pos_errs = target_ee_pos - current_ee_pos 
-			dpose = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
-			err = torch.norm(dpose.squeeze(-1),dim=-1)
-			num_it += 1
-			# print(num_it, current_ee_pos, target_ee_pos)
-			if err < self.cfg.ik_err or num_it > self.cfg.max_ik_iter:
-				break
-		return current_joint
-
-	def control_ik_old(self, dpose):
-		# solve damped least squares
-		j_eefs = torch.stack(self.j_eefs).transpose(0,1)
-		j_eef_T = torch.transpose(j_eefs, -2, -1)
-		lmbda = torch.eye(6, device=self.device) * (self.cfg.damping ** 2)
-		u = (j_eef_T @ torch.inverse(j_eefs @ j_eef_T + lmbda)
-				 @ dpose).view(self.cfg.num_envs, self.cfg.num_robots, self.franka_hand_index)
-		return u+self.franka_dof_poses[...,:self.franka_hand_index]
-
-	def orientation_error(self, desired, current):
-		cc = quat_conjugate(current)
-		q_r = quat_mul(desired, cc)
-		return q_r[..., 0:3] * torch.sign(q_r[..., 3]).unsqueeze(-1)
-
-	def ezpolicy(self, obs):
-		up_step = 6
-		reach_step = 26
-		grasp_step = 30
-		end_step = 80
-		pos = obs[..., :3]*self.single_goal_std+self.single_goal_mean + self.origin_shift
-		obj = obs[..., 17:20].view(
-			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
-		goal = obs[..., 20:23].view(
-			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
-		action = torch.zeros((self.cfg.num_envs, 4),
-												 device=self.device, dtype=torch.float32)
-		for env_id in range(self.cfg.num_envs):
-			pos_now = pos[env_id]
-			for goal_id in range(self.cfg.num_goals):
-				obj_now = obj[env_id, goal_id]
-				goal_now = goal[env_id, goal_id]
-				o2g = torch.norm(obj_now-goal_now)
-				r2o = torch.norm(pos_now - obj_now)
-				reached = o2g < self.cfg.err
-				attached = r2o < self.cfg.err
-				if self.progress_buf[env_id] < up_step:
-					action[env_id, 2:4] = 1
-				elif up_step <= self.progress_buf[env_id] < reach_step:
-					# action[env_id, :3] = (torch.tensor([-0.15,0,0.05],device=self.device) - pos_now)
-					action[env_id, :3] = (obj_now - pos_now)*16
-					action[env_id, 3] = 1
-				elif reach_step <= self.progress_buf[env_id] < grasp_step:
-					action[env_id, 3] = -1
-				elif grasp_step <= self.progress_buf[env_id] < end_step:
-					action[env_id, :3] = (goal_now - obj_now)*16
-					action[env_id, 3] = -1
-		return action - self.cfg.action_shift
 
 	def update_config(self, cfg):
 		cfg.update(enable_camera_sensors=cfg.num_cameras > 0)
@@ -1244,7 +997,7 @@ class FrankaCube(gym.Env):
 		)
 
 
-gym.register(id='FrankaPNP-v0', entry_point=FrankaCube)
+gym.register(id='gripPNP-v0', entry_point=gripCube)
 
 if __name__ == '__main__':
 	import argparse
@@ -1256,7 +1009,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0)
+	env = gym.make('gripPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0, control_freq_inv=1)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
