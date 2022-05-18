@@ -652,7 +652,7 @@ class FrankaCube(gym.Env):
 			multi_goal_in_same_ws |= ((self.goal_workspace==i).sum(dim=-1) > 1)
 		# reset tables
 		if self.cfg.num_robots == 2:
-			new_gap = self.cfg.table_size[0] + self.cfg.table_gap + torch.rand((done_env_num), device=self.device) * self.cfg.rand_table_gap
+			new_gap = self.cfg.table_size[0] + torch.clip(self.cfg.table_gap + torch.rand((done_env_num), device=self.device) * self.cfg.rand_table_gap, min=0, max=self.cfg.max_table_gap)
 			self.table_states[reset_idx,0,0] = -new_gap/2
 			self.table_states[reset_idx,1,0] = new_gap/2
 		# reset blocks
@@ -1256,7 +1256,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=0.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0, table_gap=0.15, rand_table_gap=0.1)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
