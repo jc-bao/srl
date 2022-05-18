@@ -35,7 +35,6 @@ def train(config):
 	elif (config.wid is not None):
 		print('[Load] resume from cloud')
 		exp_agent.save_or_load_agent(file_tag=config.load_tag, if_save=False)
-		# exp_agent.save_or_load_agent(file_tag = 'rew-0.08', if_save=False)
 
 	def log(msg, prefix=''):
 		print(msg)
@@ -75,13 +74,15 @@ def train(config):
 			log(result, prefix='eval')
 
 			if (i % int(1/config.rollout_per_save)) == 0:
-				if result.final_rew > best_rew: 
-					best_rew = result.final_rew
-					exp_agent.save_or_load_agent(
-						file_tag=f'rew{best_rew:.2f}', if_save=True)
-					exp_agent.save_or_load_agent(file_tag='best', if_save=True)
-				else:
-					exp_agent.save_or_load_agent(file_tag='latest', if_save=True)
+				# if result.final_rew > best_rew: 
+				# 	best_rew = result.final_rew
+				# 	tag = 'best'
+				# 	if exp_agent.cfg.curri is not None:
+				# 		for k,v in exp_agent.cfg.curri.items():
+				# 			tag += f'_{k}={v.now}'
+				# 	exp_agent.save_or_load_agent(file_tag=tag, if_save=True)
+				# else:
+				exp_agent.save_or_load_agent(file_tag='latest', if_save=True)
 				print('=========saved!')
 			
 

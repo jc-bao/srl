@@ -400,32 +400,31 @@ class AgentBase:
     if cwd is None:
       cwd = self.cfg.cwd
 
-    def load_torch_file(model_or_optim, _path=None):
-      if self.cfg.wid is not None:
-        file_name = _path.split('/')[-1]
-        _path = wandb.restore(
-          file_name, f'{self.cfg.entity}/{self.cfg.project}/{self.cfg.wid}').name
-      with open(_path, 'rb') as f:
-        state_dict = torch.load(
-          f, map_location=lambda storage, loc: storage)
-      model_or_optim.load_state_dict(state_dict)
-
     name_obj_list = [('actor', self.act), ('act_target', self.act_target), ('act_optim', self.act_optimizer),
                      ('critic', self.cri), ('cri_target', self.cri_target), ('cri_optim', self.cri_optimizer), ]
     name_obj_list = [(name, obj)
                      for name, obj in name_obj_list if obj is not None]
     if if_save:
+      data = {'step':self.total_step, 'curri': self.cfg.curri}
       for name, obj in name_obj_list:
-        save_path = f"{cwd}/{file_tag+name}.pth"
-        torch.save(obj.state_dict(), save_path)
-        if self.cfg.wandb:
+        data[name] = obj.state_dict()
+      save_path = f"{cwd}/{file_tag}.pth"
+      torch.save(data, save_path)
+      if self.cfg.wandb:
           wandb.save(save_path, base_path=cwd)  # upload now
     else:
+      if self.cfg.wid is not None:
+        save_path = wandb.restore(f'{file_tag}.pth', f'{self.cfg.entity}/{self.cfg.project}/{self.cfg.wid}').name
+      elif self.cfg.load_path is not None:
+        save_path = self.cfg.load_path
+      with open(save_path, 'rb') as f:
+        data = torch.load(f, map_location=lambda storage, loc: storage)
+      if self.cfg.resume_mode == 'continue':
+        self.total_step = data['step']
+        if self.cfg.load_curri:
+          self.cfg.curri = data['curri']
       for name, obj in name_obj_list:
-        save_path = f"{cwd}/{file_tag+name}.pth"
-        load_torch_file(obj, save_path) if (os.path.isfile(
-          save_path) or self.cfg.wid is not None) else None
-
+        obj.load_state_dict(data[name])
 
 class AgentSAC(AgentBase):
   def __init__(self, cfg):

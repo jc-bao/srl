@@ -10,4 +10,4 @@ eval_per_rollout: 1
 eval_eps: 1
 
 defaults:
-  - override /env: 1ho
+  - override /env: 1ho_debug
