@@ -422,7 +422,10 @@ class AgentBase:
       if self.cfg.resume_mode == 'continue':
         self.total_step = data['step']
         if self.cfg.load_curri:
-          self.cfg.curri = data['curri']
+          for k,v in data['curri'].items(): 
+            if k in self.cfg.curri:
+              print(f'set {k} to data['curri']['now']')
+              self.cfg.curri.now = data['curri']['now']
       for name, obj in name_obj_list:
         obj.load_state_dict(data[name])
 
