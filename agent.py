@@ -419,8 +419,10 @@ class AgentBase:
         wandb.save(save_path, base_path=cwd)  # upload now
     else:
       if self.cfg.wid is not None:
+        if self.cfg.load_project is None:
+          self.cfg.load_project = self.cfg.project
         save_path = wandb.restore(
-          f'{file_tag}.pth', f'{self.cfg.entity}/{self.cfg.project}/{self.cfg.wid}').name
+          f'{file_tag}.pth', f'{self.cfg.entity}/{self.cfg.load_project}/{self.cfg.wid}').name
       elif self.cfg.load_path is not None:
         save_path = self.cfg.load_path
       with open(save_path, 'rb') as f:

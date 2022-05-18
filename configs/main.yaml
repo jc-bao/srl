@@ -5,6 +5,7 @@ entity: jc-bao
 load_path: null
 load_curri: true
 load_tag: latest
+load_project: null
 # set wandb wid to load remotely
 wid: null
 # resume mode {null, 'continue', 'restart', 'load_only'}
