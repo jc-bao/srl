@@ -430,8 +430,8 @@ class AgentBase:
         if self.cfg.load_curri:
           for k, v in data['curri'].items():
             if k in self.cfg.curri:
-              print(f'set {k} to {v["now"]}')
-              self.cfg.curri.now = data['curri']['now']
+              print(f'[load] set {k} to {v["now"]}')
+              self.cfg.curri.now = v['now']
       for name, obj in name_obj_list:
         obj.load_state_dict(data[name])
 
