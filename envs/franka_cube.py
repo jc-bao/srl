@@ -812,7 +812,8 @@ class FrankaCube(gym.Env):
 			grip_pos_normed.view(self.cfg.num_envs, self.cfg.num_robots*3),  # mid finger
 			hand_vel_normed.view(self.cfg.num_envs, self.cfg.num_robots*3),
 			finger_widths_normed.view(self.cfg.num_envs, self.cfg.num_robots),  # robot
-			self.block_states[..., 3:].reshape(self.cfg.num_envs, -1),  # objects
+			# self.block_states[..., 3:].reshape(self.cfg.num_envs, -1),  # objects
+			self.block_states[..., 3:7].reshape(self.cfg.num_envs, -1),  # objects
 			# achieved goal NOTE make sure it is close to end
 			block_pos_normed.view(self.cfg.num_envs, self.cfg.num_goals*3),
 			goal_normed.view(self.cfg.num_envs, self.cfg.num_goals*3),

@@ -30,7 +30,7 @@ max_steps: null
 per_action_dim: 4
 state_dim: null # calculate later
 per_shared_dim: 7 # pos3, vel3, finger1 
-per_seperate_dim: 13 # block state
+per_seperate_dim: 7 # block state
 seperate_dim: null
 per_goal_dim: 3
 goal_dim: null
