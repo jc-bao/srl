@@ -1,0 +1,9 @@
+num_envs: 1024 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
+num_robots: 1
+num_goals: 1
+inhand_rate: 0.2 # init obj in hand
+
+control_freq_inv: 10
+max_vel: 2
+max_grip_vel: 0.1
+filter_param: 0.4

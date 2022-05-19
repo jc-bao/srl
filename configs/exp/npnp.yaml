@@ -1,0 +1,11 @@
+# @package _global_
+
+wandb: true
+project: npn_n
+name: default
+
+render: true
+
+defaults:
+  - override /env: 1pnp
+  - override /curri: num_g

@@ -225,7 +225,7 @@ class FrankaCube(gym.Env):
 		box_opts.angular_damping = 100
 		box_opts.linear_damping = 10
 		box_opts.thickness = 0.005
-		if self.cfg.lock_block_orn:
+		if self.cfg.lock_block_orn and self.cfg.num_robots > 1:
 			block_asset = self.gym.load_asset(
 				self.sim, asset_root, 'urdf/cube.urdf', box_opts)
 		else:
@@ -1256,7 +1256,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0, table_gap=0.15, rand_table_gap=0.1, max_grip_vel = 0.1, max_vel = 2, filter_param = 0.4)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0, table_gap=0.15, rand_table_gap=0.1, max_grip_vel = 0.1, max_vel = 2, filter_param = 0.4)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 

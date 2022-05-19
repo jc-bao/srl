@@ -1,0 +1,6 @@
+num_goals: # env properties
+  now: 1
+  end: 5
+  step: 1
+  indicator: results.success_rate
+  bar: 0.8 # reward bar to change curriculum
