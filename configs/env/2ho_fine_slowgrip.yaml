@@ -8,4 +8,5 @@ inhand_rate: 0.2 # init obj in hand
 rand_table_gap: 0.0
 control_freq_inv: 10
 max_vel: 2
+max_grip_vel: 0.1
 filter_param: 0.4
