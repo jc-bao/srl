@@ -3,17 +3,12 @@
 wandb: true
 resume_mode: restart
 load_path: null
-wid: 805qpc8q # your wandb wid here
-project: handover2
-name: resume_from_3
-
-env_kwargs:
-  num_envs: 1024
-  num_robots: 2
-  num_goals: 3
-  os_rate: 0.8
-  table_gap: 0.2
-
-curri: null
+load_project: handover2
+wid: 1vom6h85 # your wandb wid here
+project: handover3
+name: resume_from_2ho(fine)
 
 render: true
+
+defaults:
+  - override /env: 3ho_fine

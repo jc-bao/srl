@@ -633,12 +633,12 @@ class FrankaCube(gym.Env):
 				self.num_os_goal[reset_idx] = goal_ws_shift.sum(dim=-1)
 				extra_goal_ws_shift = goal_ws_shift.repeat(self.cfg.extra_goal_sample,1,1)
 				extra_goal_ws[...,1:] += extra_goal_ws_shift
-				extra_goal_ws %= self.cfg.num_goals
-			sampled_goal = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num,self.cfg.num_goals))
-			goal_dift = torch.tensor([0,0,self.cfg.block_size/2], device=self.device)
-			sampled_goal = (sampled_goal - goal_dift)*self.cfg.goal_scale + goal_dift
+				extra_goal_ws %= self.cfg.num_robots
+			sampled_goal = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num.item(),self.cfg.num_goals))
+			goal_drift = torch.tensor([0,0,self.cfg.block_size/2], device=self.device)
+			sampled_goal = (sampled_goal - goal_drift)*self.cfg.goal_scale + goal_drift
 			extra_goals = sampled_goal + \
-				self.origin_shift[extra_goal_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num, self.cfg.num_goals, 3)
+				self.origin_shift[extra_goal_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num.item(), self.cfg.num_goals, 3)
 			goal_dist = torch.abs(extra_goals.unsqueeze(-3) - extra_goals.unsqueeze(-2))
 			satisfied_idx = ((goal_dist[...,0] > self.cfg.block_length*1.2) | \
 				(goal_dist[..., 1] > self.cfg.block_size*2) | \
