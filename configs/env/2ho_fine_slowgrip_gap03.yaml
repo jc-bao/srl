@@ -1,14 +1,13 @@
-num_envs: 1 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
+num_envs: 1024 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
 num_robots: 2
-num_goals: 1
-os_rate: 0.8
+num_goals: 2
+table_gap: 0.0
+os_rate: 0.2
 inhand_rate: 0.2 # init obj in hand
-headless: false
 
-table_gap: 0.3
+max_table_gap: 0.3
 goal_space: [0.4, 0.3, 0.2]
 robot_gap: 0.7
-
 
 rand_table_gap: 0.0
 control_freq_inv: 10

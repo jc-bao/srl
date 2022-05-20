@@ -3,11 +3,14 @@
 # load the model and run GUI
 
 resume_mode: load_only
+wid: cx426btp
+load_project: handover1
 
-env_kwargs:
-  num_envs: 1 
-  num_robots: 2
-  headless: false
+defaults:
+  - override /env: 1ho_debug
+
+curri: null
 
 steps_per_rollout: 10
-eval_per_rollout: 100
+eval_eps: 100
+eval_per_rollout: 1
