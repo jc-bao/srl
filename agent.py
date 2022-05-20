@@ -475,7 +475,7 @@ class AgentSAC(AgentBase):
       q_value_pg = self.cri(state, a_noise_pg)
       obj_actor = -(q_value_pg + log_prob * alpha).mean()
       self.optimizer_update(self.act_optimizer, obj_actor)
-      # self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau) # SAC don't use act_target network
+      self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau) # SAC don't use act_target network
 
     return AttrDict(
       critic_loss=obj_critic.item(),
@@ -519,7 +519,6 @@ class AgentSAC(AgentBase):
     return obj_critic, state
 
 
-# Modified SAC using reliable_lambda and TTUR (Two Time-scale Update Rule)
 class AgentModSAC(AgentSAC):
   def __init__(self, cfg):
     super().__init__(cfg)
@@ -624,9 +623,6 @@ class AgentREDqSAC(AgentSAC):
 
     buffer.td_error_update(td_error.detach())
     return obj_critic, state
-
-# Modified SAC using reliable_lambda and TTUR (Two Time-scale Update Rule)
-
 
 class AgentREDQSAC(AgentSAC):
   def __init__(self, cfg):
