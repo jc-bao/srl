@@ -97,7 +97,7 @@ class ActorFixSAC(nn.Module):
 			self.net_state = ActorDeepsetBlock(cfg)
 		elif cfg.net_type == 'mlp':
 			self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
-																		 nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU())
+																		 *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*2)
 		else:
 			raise NotImplementedError
 		self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
