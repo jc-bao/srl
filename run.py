@@ -44,7 +44,7 @@ def train(config):
 				curri_params = msg.curri
 				wandb.log({f'curri/{k}': v for k, v in curri_params.items()}, step=exp_agent.total_step)
 			if msg.get('video') is not None:
-				wandb.log({"Media/video": wandb.Video(msg.video, fps=30, format="mp4")})
+				wandb.log({"Media/video": wandb.Video(msg.video, fps=10, format="mp4")})
 	torch.set_grad_enabled(False)
 
 	# warmup
