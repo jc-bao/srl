@@ -433,7 +433,7 @@ class AgentBase:
           for k, v in data['curri'].items():
             if k in self.cfg.curri:
               print(f'[Load] set {k} to {v["now"]}')
-              self.cfg['curri']['now'] = v['now']
+              self.cfg['curri'][k]['now'] = v['now']
       for name, obj in name_obj_list:
         obj.load_state_dict(data[name])
 
