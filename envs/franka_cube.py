@@ -46,9 +46,9 @@ class FrankaCube(gym.Env):
 			high=torch.tensor([self.cfg.goal_space[0]/2, self.cfg.goal_space[1]/2, self.cfg.block_size/2+0.001], device=self.device))
 		# robot space
 		self.torch_robot_space = torch.distributions.uniform.Uniform(
-			low=torch.tensor([-self.cfg.robot_gap/2, -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
+			low=torch.tensor([-(self.cfg.robot_gap-self.cfg.block_size)/2, -self.cfg.goal_space[1]/1.5, self.cfg.block_size/2],
 											 device=self.device),
-			high=torch.tensor([self.cfg.robot_gap/2, self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*1.5], device=self.device))
+			high=torch.tensor([(self.cfg.robot_gap-self.cfg.block_size)/2, self.cfg.goal_space[1]/1.5, self.cfg.block_size/2+self.cfg.goal_space[2]*1.5], device=self.device))
 		# goal space
 		if self.cfg.goal_space[2] > 0.01 and self.cfg.num_robots > 1 and self.cfg.num_goals > 1:
 			print('[Env] Warn: multi robot, multi goal, goal height > 0.01')
@@ -1259,7 +1259,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=1, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0, table_gap=0.15, rand_table_gap=0.1, max_grip_vel = 0.1, max_vel = 2, filter_param = 0.4)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0, obj_sample_mode='task_distri', task_distri=[0,0,1], goal_os_rate=1.0, table_gap=0.15, rand_table_gap=0.1, max_grip_vel = 0.1, max_vel = 2, filter_param = 0.4)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
