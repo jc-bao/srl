@@ -69,6 +69,7 @@ class ReplayBuffer:  # for off-policy
 			unmoved_ag_idx = next_info_dict.ag_unmoved_steps > self.EP.max_ag_unmoved_steps 
 			g_random_relabel_idx = unmoved_ag_idx & (torch.rand(unmoved_ag_idx.shape, device=self.device) < self.cfg.g_random_relabel_rate)
 			g_random_relabel_num = g_random_relabel_idx.sum()
+			self.g_random_relabel_rate = g_random_relabel_num / her_batch_size 
 			if g_random_relabel_num > 0:
 				fut_ag = fut_ag.view(fut_ag.shape[0],self.EP.num_goals,-1)
 				fut_ag[g_random_relabel_idx] = self.EP.sample_goal(size=g_random_relabel_idx.sum())
