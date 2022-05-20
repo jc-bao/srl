@@ -20,6 +20,7 @@ random_seed: 0
 her_rate: 0.8
 # random relabel umoved objects' goal
 g_random_relabel_rate: 0.8
+g_random_relabel_bar: 5
 # random relabel umoved objects' pos
 ag_random_relabel_rate: 0.0
 # prioterity replay
