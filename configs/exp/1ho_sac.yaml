@@ -8,5 +8,6 @@ render: true
 
 act_net: ActorFixSAC
 critic_net: CriticTwin
-net_type: mlp
+net_type: attn
+if_act_target: false
 agent_name: AgentSAC
