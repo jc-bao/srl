@@ -94,22 +94,20 @@ class ActorFixSAC(nn.Module):
 		self.cfg, EP = filter_cfg(cfg)
 		super().__init__()
 		if cfg.net_type == 'deepset':
-			self.net = nn.Sequential(
+			self.net_state = nn.Sequential(
 				ActorDeepsetBlock(cfg),
 				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
 				(self.cfg.net_layer-self.cfg.shared_net_layer-1),)
 		elif cfg.net_type == 'attn':
-			self.net = nn.Sequential(
+			self.net_state = nn.Sequential(
 				ActorAttnBlock(cfg),
 				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
-				(self.cfg.net_layer-self.cfg.shared_net_layer-1),
-				nn.Linear(cfg.net_dim, EP.action_dim))
+				(self.cfg.net_layer-self.cfg.shared_net_layer-1))
 		elif cfg.net_type == 'mlp':
-			self.net = nn.Sequential(
+			self.net_state = nn.Sequential(
 				nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
 				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] * \
 				(self.cfg.net_layer-2),
-				nn.Linear(cfg.net_dim, EP.action_dim),
 			)
 		else:
 			raise NotImplementedError(f'net_type {cfg.net_type} not implemented')
