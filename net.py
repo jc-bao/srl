@@ -94,16 +94,34 @@ class ActorFixSAC(nn.Module):
 		self.cfg, EP = filter_cfg(cfg)
 		super().__init__()
 		if cfg.net_type == 'deepset':
-			self.net_state = ActorDeepsetBlock(cfg)
+			self.net = nn.Sequential(
+				ActorDeepsetBlock(cfg),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
+				(self.cfg.net_layer-self.cfg.shared_net_layer-1),)
+		elif cfg.net_type == 'attn':
+			self.net = nn.Sequential(
+				ActorAttnBlock(cfg),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
+				(self.cfg.net_layer-self.cfg.shared_net_layer-1),
+				nn.Linear(cfg.net_dim, EP.action_dim))
 		elif cfg.net_type == 'mlp':
-			self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
-																		 *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*2)
+			self.net = nn.Sequential(
+				nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+				*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] * \
+				(self.cfg.net_layer-2),
+				nn.Linear(cfg.net_dim, EP.action_dim),
+			)
 		else:
-			raise NotImplementedError
-		self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-																	 nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
-		self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-																	 nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
+			raise NotImplementedError(f'net_type {cfg.net_type} not implemented')
+		# if cfg.net_type == 'deepset':
+		# 	self.net_state = ActorDeepsetBlock(cfg)
+		# elif cfg.net_type == 'mlp':
+		# 	self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+		# 																 *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*2)
+		# else:
+		# 	raise NotImplementedError
+		self.net_a_avg = nn.Linear(cfg.net_dim, EP.action_dim)  # the average of action
+		self.net_a_std = nn.Linear(cfg.net_dim, EP.action_dim)  # the log_std of action
 		self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
 		self.soft_plus = nn.Softplus()
 
@@ -119,8 +137,7 @@ class ActorFixSAC(nn.Module):
 
 	def get_a_log_std(self, state):
 		t_tmp = self.net_state(state)
-		a_log_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
-		return a_log_std
+		return self.net_a_std(t_tmp).clamp(-20, 2).exp()
 
 	def get_logprob(self, state, action):
 		t_tmp = self.net_state(state)
@@ -210,9 +227,7 @@ class ActorPPO(nn.Module):
 		a_std = self.a_std_log.exp()
 
 		delta = ((a_avg - action) / a_std).pow(2) * 0.5
-		log_prob = -(self.a_std_log + self.sqrt_2pi_log + delta)  # new_logprob
-
-		return log_prob
+		return -(self.a_std_log + self.sqrt_2pi_log + delta)
 
 	def get_logprob_entropy(self, state, action):
 		a_avg = self.net(state)
@@ -419,6 +434,9 @@ class ActorAttnBlock(nn.Module):
 								self.single_goal_dim, cfg.net_dim), nn.ReLU())
 		self.enc = nn.Sequential(*[EncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
 														 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
+		if self.cfg.actor_pool_type == 'berd':
+			self.berd_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
+			self.berd_attn = nn.MultiheadAttention(self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
 
 	def forward(self, state):
 		grip = state[..., :self.shared_dim]
@@ -428,11 +446,14 @@ class ActorAttnBlock(nn.Module):
 							self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
 		grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
 		x = torch.cat((grip, obj, g), -1)
-		x = self.embed(x).transpose(0, 1)
+		x = self.embed(x).transpose(0, 1) # Tensor(num_goals, num_envs, net_dim)
+		token = self.enc(x)
 		if self.cfg.actor_pool_type == 'mean':
-			x = self.enc(x).mean(dim=0)
+			x = token.mean(dim=0)
 		elif self.cfg.actor_pool_type == 'max':
-			return self.enc(x).max(dim=0)[0]
+			return token.max(dim=0)[0]
+		elif self.cfg.actor_pool_type == 'berd':
+			return self.berd_attn(self.berd_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
 
 class CriticDeepsetBlock(nn.Module):
 	def __init__(self, cfg):
@@ -483,6 +504,9 @@ class CriticAttnBlock(nn.Module):
 													 self.single_goal_dim+EP.action_dim, self.cfg.net_dim), nn.ReLU())
 		self.enc = nn.Sequential(*[EncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
 														 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
+		if self.cfg.critic_pool_type == 'berd':
+			self.berd_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
+			self.berd_attn = nn.MultiheadAttention(self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
 
 	def forward(self, state, action=None):
 		if action is None:
@@ -496,7 +520,15 @@ class CriticAttnBlock(nn.Module):
 		action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
 		x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
 		x = self.embed(x).transpose(0, 1)
-		return self.enc(x).mean(dim=0)
+		token = self.enc(x)
+		if self.cfg.critic_pool_type == 'mean':
+			return token.mean(dim=0)
+		elif self.cfg.critic_pool_type == 'max':
+			return token.max(dim=0)[0]
+		elif self.cfg.critic_pool_type == 'berd':
+			return self.berd_attn(self.berd_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
+		else: 
+			raise NotImplementedError
 
 
 class EncoderLayer(nn.Module):

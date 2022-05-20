@@ -1,4 +1,4 @@
-num_envs: 1 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
+num_envs: 16 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
 num_robots: 2
 num_goals: 1
 os_rate: 0.8
