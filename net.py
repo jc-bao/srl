@@ -432,7 +432,7 @@ class ActorAttnBlock(nn.Module):
 		if self.cfg.actor_pool_type == 'mean':
 			x = self.enc(x).mean(dim=0)
 		elif self.cfg.actor_pool_type == 'max':
-			return self.enc(x).max(dim=0)
+			return self.enc(x).max(dim=0)[0]
 
 class CriticDeepsetBlock(nn.Module):
 	def __init__(self, cfg):
