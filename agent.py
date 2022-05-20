@@ -494,8 +494,9 @@ class AgentSAC(AgentBase):
       q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
         (next_q + next_log_prob * alpha)
     qs = self.cri.get_q_all(trans.state, trans.action)
-    obj_critic = (self.criterion(qs[..., [0]], q_label) +
-                  self.criterion(qs[..., [1]], q_label)) / 2
+    # obj_critic = (self.criterion(qs[..., [0]], q_label) +
+    #               self.criterion(qs[..., [1]], q_label)) / 2
+    obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
     return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
