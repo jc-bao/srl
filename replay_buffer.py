@@ -66,7 +66,7 @@ class ReplayBuffer:  # for off-policy
 			assert (self.data_parser(fut_trans, 'info.traj_idx') == self.data_parser(trans[:her_batch_size], 'info.traj_idx')).all()
 			fut_ag = self.data_parser(fut_trans,'info.ag')
 			# random relabel
-			unmoved_ag_idx = next_info_dict.ag_unmoved_steps > self.EP.max_ag_unmoved_steps 
+			unmoved_ag_idx = next_info_dict.ag_unmoved_steps > 5 
 			g_random_relabel_idx = unmoved_ag_idx & (torch.rand(unmoved_ag_idx.shape, device=self.device) < self.cfg.g_random_relabel_rate)
 			g_random_relabel_num = g_random_relabel_idx.sum()
 			self.g_random_relabel_rate = g_random_relabel_num / her_batch_size 
