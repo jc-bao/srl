@@ -706,9 +706,6 @@ class FrankaCube(gym.Env):
 					self.init_ag[reset_idx] = extra_ags[satisfied_idx][:done_env_num]
 					self.block_workspace[reset_idx] = extra_block_ws[satisfied_idx][:done_env_num]
 					break	
-			self.num_handovers = (self.block_workspace != self.goal_workspace).sum(dim=-1)
-			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
-			self.ag_unmoved_steps[reset_idx] = 0
 			if self.inhand_idx.any():
 				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
 				# NOTE can only choose block 0 in hand now TODO fix it
@@ -723,6 +720,9 @@ class FrankaCube(gym.Env):
 					self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
 						(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
 					self.block_workspace[self.inhand_idx, choosed_block] = choosed_robot 
+			self.num_handovers = (self.block_workspace != self.goal_workspace).sum(dim=-1)
+			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
+			self.ag_unmoved_steps[reset_idx] = 0
 			self.block_states[reset_idx,:,:3] = self.init_ag[reset_idx]
 			self.init_ag_normed[reset_idx] = ((self.init_ag[reset_idx]-self.goal_mean)/self.goal_std)
 			# change some goal to the ground
