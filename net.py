@@ -429,7 +429,10 @@ class ActorAttnBlock(nn.Module):
 		grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
 		x = torch.cat((grip, obj, g), -1)
 		x = self.embed(x).transpose(0, 1)
-		return self.enc(x).mean(dim=0)
+		if self.cfg.actor_pool_type == 'mean':
+			x = self.enc(x).mean(dim=0)
+		elif self.cfg.actor_pool_type == 'max':
+			return self.enc(x).max(dim=0)
 
 class CriticDeepsetBlock(nn.Module):
 	def __init__(self, cfg):

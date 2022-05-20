@@ -37,6 +37,7 @@ reward_scale: 1
 
 # network
 act_net: Actor
+actor_pool_type: max
 critic_net: CriticTwin
 net_dim: 256
 net_layer: 4
