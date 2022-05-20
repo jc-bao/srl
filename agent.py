@@ -493,9 +493,9 @@ class AgentSAC(AgentBase):
       alpha = self.alpha_log.exp().detach()
       q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
         (next_q + next_log_prob * alpha)
-    q1, q2 = self.cri.get_q_all(trans.state, trans.action)
-    obj_critic = (self.criterion(q1, q_label) +
-                  self.criterion(q2, q_label)) / 2
+    qs = self.cri.get_q_all(trans.state, trans.action)
+    obj_critic = (self.criterion(qs[..., [0]], q_label) +
+                  self.criterion(qs[..., [1]], q_label)) / 2
     return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
