@@ -1,6 +1,6 @@
 # @package _global_
 
-wandb: false
+wandb: true
 project: handover1
 name: sac_default
 
