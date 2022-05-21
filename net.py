@@ -452,7 +452,7 @@ class ActorAttnBlock(nn.Module):
 		x = self.embed(x).transpose(0, 1) # Tensor(num_goals, num_envs, net_dim)
 		token = self.enc(x)
 		if self.cfg.actor_pool_type == 'mean':
-			x = token.mean(dim=0)
+			return token.mean(dim=0)
 		elif self.cfg.actor_pool_type == 'max':
 			return token.max(dim=0)[0]
 		elif self.cfg.actor_pool_type == 'berd':
