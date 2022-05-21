@@ -809,15 +809,14 @@ class FrankaCube(gym.Env):
 		hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
 		finger_widths_normed = (self.finger_widths.unsqueeze(-1)-self.finger_width_mean) / self.finger_width_std
 		block_pos_normed = (self.block_states[..., :3]-self.goal_mean) / self.goal_std # CHECK multi robot
+		# NOTE make sure achieved goal is close to end
+		block_obs = torch.cat((self.block_states[..., 3:7], block_pos_normed), dim=-1)
 		goal_normed = (self.goal-self.goal_mean)/self.goal_std
 		obs = torch.cat((
 			grip_pos_normed.view(self.cfg.num_envs, self.cfg.num_robots*3),  # mid finger
 			hand_vel_normed.view(self.cfg.num_envs, self.cfg.num_robots*3),
 			finger_widths_normed.view(self.cfg.num_envs, self.cfg.num_robots),  # robot
-			# self.block_states[..., 3:].reshape(self.cfg.num_envs, -1),  # objects
-			self.block_states[..., 3:7].reshape(self.cfg.num_envs, -1),  # objects
-			# achieved goal NOTE make sure it is close to end
-			block_pos_normed.view(self.cfg.num_envs, self.cfg.num_goals*3),
+			block_obs.view(self.cfg.num_envs, -1),  # objects
 			goal_normed.view(self.cfg.num_envs, self.cfg.num_goals*3),
 		), dim=-1)
 
@@ -1117,7 +1116,7 @@ class FrankaCube(gym.Env):
 			return AttrDict(
 				shared = obs[..., :self.cfg.shared_dim],
 				seperate = obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim],
-				ag = obs[..., self.cfg.shared_dim+self.cfg.seperate_dim-self.cfg.goal_dim:self.cfg.shared_dim+self.cfg.seperate_dim], 
+				ag = obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim].view(-1,self.cfg.num_goals, self.cfg.single_seperate_dim)[:,:,-self.cfg.goal_dim:], 
 				g = obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:]
 			)
 		elif name == 'shared':
@@ -1125,7 +1124,7 @@ class FrankaCube(gym.Env):
 		elif name == 'seperate':
 			return obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim]
 		elif name == 'ag':
-			return obs[..., self.cfg.shared_dim+self.cfg.seperate_dim-self.cfg.goal_dim:self.cfg.shared_dim+self.cfg.seperate_dim]
+			return obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim].view(-1,self.cfg.num_goals, self.cfg.single_seperate_dim)[:,:,-self.cfg.goal_dim:]
 		elif name == 'g':
 			return obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:] 
 		else:
@@ -1140,7 +1139,7 @@ class FrankaCube(gym.Env):
 		if 'seperate' in new_obs:
 			old_obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim] = new_obs.seperate
 		if 'ag' in new_obs:
-			old_obs[..., self.cfg.shared_dim+self.cfg.seperate_dim-self.cfg.goal_dim:self.cfg.shared_dim+self.cfg.seperate_dim] = new_obs.ag
+			old_obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim].view(-1,self.cfg.num_goals, self.cfg.single_seperate_dim)[:,:,-self.cfg.goal_dim:] = new_obs.ag
 		if 'g' in new_obs:
 			old_obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:] = new_obs.g
 		return old_obs

@@ -19,7 +19,7 @@ success_bar: !!float -1e-3
 extra_steps: 5
 # number
 num_cameras: 16
-num_envs: 4096 
+num_envs: 1024 
 max_num_goals: 4
 # extra sample to keep goal away
 extra_goal_sample: 10
@@ -36,13 +36,13 @@ per_goal_dim: 3
 goal_dim: null
 info_dim: 6 #is_success1, step1, early_termin, traj_idx, traj_len, tleft, achieved_goal3n, grip pos, reached_ag
 # control
-control_freq_inv: 5 # TODO check
-filter_param: 0.8
+control_freq_inv: 10 # TODO check
+filter_param: 0.4
 env_spacing: 1.5
 debug_viz: true
 damping: 0.05
-max_vel: 4
-max_grip_vel: 1 
+max_vel: 2
+max_grip_vel: 0.1 
 max_ik_iter: 10
 ik_err: 0.005 # for iteration version of IK
 # max_vel: 1.8 # max move 0.05 per step
@@ -58,10 +58,10 @@ goal_sample_mode: bernoulli
 obj_sample_mode: bernoulli
 task_distri: null
 lock_block_orn: true
-os_rate: 0.5
+os_rate: 0.2
 goal_os_rate: 0.5
 # robot
-num_robots: 1
+num_robots: 2
 bound_robot: true
 action_shift: [0,0,0,0]
 asset:
@@ -71,14 +71,14 @@ asset:
 # table 
 table_size: [1.0, 1.0, 0.4]
 table_gap: 0.0
-max_table_gap: 0.2 # max table gap to prevent object falling
+max_table_gap: 0.3 # max table gap to prevent object falling
 rand_table_gap: 0.01
-robot_gap: 0.6
+robot_gap: 0.7
 robot_y: 0.5
 # ee_init_pos: [0.0, 0.0, 0.05]
 friction: 0.01
 # goal space
-goal_space: [0.3, 0.3, 0.2]
+goal_space: [0.4, 0.3, 0.2]
 goal_scale: 1.0
 goal_ground_rate: 0.5
 

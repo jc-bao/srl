@@ -1,7 +1,7 @@
 # @package _global_
 
-wandb: false
-project: handover1
+wandb: true
+project: handover2
 name: sac_default
 
 render: true
@@ -11,3 +11,6 @@ act_net: ActorFixSAC
 critic_net: CriticTwin
 net_type: attn
 if_act_target: false
+
+defaults:
+  - override /env: 2ho

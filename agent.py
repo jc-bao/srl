@@ -451,8 +451,8 @@ class AgentSAC(AgentBase):
   def update_net(self):
     self.buffer.update_now_len()
 
-    obj_critic = obj_actor = None
-    for _ in range(1+int(self.buffer.now_len / self.buffer.max_len * self.cfg.updates_per_rollout)):
+    obj_critic = obj_actor = torch.zeros(1, device=self.cfg.device)[0]
+    for _ in range(int(self.buffer.now_len / self.buffer.max_len * self.cfg.updates_per_rollout)):
       '''objective of critic (loss function of critic)'''
       obj_critic, state = self.get_obj_critic(
         self.buffer, self.cfg.batch_size)

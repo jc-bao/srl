@@ -3,7 +3,7 @@
 # load the model and run GUI
 
 resume_mode: load_only
-wid: cx426btp
+wid: 3a094sn2
 load_project: handover1
 
 defaults:
@@ -11,6 +11,11 @@ defaults:
 
 curri: null
 
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+
 steps_per_rollout: 10
 eval_eps: 100
 eval_per_rollout: 1
+updates_per_rollout: 0
