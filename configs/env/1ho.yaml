@@ -1,1 +1,1 @@
-num_envs: 1024 # recommend: 1024 (too many env will cause longer update interval and hurt sample effiency)
+num_goals: 1
