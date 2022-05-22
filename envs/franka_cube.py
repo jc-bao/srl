@@ -93,8 +93,12 @@ class FrankaCube(gym.Env):
 			[0,0,0,1],
 			[0,0,1,0],
 		], device=self.device)
-		block_other_mat = torch.block_diag(*([quat_rot_mat]+[pos_rot_mat]*2))
-		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0,1],[1,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*2*self.cfg.num_goals))
+		block_other_mat = torch.block_diag(*([quat_rot_mat, pos_rot_mat]))
+		# obs=(
+		# p_r0[3],p_r1[3],v_r0[3],v_r1[3],p_g0[1],p_g1[1],
+		# [rot_block_i[4], p_block_i[3]]* block_num
+		# [p_goal_i[3]]*num_goals)
+		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0,1],[1,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
 
 		self.reset()
 
@@ -330,7 +334,10 @@ class FrankaCube(gym.Env):
 					block_state_pose.p.x = xmin + j * 2 * self.cfg.block_size
 					block_state_pose.p.y = 0
 					block_state_pose.p.z = self.cfg.table_size[2]
-					block_state_pose.r = gymapi.Quat(0, 0, 0, 1)
+					if np.random.rand() < 0.5:
+						block_state_pose.r = gymapi.Quat(0, 0, 1, 0)
+					else:
+						block_state_pose.r = gymapi.Quat(0, 0, 0, 1)
 					handle = self.gym.create_actor(
 						env_ptr, block_asset, block_state_pose, "block{}".format(j), i, 0, 0,)
 					self.block_handles.append(handle)
