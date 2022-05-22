@@ -427,15 +427,11 @@ class ActorAttnBlock(nn.Module):
     if self.cfg.actor_pool_type == 'cross':
       self.query_embed = nn.Sequential(
         nn.Linear(self.shared_dim, cfg.net_dim), nn.ReLU())
-      self.embed = nn.Sequential(
-        nn.Linear(self.single_seperate_dim +
-                  self.single_goal_dim, cfg.net_dim), nn.ReLU())
       self.cross_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
-    else:
-      self.embed = nn.Sequential(
-        nn.Linear(self.shared_dim + self.single_seperate_dim +
-                  self.single_goal_dim, cfg.net_dim), nn.ReLU())
+    self.embed = nn.Sequential(
+      nn.Linear(self.shared_dim + self.single_seperate_dim +
+                self.single_goal_dim, cfg.net_dim), nn.ReLU())
     self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
     if self.cfg.actor_pool_type == 'berd':
@@ -451,10 +447,8 @@ class ActorAttnBlock(nn.Module):
               self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
     if self.cfg.actor_pool_type == 'cross':
       query = self.query_embed(grip).unsqueeze(0)
-      x = torch.cat((obj, g), -1)
-    else:
-      grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
-      x = torch.cat((grip, obj, g), -1)
+    grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
+    x = torch.cat((grip, obj, g), -1)
     x = self.embed(x).transpose(0, 1)  # Tensor(num_goals, num_envs, net_dim)
     token = self.enc(x)
     if self.cfg.actor_pool_type == 'mean':
@@ -517,15 +511,11 @@ class CriticAttnBlock(nn.Module):
     if self.cfg.actor_pool_type == 'cross':
       self.query_embed = nn.Sequential(
         nn.Linear(self.shared_dim+EP.action_dim, cfg.net_dim), nn.ReLU())
-      self.embed = nn.Sequential(
-        nn.Linear(self.single_seperate_dim +
-                  self.single_goal_dim, cfg.net_dim), nn.ReLU())
       self.cross_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
-    else:
-      self.embed = nn.Sequential(
-        nn.Linear(self.shared_dim + self.single_seperate_dim +
-                  self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU())
+    self.embed = nn.Sequential(
+      nn.Linear(self.shared_dim + self.single_seperate_dim +
+                self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU())
     self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
     if self.cfg.critic_pool_type == 'berd':
@@ -543,12 +533,10 @@ class CriticAttnBlock(nn.Module):
     if self.cfg.actor_pool_type == 'cross':
       grip = state[..., :self.shared_dim]
       query = self.query_embed(torch.cat([grip, action], dim=-1)).unsqueeze(0)
-      x = torch.cat((obj, g), -1)
-    else:
-      grip = state[..., :self.shared_dim].unsqueeze(
-        1).repeat(1, self.num_goals, 1)
-      action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
-      x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
+    grip = state[..., :self.shared_dim].unsqueeze(
+      1).repeat(1, self.num_goals, 1)
+    action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
+    x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
     x = self.embed(x).transpose(0, 1)
     token = self.enc(x)
     if self.cfg.critic_pool_type == 'mean':
