@@ -3,8 +3,8 @@
 # load the model and run GUI
 
 resume_mode: load_only
-wid: 3a094sn2
-load_project: handover1
+wid: 3o6f08ec
+project: handover2
 
 defaults:
   - override /env: 1ho_debug

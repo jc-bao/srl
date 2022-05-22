@@ -23,10 +23,10 @@ class AgentBase:
     # dir
     if cfg.wandb:
       self.cfg.update(
-        cwd=f'{wandb.run.dir}/model')
+        cwd=f'{wandb.run.dir}')
     else:
       self.cfg.update(
-        cwd=f'./results/{cfg.cwd}/model')
+        cwd=f'./results/{cfg.cwd}')
     os.makedirs(self.cfg.cwd, exist_ok=True)
 
     '''seed '''
@@ -422,7 +422,7 @@ class AgentBase:
         if self.cfg.load_project is None:
           self.cfg.load_project = self.cfg.project
         save_path = wandb.restore(
-          f'{file_tag}.pth', f'{self.cfg.entity}/{self.cfg.load_project}/{self.cfg.wid}').name
+          f'{self.cfg.load_folder}{file_tag}.pth', f'{self.cfg.entity}/{self.cfg.load_project}/{self.cfg.wid}').name
       elif self.cfg.load_path is not None:
         save_path = self.cfg.load_path
       with open(save_path, 'rb') as f:

@@ -73,7 +73,7 @@ def train(config):
 				render=(num_eval % int(1/config.render_per_eval) == 0))
 			log(result, prefix='eval')
 
-			if (i % int(1/config.rollout_per_save)) == 0:
+			if (i % int(1/config.eval_per_save)) == 0:
 				# if result.final_rew > best_rew: 
 				# 	best_rew = result.final_rew
 				# 	tag = 'best'

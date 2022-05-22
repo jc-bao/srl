@@ -6,6 +6,7 @@ load_path: null
 load_curri: true
 load_tag: latest
 load_project: null
+load_folder: ''
 # set wandb wid to load remotely
 wid: null
 # resume mode {null, 'continue', 'restart', 'load_only'}
@@ -83,4 +84,4 @@ defaults:
 
 # save
 cwd: results
-rollout_per_save: 0.1
+eval_per_save: 0.1
