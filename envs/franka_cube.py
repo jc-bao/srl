@@ -99,6 +99,8 @@ class FrankaCube(gym.Env):
 		# [rot_block_i[4], p_block_i[3]]* block_num
 		# [p_goal_i[3]]*num_goals)
 		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
+		self.single_act_rot_mat = torch.tensor(
+			[[-1.,0,0,0],[0,-1,0,0],[0,0,1,0],[0,0,0,1]], device=self.device)
 		self.act_rot_mat = torch.tensor(
 			[[0,0,0,0,-1.,0,0,0],[0,0,0,0,0,-1,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1],
 			[-1.,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0]
@@ -1338,6 +1340,7 @@ class FrankaCube(gym.Env):
 			max_ag_unmoved_steps = self.cfg.max_ag_unmoved_steps, 
 			ag_moved_threshold = self.cfg.ag_moved_threshold,
 			# dims
+			per_action_dim=self.cfg.per_action_dim,
 			action_dim=self.cfg.action_dim,
 			state_dim=self.cfg.state_dim,
 			shared_dim=self.cfg.shared_dim,
@@ -1349,6 +1352,10 @@ class FrankaCube(gym.Env):
 			num_envs=self.cfg.num_envs,
 			max_env_step=self.cfg.max_steps,
 			early_termin_step=self.cfg.early_termin_step,
+			# rot matrixs
+			obs_rot_mat = self.obs_rot_mat, 
+			act_rot_mat = self.act_rot_mat, 
+			single_act_rot_mat = self.single_act_rot_mat, 
 			# functions
 			sample_goal=self.sample_goal, 
 			compute_reward=self.compute_reward,

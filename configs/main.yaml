@@ -40,8 +40,10 @@ reward_scale: 1
 # network
 act_net: Actor
 actor_pool_type: max
+shared_actor: false
 critic_pool_type: mean
 critic_net: CriticTwin
+shared_critic: false
 net_dim: 256
 net_layer: 4
 # attention block number

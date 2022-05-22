@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 class Actor(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
     if cfg.net_type == 'deepset':
       self.net = nn.Sequential(
@@ -16,21 +16,21 @@ class Actor(nn.Module):
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
         (self.cfg.net_layer-self.cfg.shared_net_layer-1),
         # *[nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU()]*(self.cfg.net_layer-4),
-        nn.Linear(cfg.net_dim, EP.action_dim))
+        nn.Linear(cfg.net_dim, self.EP.action_dim))
     elif cfg.net_type == 'attn':
       self.net = nn.Sequential(
         ActorAttnBlock(cfg),
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
         (self.cfg.net_layer-self.cfg.shared_net_layer-1),
-        nn.Linear(cfg.net_dim, EP.action_dim))
+        nn.Linear(cfg.net_dim, self.EP.action_dim))
     elif cfg.net_type == 'mlp':
       self.net = nn.Sequential(
-        nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+        nn.Linear(self.EP.state_dim, cfg.net_dim), nn.ReLU(),
         # nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
         # nn.Linear(cfg.net_dim, cfg.net_dim),nn.ReLU(),
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] * \
         (self.cfg.net_layer-2),
-        nn.Linear(cfg.net_dim, EP.action_dim),
+        nn.Linear(cfg.net_dim, self.EP.action_dim),
       )
     else:
       raise NotImplementedError(f'net_type {cfg.net_type} not implemented')
@@ -54,14 +54,14 @@ class Actor(nn.Module):
 
 class ActorSAC(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.net_state = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+    self.net_state = nn.Sequential(nn.Linear(self.EP.state_dim, cfg.net_dim), nn.ReLU(),
                                    nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(), )
     self.net_a_avg = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the average of action
+                                   nn.Linear(cfg.net_dim, self.EP.action_dim))  # the average of action
     self.net_a_std = nn.Sequential(nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),
-                                   nn.Linear(cfg.net_dim, EP.action_dim))  # the log_std of action
+                                   nn.Linear(cfg.net_dim, self.EP.action_dim))  # the log_std of action
     self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
 
   def forward(self, state):
@@ -92,7 +92,7 @@ class ActorSAC(nn.Module):
 
 class ActorFixSAC(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
     if cfg.net_type == 'deepset':
       self.net_state = nn.Sequential(
@@ -106,103 +106,112 @@ class ActorFixSAC(nn.Module):
         (self.cfg.net_layer-self.cfg.shared_net_layer-1))
     elif cfg.net_type == 'mlp':
       self.net_state = nn.Sequential(
-        nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+        nn.Linear(self.EP.state_dim, cfg.net_dim), nn.ReLU(),
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
         (self.cfg.net_layer-2),
       )
     else:
       raise NotImplementedError(f'net_type {cfg.net_type} not implemented')
-    self.net_a_avg = nn.Linear(
-      cfg.net_dim, EP.action_dim)  # the average of action
-    self.net_a_std = nn.Linear(
-      cfg.net_dim, EP.action_dim)  # the log_std of action
+    if self.cfg.shared_actor:
+      self.net_a_avg = nn.Linear(
+        cfg.net_dim, self.EP.per_action_dim)  # the average of action
+      self.net_a_std = nn.Linear(
+        cfg.net_dim, self.EP.per_action_dim)  # the log_std of action
+    else:
+      self.net_a_avg = nn.Linear(
+        cfg.net_dim, self.EP.action_dim)  # the average of action
+      self.net_a_std = nn.Linear(
+        cfg.net_dim, self.EP.action_dim)  # the log_std of action
     self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
     self.soft_plus = nn.Softplus()
 
   def forward(self, state):
+    if self.cfg.shared_actor:
+      state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
     tmp = self.net_state(state)
-    return self.net_a_avg(tmp).tanh()  # action
+    a_avg = self.net_a_avg(tmp).tanh()
+    if self.cfg.shared_actor:
+      a_avg = a_avg.view(-1,2,self.EP.per_action_dim)
+      a_avg[:,1,:] @= self.EP.single_act_rot_mat
+      a_avg = a_avg.view(a_avg.shape[0], -1)
+    return a_avg
 
   def get_action(self, state):
+    if self.cfg.shared_actor:
+      state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
     t_tmp = self.net_state(state)
     a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
     a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
-    return torch.normal(a_avg, a_std).tanh()  # re-parameterize
+    act = torch.normal(a_avg, a_std).tanh()  # re-parameterize
+    if self.cfg.shared_actor:
+      act = act.view(-1,2,self.EP.per_action_dim)
+      act[:,1,:] @= self.EP.single_act_rot_mat
+      act = act.view(act.shape[0], -1)
+    return act
 
   def get_a_log_std(self, state):
+    if self.cfg.shared_actor:
+      state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
     t_tmp = self.net_state(state)
-    return self.net_a_std(t_tmp).clamp(-20, 2).exp()
+    a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
+    if self.cfg.shared_actor:
+      a_std = a_std.view(-1,2,self.EP.per_action_dim)
+      a_std = a_std.view(a_std.shape[0], -1)
+    return a_std
 
   def get_logprob(self, state, action):
+    if self.cfg.shared_actor:
+      state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
     t_tmp = self.net_state(state)
     a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
     a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
     a_std = a_std_log.exp()
-
-    '''add noise to a_noise in stochastic policy'''
     a_noise = a_avg + a_std * torch.randn_like(a_avg, requires_grad=True)
-    noise = a_noise - action  # todo
-
+    noise = a_noise - action 
     log_prob = a_std_log + self.log_sqrt_2pi + \
       noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
-    log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *
-                                                       a_noise)) * 2.  # better than below
+    log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *a_noise)) * 2.
+    if self.cfg.shared_actor:
+      log_prob = log_prob.view(-1,2,self.EP.per_action_dim)
+      log_prob = log_prob.view(log_prob.shape[0], -1)
     return log_prob
 
   def get_action_logprob(self, state):
+    if self.cfg.shared_actor:
+      state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
     t_tmp = self.net_state(state)
     a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
     a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
     a_std = a_std_log.exp()
-
-    '''add noise to a_noise in stochastic policy'''
     noise = torch.randn_like(a_avg, requires_grad=True)
     a_noise = a_avg + a_std * noise
-    # Can only use above code instead of below, because the tensor need gradients here.
-    # a_noise = torch.normal(a_avg, a_std, requires_grad=True)
-
-    '''compute log_prob according to mean and std of a_noise (stochastic policy)'''
-    # self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
     log_prob = a_std_log + self.log_sqrt_2pi + \
       noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
-    """same as below:
-				from torch.distributions.normal import Normal
-				log_prob = Normal(a_avg, a_std).log_prob(a_noise)
-				# same as below:
-				a_delta = (a_avg - a_noise).pow(2) /(2*a_std.pow(2))
-				log_prob = -a_delta - a_std.log() - np.log(np.sqrt(2 * np.pi))
-				"""
-
-    '''fix log_prob of action.tanh'''
     log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *
                                                        a_noise)) * 2.  # better than below
-    """same as below:
-				epsilon = 1e-6
-				a_noise_tanh = a_noise.tanh()
-				log_prob = log_prob - (1 - a_noise_tanh.pow(2) + epsilon).log()
-
-				Thanks for:
-				https://github.com/denisyarats/pytorch_sac/blob/81c5b536d3a1c5616b2531e446450df412a064fb/agent/actor.py#L37
-				↑ MIT License， Thanks for https://www.zhihu.com/people/Z_WXCY 2ez4U
-				They use action formula that is more numerically stable, see details in the following link
-				https://pytorch.org/docs/stable/_modules/torch/distributions/transforms.html#TanhTransform
-				https://github.com/tensorflow/probability/commit/ef6bb176e0ebd1cf6e25c6b5cecdd2428c22963f
-				"""
-    return a_noise.tanh(), log_prob.sum(1, keepdim=True)
+    a_noise = a_noise.tanh()
+    if self.cfg.shared_actor:
+      a_noise = a_noise.view(-1,2,self.EP.per_action_dim)
+      a_noise[:,1,:] @= self.EP.single_act_rot_mat
+      a_noise = a_noise.view(a_noise.shape[0], -1)
+      log_prob = log_prob.view(-1,2,self.EP.per_action_dim)
+      log_prob = log_prob.view(log_prob.shape[0], -1)
+    log_prob = log_prob.sum(1, keepdim=True)
+    return a_noise, log_prob
 
 
 class ActorPPO(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+    self.net = nn.Sequential(nn.Linear(self.EP.state_dim, cfg.net_dim), nn.ReLU(),
                              nn.Linear(
       cfg.net_dim, cfg.net_dim), nn.ReLU(),
-      nn.Linear(cfg.net_dim, EP.action_dim))
+      nn.Linear(cfg.net_dim, self.EP.action_dim))
 
     # the logarithm (log) of standard deviation (std) of action, it is a trainable parameter
     self.a_std_log = nn.Parameter(torch.zeros(
-      (1, EP.action_dim)) - 0., requires_grad=True)
+      (1, self.EP.action_dim)) - 0., requires_grad=True)
     self.sqrt_2pi_log = np.log(np.sqrt(2 * np.pi))
 
   def forward(self, state):
@@ -246,9 +255,9 @@ class ActorPPO(nn.Module):
 
 class Critic(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.net = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+    self.net = nn.Sequential(nn.Linear(self.EP.state_dim + self.EP.action_dim, cfg.net_dim), nn.ReLU(),
                              nn.Linear(
       cfg.net_dim, cfg.net_dim), nn.ReLU(),
       nn.Linear(
@@ -261,14 +270,14 @@ class Critic(nn.Module):
 
 class CriticTwin(nn.Module):  # shared parameter
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
     if self.cfg.net_type == 'deepset':
       self.net_sa = CriticDeepsetBlock(cfg)
     elif self.cfg.net_type == 'attn':
       self.net_sa = CriticAttnBlock(cfg)
     elif self.cfg.net_type == 'mlp':
-      self.net_sa = nn.Sequential(nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+      self.net_sa = nn.Sequential(nn.Linear(self.EP.state_dim + self.EP.action_dim, cfg.net_dim), nn.ReLU(),
                                   *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1))  # concat(state, action)
     else:
       raise NotImplementedError
@@ -285,14 +294,20 @@ class CriticTwin(nn.Module):  # shared parameter
     return torch.min(self.get_q_all(state, action), dim=-1, keepdim=True)[0]
 
   def get_q_all(self, state, action):
-    tmp = self.net_sa(torch.cat((state, action), dim=1))
-    # two Q values
-    return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)
+    if self.cfg.shared_critic:
+      state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1, state.shape[-1])
+      action = torch.stack((action, action@self.EP.act_rot_mat),dim=1).view(-1, action.shape[-1])
+      tmp = self.net_sa(torch.cat((state, action), dim=-1))
+      q_stack = torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1).view(-1,2,2) # [batch, 2, 2]
+      return q_stack.mean(dim=1)
+    else:
+      tmp = self.net_sa(torch.cat((state, action), dim=1))
+      return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)
 
 
 class CriticRed(nn.Module):  # shared parameter
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
     if self.cfg.net_type == 'deepset':
       self.net_sa = nn.Sequential(
@@ -303,7 +318,7 @@ class CriticRed(nn.Module):  # shared parameter
       self.net_sa = CriticAttnBlock(cfg)
     elif self.cfg.net_type == 'mlp':
       self.net_sa = nn.Sequential(
-        nn.Linear(EP.state_dim + EP.action_dim, cfg.net_dim), nn.ReLU(),
+        nn.Linear(self.EP.state_dim + self.EP.action_dim, cfg.net_dim), nn.ReLU(),
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-3))  # concat(state, action)
     else:
       raise NotImplementedError
@@ -367,9 +382,9 @@ class CriticREDq(nn.Module):  # modified REDQ (Randomized Ensemble Double Q-lear
 
 class CriticPPO(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.net = nn.Sequential(nn.Linear(EP.state_dim, cfg.net_dim), nn.ReLU(),
+    self.net = nn.Sequential(nn.Linear(self.EP.state_dim, cfg.net_dim), nn.ReLU(),
                              nn.Linear(
       cfg.net_dim, cfg.net_dim), nn.ReLU(),
       nn.Linear(cfg.net_dim, 1))
@@ -382,12 +397,12 @@ class CriticPPO(nn.Module):
 class ActorDeepsetBlock(nn.Module):
   def __init__(self, cfg):
     # state_dim=[shared_dim, seperate_dim, goal_dim, num_goals]
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.shared_dim = EP.shared_dim
-    self.seperate_dim = EP.seperate_dim
-    self.goal_dim = EP.goal_dim
-    self.num_goals = EP.num_goals
+    self.shared_dim = self.EP.shared_dim
+    self.seperate_dim = self.EP.seperate_dim
+    self.goal_dim = self.EP.goal_dim
+    self.num_goals = self.EP.num_goals
     assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
     self.single_goal_dim = self.goal_dim // self.num_goals
     assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
@@ -414,12 +429,12 @@ class ActorDeepsetBlock(nn.Module):
 class ActorAttnBlock(nn.Module):
   def __init__(self, cfg):
     # state_dim=[shared_dim, seperate_dim, goal_dim, num_goals]
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.shared_dim = EP.shared_dim
-    self.seperate_dim = EP.seperate_dim
-    self.goal_dim = EP.goal_dim
-    self.num_goals = EP.num_goals
+    self.shared_dim = self.EP.shared_dim
+    self.seperate_dim = self.EP.seperate_dim
+    self.goal_dim = self.EP.goal_dim
+    self.num_goals = self.EP.num_goals
     assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
     self.single_goal_dim = self.goal_dim // self.num_goals
     assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
@@ -465,20 +480,20 @@ class ActorAttnBlock(nn.Module):
 
 class CriticDeepsetBlock(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.shared_dim = EP.shared_dim
-    self.seperate_dim = EP.seperate_dim
-    self.goal_dim = EP.goal_dim
-    self.num_goals = EP.num_goals
-    self.action_dim = EP.action_dim
+    self.shared_dim = self.EP.shared_dim
+    self.seperate_dim = self.EP.seperate_dim
+    self.goal_dim = self.EP.goal_dim
+    self.num_goals = self.EP.num_goals
+    self.action_dim = self.EP.action_dim
     assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
     self.single_goal_dim = self.goal_dim // self.num_goals
     assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
     self.single_seperate_dim = self.seperate_dim // self.num_goals
     self.net_in = nn.Sequential(
       nn.Linear(self.shared_dim+self.single_seperate_dim +
-                self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU(),
+                self.single_goal_dim+self.EP.action_dim, cfg.net_dim), nn.ReLU(),
       *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1),)
 
   def forward(self, state, action=None):
@@ -497,25 +512,25 @@ class CriticDeepsetBlock(nn.Module):
 
 class CriticAttnBlock(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.shared_dim = EP.shared_dim
-    self.seperate_dim = EP.seperate_dim
-    self.goal_dim = EP.goal_dim
-    self.num_goals = EP.num_goals
-    self.action_dim = EP.action_dim
+    self.shared_dim = self.EP.shared_dim
+    self.seperate_dim = self.EP.seperate_dim
+    self.goal_dim = self.EP.goal_dim
+    self.num_goals = self.EP.num_goals
+    self.action_dim = self.EP.action_dim
     assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
     self.single_goal_dim = self.goal_dim // self.num_goals
     assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
     self.single_seperate_dim = self.seperate_dim // self.num_goals
     if self.cfg.actor_pool_type == 'cross':
       self.query_embed = nn.Sequential(
-        nn.Linear(self.shared_dim+EP.action_dim, cfg.net_dim), nn.ReLU())
+        nn.Linear(self.shared_dim+self.EP.action_dim, cfg.net_dim), nn.ReLU())
       self.cross_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
     self.embed = nn.Sequential(
       nn.Linear(self.shared_dim + self.single_seperate_dim +
-                self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU())
+                self.single_goal_dim+self.EP.action_dim, cfg.net_dim), nn.ReLU())
     self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
     if self.cfg.critic_pool_type == 'berd':
@@ -526,16 +541,18 @@ class CriticAttnBlock(nn.Module):
   def forward(self, state, action=None):
     if action is None:
       action = state[..., -self.action_dim:]
+    batch_shape = state.shape[:-1] # [batch] or [batch, stack]
+    batch_shape_len = len(batch_shape)
     obj = state[..., self.shared_dim:self.shared_dim +
-                self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
+                self.seperate_dim].reshape(*batch_shape, self.num_goals, self.single_seperate_dim)
     g = state[..., self.shared_dim+self.seperate_dim:self.shared_dim +
-              self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
+              self.seperate_dim+self.goal_dim].reshape(*batch_shape, self.num_goals, self.single_goal_dim)
     if self.cfg.actor_pool_type == 'cross':
       grip = state[..., :self.shared_dim]
       query = self.query_embed(torch.cat([grip, action], dim=-1)).unsqueeze(0)
     grip = state[..., :self.shared_dim].unsqueeze(
-      1).repeat(1, self.num_goals, 1)
-    action = action.unsqueeze(1).repeat(1, self.num_goals, 1)
+      -2).repeat(*([1]*batch_shape_len), self.num_goals, 1)
+    action = action.unsqueeze(-2).repeat(*([1]*batch_shape_len), self.num_goals, 1)
     x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
     x = self.embed(x).transpose(0, 1)
     token = self.enc(x)
@@ -605,20 +622,20 @@ class GATEncoderLayer(nn.Module):
 
 class CriticDeepset(nn.Module):
   def __init__(self, cfg):
-    self.cfg, EP = filter_cfg(cfg)
+    self.cfg, self.EP = filter_cfg(cfg)
     super().__init__()
-    self.shared_dim = EP.shared_dim
-    self.seperate_dim = EP.seperate_dim
-    self.goal_dim = EP.goal_dim
-    self.num_goals = EP.num_goals
-    self.action_dim = EP.action_dim
+    self.shared_dim = self.EP.shared_dim
+    self.seperate_dim = self.EP.seperate_dim
+    self.goal_dim = self.EP.goal_dim
+    self.num_goals = self.EP.num_goals
+    self.action_dim = self.EP.action_dim
     assert self.goal_dim % self.num_goals == 0, f'goal dim {self.goal_dim} should be divisible by num goals {self.num_goals}'
     self.single_goal_dim = self.goal_dim // self.num_goals
     assert self.seperate_dim % self.num_goals == 0, f'seperate dim {self.seperate_dim} should be divisible by num goals {self.num_goals}'
     self.single_seperate_dim = self.seperate_dim // self.num_goals
     self.net_in = nn.Sequential(
       nn.Linear(self.shared_dim+self.single_seperate_dim +
-                self.single_goal_dim+EP.action_dim, cfg.net_dim), nn.ReLU(),
+                self.single_goal_dim+self.EP.action_dim, cfg.net_dim), nn.ReLU(),
       nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),)
     self.net_out = nn.Sequential(
       nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU(),

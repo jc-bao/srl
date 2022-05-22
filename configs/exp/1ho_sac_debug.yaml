@@ -1,0 +1,19 @@
+# @package _global_
+
+wandb: false
+
+buffer_size: 1000
+batch_size: 20
+reuse: 0.0001
+steps_per_rollout: 300
+eval_per_rollout: 1
+eval_eps: 1
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+
+defaults:
+  - override /env: 1ho_debug
