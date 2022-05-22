@@ -225,7 +225,7 @@ class FrankaCube(gym.Env):
 
 		# create block assets
 		box_opts = gymapi.AssetOptions()
-		box_opts.density = 100
+		box_opts.density = 50
 		box_opts.angular_damping = 100
 		box_opts.linear_damping = 10
 		box_opts.thickness = 0.005
@@ -1019,37 +1019,134 @@ class FrankaCube(gym.Env):
 		return q_r[..., 0:3] * torch.sign(q_r[..., 3]).unsqueeze(-1)
 
 	def ezpolicy(self, obs):
-		up_step = 6
-		reach_step = 26
-		grasp_step = 30
-		end_step = 80
+		assert self.cfg.num_goals == 1, "ezpolicy only works for 1 goal"
 		pos = obs[..., :3]*self.single_goal_std+self.single_goal_mean + self.origin_shift
 		obj = obs[..., 17:20].view(
 			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
 		goal = obs[..., 20:23].view(
 			self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
-		action = torch.zeros((self.cfg.num_envs, 4),
-												 device=self.device, dtype=torch.float32)
-		for env_id in range(self.cfg.num_envs):
-			pos_now = pos[env_id]
-			for goal_id in range(self.cfg.num_goals):
-				obj_now = obj[env_id, goal_id]
-				goal_now = goal[env_id, goal_id]
-				o2g = torch.norm(obj_now-goal_now)
-				r2o = torch.norm(pos_now - obj_now)
-				reached = o2g < self.cfg.err
-				attached = r2o < self.cfg.err
-				if self.progress_buf[env_id] < up_step:
-					action[env_id, 2:4] = 1
-				elif up_step <= self.progress_buf[env_id] < reach_step:
-					# action[env_id, :3] = (torch.tensor([-0.15,0,0.05],device=self.device) - pos_now)
-					action[env_id, :3] = (obj_now - pos_now)*16
-					action[env_id, 3] = 1
-				elif reach_step <= self.progress_buf[env_id] < grasp_step:
-					action[env_id, 3] = -1
-				elif grasp_step <= self.progress_buf[env_id] < end_step:
-					action[env_id, :3] = (goal_now - obj_now)*16
-					action[env_id, 3] = -1
+		if self.cfg.num_robots == 1:
+			up_step = 6
+			reach_step = 26
+			grasp_step = 30
+			end_step = 80
+			action = torch.zeros((self.cfg.num_envs, 4),
+													device=self.device, dtype=torch.float32)
+			for env_id in range(self.cfg.num_envs):
+				pos_now = pos[env_id]
+				for goal_id in range(self.cfg.num_goals):
+					obj_now = obj[env_id, goal_id]
+					goal_now = goal[env_id, goal_id]
+					o2g = torch.norm(obj_now-goal_now)
+					r2o = torch.norm(pos_now - obj_now)
+					reached = o2g < self.cfg.err
+					attached = r2o < self.cfg.err
+					if self.progress_buf[env_id] < up_step:
+						action[env_id, 2:4] = 1
+					elif up_step <= self.progress_buf[env_id] < reach_step:
+						# action[env_id, :3] = (torch.tensor([-0.15,0,0.05],device=self.device) - pos_now)
+						action[env_id, :3] = (obj_now - pos_now)*16
+						action[env_id, 3] = 1
+					elif reach_step <= self.progress_buf[env_id] < grasp_step:
+						action[env_id, 3] = -1
+					elif grasp_step <= self.progress_buf[env_id] < end_step:
+						action[env_id, :3] = (goal_now - obj_now)*16
+						action[env_id, 3] = -1
+		elif self.cfg.num_robots == 2:
+			up_step = 6
+			reach_step = 26
+			grasp_step = 30
+			move_to_other_step =50
+			close_both_step=55
+			open_grip_step=60
+			move_to_goal_step=80
+			obs_dict = self.obs_parser(obs[0])
+			ag = obs_dict.ag[0,0]*self.goal_std+self.goal_mean
+			g = obs_dict.g*self.goal_std+self.goal_mean
+			robot0 = obs_dict.shared[:3]*self.goal_std+self.goal_mean
+			robot1 = obs_dict.shared[3:6]*self.goal_std+self.goal_mean
+			g_side= g[0] > 0
+			ag_side= self.init_ag[0,0,0] > 0
+			action = torch.zeros((2, 4),
+													device=self.device, dtype=torch.float32)
+			if g_side and ag_side:
+				if self.progress_buf[0] < up_step:
+					action[1, 2] = 1
+					action[1, 3] = 1
+				elif self.progress_buf[0] < reach_step:
+					delta = ag - robot1
+					action[1, :3] = delta*20
+				elif self.progress_buf[0] < grasp_step:
+					action[1, 3] = -1
+				elif self.progress_buf[0] < move_to_other_step:
+					delta =  g - ag
+					action[1, :3] = delta*20
+					action[1, 3] = -1
+			elif (not g_side) and (not ag_side):
+				if self.progress_buf[0] < up_step:
+					action[0, 2] = 1
+					action[0, 3] = 1
+				elif self.progress_buf[0] < reach_step:
+					delta = ag - robot0
+					action[0, :3] = delta*20
+				elif self.progress_buf[0] < grasp_step:
+					action[0, 3] = -1
+				elif self.progress_buf[0] < move_to_other_step:
+					delta =  g - ag
+					action[0, :3] = delta*20
+					action[0, 3] = -1
+			elif g_side and (not ag_side):
+				if self.progress_buf[0] < up_step: # move up
+					action[0, 2] = 1
+					action[0, 3] = 1
+				elif self.progress_buf[0] < reach_step: # reach obj
+					delta = ag - robot0 + torch.tensor([-0.05,0,0], device=self.device)
+					action[0, :3] = delta*20
+				elif self.progress_buf[0] < grasp_step:
+					action[0, 3] = -1
+				elif self.progress_buf[0] < move_to_other_step: # move to gap
+					delta0 =  torch.tensor([-0.05,0,0.5], device=self.device)- robot0
+					action[0, :3] = delta0*20
+					action[0, 3] = -1
+					delta1 =  torch.tensor([0.05,0,0.5], device=self.device)- robot1
+					action[1, :3] = delta1*20
+					action[1, 3] = 1
+				elif self.progress_buf[0] < close_both_step: # close both
+					action[:,3]=-1
+				elif self.progress_buf[0] < open_grip_step: # open left
+					action[0,3]=1
+					action[1,3]=-1
+				elif self.progress_buf[0] < move_to_goal_step: # move to goal
+					delta = g - ag
+					action[1, :3] = delta*20
+					action[1,3]=-1
+			elif (not g_side) and ag_side:
+				if self.progress_buf[0] < up_step: # move up
+					action[1, 2] = 1
+					action[1, 3] = 1
+				elif self.progress_buf[0] < reach_step: # reach obj
+					delta = ag - robot1 + torch.tensor([0.05,0,0], device=self.device)
+					action[1, :3] = delta*20
+				elif self.progress_buf[0] < grasp_step:
+					action[1, 3] = -1
+				elif self.progress_buf[0] < move_to_other_step: # move to gap
+					delta0 =  torch.tensor([-0.05,0,0.3], device=self.device)- robot0
+					action[0, :3] = delta0*20
+					action[0, 3] = 1
+					delta1 =  torch.tensor([0.05,0,0.3], device=self.device)- robot1
+					action[1, :3] = delta1*20
+					action[1, 3] = -1
+				elif self.progress_buf[0] < close_both_step: # close both
+					action[:,3]=-1
+				elif self.progress_buf[0] < open_grip_step: # open left
+					action[0,3]=-1
+					action[1,3]=1
+				elif self.progress_buf[0] < move_to_goal_step: # move to goal
+					delta = g - ag
+					action[0, :3] = delta*20
+					action[0,3]=-1
+		else:
+			raise NotImplementedError("ezpolicy only works for 1 or 2 robots")
 		return action - self.cfg.action_shift
 
 	def update_config(self, cfg):
@@ -1123,7 +1220,7 @@ class FrankaCube(gym.Env):
 			return AttrDict(
 				shared = obs[..., :self.cfg.shared_dim],
 				seperate = obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim],
-				ag = obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim].view(-1,self.cfg.num_goals, self.cfg.single_seperate_dim)[:,:,-self.cfg.goal_dim:], 
+				ag = obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim].view(-1,self.cfg.num_goals, self.cfg.per_seperate_dim)[:,:,-self.cfg.goal_dim:], 
 				g = obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:]
 			)
 		elif name == 'shared':
@@ -1131,7 +1228,7 @@ class FrankaCube(gym.Env):
 		elif name == 'seperate':
 			return obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim]
 		elif name == 'ag':
-			return obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim].view(-1,self.cfg.num_goals, self.cfg.single_seperate_dim)[:,:,-self.cfg.goal_dim:]
+			return obs[..., self.cfg.shared_dim:self.cfg.shared_dim+self.cfg.seperate_dim].view(-1,self.cfg.num_goals, self.cfg.per_seperate_dim)[:,:,-self.cfg.goal_dim:]
 		elif name == 'g':
 			return obs[..., self.cfg.shared_dim+self.cfg.seperate_dim:] 
 		else:
@@ -1267,7 +1364,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, inhand_rate=1.0, table_gap=0.3, goal_space=[0.4, 0.3, 0.2], robot_gap = 0.7, rand_table_gap=0.0, max_grip_vel = 0.1, max_vel = 2, filter_param = 0.4, control_freq_inv=10)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, base_steps=100, max_ag_unmoved_steps=100, early_termin_step=100, os_rate=0.8)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1279,8 +1376,6 @@ if __name__ == '__main__':
 		for j in range(env.cfg.max_steps):
 			if args.random:
 				act = torch.randn((env.cfg.num_envs,4*env.cfg.num_robots), device=env.device)
-				# act[..., 3] = -1
-				# act[..., 0] = 1
 				# act[..., 7] = -1
 				# act[..., 4] = -1
 			elif args.ezpolicy:
