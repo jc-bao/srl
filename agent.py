@@ -416,7 +416,7 @@ class AgentBase:
       save_path = f"{cwd}/{file_tag}.pth"
       torch.save(data, save_path)
       if self.cfg.wandb:
-        wandb.save(save_path, base_path=cwd)  # upload now
+        wandb.save(save_path, base_path=cwd, policy="now")  # upload now
     else:
       if self.cfg.wid is not None:
         if self.cfg.load_project is None:

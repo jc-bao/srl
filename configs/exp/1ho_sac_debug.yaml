@@ -4,8 +4,8 @@ wandb: false
 
 buffer_size: 1000
 batch_size: 20
-reuse: 0.0001
-steps_per_rollout: 300
+reuse: 1
+steps_per_rollout: 100
 eval_per_rollout: 1
 eval_eps: 1
 

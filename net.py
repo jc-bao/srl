@@ -113,6 +113,7 @@ class ActorFixSAC(nn.Module):
     else:
       raise NotImplementedError(f'net_type {cfg.net_type} not implemented')
     if self.cfg.shared_actor:
+      assert self.EP.num_robots == 2, 'shared actor only works for 2 robots'
       self.net_a_avg = nn.Linear(
         cfg.net_dim, self.EP.per_action_dim)  # the average of action
       self.net_a_std = nn.Linear(
@@ -131,9 +132,8 @@ class ActorFixSAC(nn.Module):
     tmp = self.net_state(state)
     a_avg = self.net_a_avg(tmp).tanh()
     if self.cfg.shared_actor:
-      a_avg = a_avg.view(-1,2,self.EP.per_action_dim)
-      a_avg[:,1,:] @= self.EP.single_act_rot_mat
-      a_avg = a_avg.view(a_avg.shape[0], -1)
+      a_avg = a_avg.view(-1,self.EP.action_dim)
+      a_avg @= self.EP.last_act_rot_mat
     return a_avg
 
   def get_action(self, state):
@@ -144,9 +144,8 @@ class ActorFixSAC(nn.Module):
     a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
     act = torch.normal(a_avg, a_std).tanh()  # re-parameterize
     if self.cfg.shared_actor:
-      act = act.view(-1,2,self.EP.per_action_dim)
-      act[:,1,:] @= self.EP.single_act_rot_mat
-      act = act.view(act.shape[0], -1)
+      act = act.view(-1,self.EP.action_dim)
+      act @= self.EP.last_act_rot_mat
     return act
 
   def get_a_log_std(self, state):
@@ -191,9 +190,8 @@ class ActorFixSAC(nn.Module):
                                                        a_noise)) * 2.  # better than below
     a_noise = a_noise.tanh()
     if self.cfg.shared_actor:
-      a_noise = a_noise.view(-1,2,self.EP.per_action_dim)
-      a_noise[:,1,:] @= self.EP.single_act_rot_mat
-      a_noise = a_noise.view(a_noise.shape[0], -1)
+      a_noise = a_noise.view(-1, self.EP.action_dim)
+      a_noise @= self.EP.last_act_rot_mat
       log_prob = log_prob.view(-1,2,self.EP.per_action_dim)
       log_prob = log_prob.view(log_prob.shape[0], -1)
     log_prob = log_prob.sum(1, keepdim=True)
