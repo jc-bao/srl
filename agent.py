@@ -429,11 +429,14 @@ class AgentBase:
         data = torch.load(f, map_location=lambda storage, loc: storage)
       if self.cfg.resume_mode == 'continue':
         self.total_step = data['step']
-        if self.cfg.load_curri:
-          for k, v in data['curri'].items():
-            if k in self.cfg.curri:
-              print(f'[Load] set {k} to {v["now"]}')
-              self.cfg['curri'][k]['now'] = v['now']
+      if self.cfg.load_curri is None:
+        self.cfg.load_curri = (self.cfg.resume_mode == 'continue')
+      print('[Load] load curri:', self.cfg.load_curri)
+      if self.cfg.load_curri:
+        for k, v in data['curri'].items():
+          if k in self.cfg.curri:
+            print(f'[Load] set {k} to {v["now"]}')
+            self.cfg['curri'][k]['now'] = v['now']
       for name, obj in name_obj_list:
         obj.load_state_dict(data[name])
 
