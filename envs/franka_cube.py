@@ -99,6 +99,10 @@ class FrankaCube(gym.Env):
 		# [rot_block_i[4], p_block_i[3]]* block_num
 		# [p_goal_i[3]]*num_goals)
 		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
+		self.act_rot_mat = torch.tensor(
+			[[0,0,0,0,-1.,0,0,0],[0,0,0,0,0,-1,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1],
+			[-1.,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0]
+			], device=self.device)
 
 		self.reset()
 
@@ -1237,6 +1241,9 @@ class FrankaCube(gym.Env):
 	
 	def obs_mirror(self, obs):
 		return obs @ self.obs_rot_mat
+
+	def act_mirror(self, act):
+		return act @ self.act_rot_mat
 	
 	def obs_updater(self, old_obs, new_obs:AttrDict):
 		if 'shared' in new_obs:
@@ -1373,12 +1380,6 @@ if __name__ == '__main__':
 	# 	*([[-1,0,0,1]]*4),
 	# 	*([[0,-1,0,1]]*4),]
 	obs = env.reset()[0]
-	act_rot_mat = torch.tensor(
-		[[-1.,0,0,0],
-		[0,-1,0,0],
-		[0,0,1,0],
-		[0,0,0,1]], device=env.device
-	)
 	for i in range(10):
 		for j in range(env.cfg.max_steps):
 			if args.random:
@@ -1386,11 +1387,9 @@ if __name__ == '__main__':
 				# act[..., 7] = -1
 				# act[..., 4] = -1
 			elif args.ezpolicy:
-				# print(env.obs_parser(obs, 'ag'))
 				obs = env.obs_mirror(obs)
-				# print(env.obs_parser(obs, 'ag'))
 				act = env.ezpolicy(obs)
-				act = torch.cat((act[1, :]@act_rot_mat,act[0, :]@act_rot_mat),dim=0)
+				act = act.flatten()@env.act_rot_mat
 			else:
 				act = torch.tensor([args.action]*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
