@@ -1379,7 +1379,9 @@ if __name__ == '__main__':
 				# act[..., 7] = -1
 				# act[..., 4] = -1
 			elif args.ezpolicy:
+				obs = env.obs_mirror(obs)
 				act = env.ezpolicy(obs)
+				act = torch.cat((act[..., 4:8],act[..., :4]),dim=-1)
 			else:
 				act = torch.tensor([args.action]*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
