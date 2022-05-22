@@ -75,7 +75,7 @@ class FrankaCube(gym.Env):
 
 		# rotation metrix
 		robot_pos_rot_mat = torch.tensor([
-			[0,0,0,-1,0,0],
+			[0.,0,0,-1,0,0],
 			[0,0,0,0,-1,0],
 			[0,0,0,0,0,1],
 			[-1,0,0,0,0,0],
@@ -83,22 +83,22 @@ class FrankaCube(gym.Env):
 			[0,0,1,0,0,0],
 		], device=self.device)
 		pos_rot_mat = torch.tensor([
-			[-1,0,0],
+			[-1.,0,0],
 			[0,-1,0],
 			[0,0,1]
 		], device=self.device)
 		quat_rot_mat = torch.tensor([
-			[0,-1,0,0],
+			[0.,-1,0,0],
 			[1,0,0,0],
 			[0,0,0,1],
 			[0,0,1,0],
 		], device=self.device)
 		block_other_mat = torch.block_diag(*([quat_rot_mat, pos_rot_mat]))
 		# obs=(
-		# p_r0[3],p_r1[3],v_r0[3],v_r1[3],p_g0[1],p_g1[1],
+		# [p_r0[3],v_r0[3],p_g0[1]]
 		# [rot_block_i[4], p_block_i[3]]* block_num
 		# [p_goal_i[3]]*num_goals)
-		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0,1],[1,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
+		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
 
 		self.reset()
 
@@ -1056,20 +1056,21 @@ class FrankaCube(gym.Env):
 			up_step = 6
 			reach_step = 26
 			grasp_step = 30
-			move_to_other_step =50
-			close_both_step=55
-			open_grip_step=60
-			move_to_goal_step=80
+			move_to_other_step =60
+			close_both_step=65
+			open_grip_step=70
+			move_to_goal_step=90
 			obs_dict = self.obs_parser(obs[0])
 			ag = obs_dict.ag[0,0]*self.goal_std+self.goal_mean
 			g = obs_dict.g*self.goal_std+self.goal_mean
 			robot0 = obs_dict.shared[:3]*self.goal_std+self.goal_mean
 			robot1 = obs_dict.shared[3:6]*self.goal_std+self.goal_mean
 			g_side= g[0] > 0
-			ag_side= self.init_ag[0,0,0] > 0
+			if self.progress_buf[0] < 6:
+				self.ag_side= ag[0] > 0
 			action = torch.zeros((2, 4),
 													device=self.device, dtype=torch.float32)
-			if g_side and ag_side:
+			if g_side and self.ag_side:
 				if self.progress_buf[0] < up_step:
 					action[1, 2] = 1
 					action[1, 3] = 1
@@ -1082,7 +1083,7 @@ class FrankaCube(gym.Env):
 					delta =  g - ag
 					action[1, :3] = delta*20
 					action[1, 3] = -1
-			elif (not g_side) and (not ag_side):
+			elif (not g_side) and (not self.ag_side):
 				if self.progress_buf[0] < up_step:
 					action[0, 2] = 1
 					action[0, 3] = 1
@@ -1095,7 +1096,7 @@ class FrankaCube(gym.Env):
 					delta =  g - ag
 					action[0, :3] = delta*20
 					action[0, 3] = -1
-			elif g_side and (not ag_side):
+			elif g_side and (not self.ag_side):
 				if self.progress_buf[0] < up_step: # move up
 					action[0, 2] = 1
 					action[0, 3] = 1
@@ -1120,7 +1121,7 @@ class FrankaCube(gym.Env):
 					delta = g - ag
 					action[1, :3] = delta*20
 					action[1,3]=-1
-			elif (not g_side) and ag_side:
+			elif (not g_side) and self.ag_side:
 				if self.progress_buf[0] < up_step: # move up
 					action[1, 2] = 1
 					action[1, 3] = 1
@@ -1235,7 +1236,7 @@ class FrankaCube(gym.Env):
 			raise NotImplementedError
 	
 	def obs_mirror(self, obs):
-		return obs * self.obs_rot_mat
+		return obs @ self.obs_rot_mat
 	
 	def obs_updater(self, old_obs, new_obs:AttrDict):
 		if 'shared' in new_obs:
@@ -1372,6 +1373,12 @@ if __name__ == '__main__':
 	# 	*([[-1,0,0,1]]*4),
 	# 	*([[0,-1,0,1]]*4),]
 	obs = env.reset()[0]
+	act_rot_mat = torch.tensor(
+		[[-1.,0,0,0],
+		[0,-1,0,0],
+		[0,0,1,0],
+		[0,0,0,1]], device=env.device
+	)
 	for i in range(10):
 		for j in range(env.cfg.max_steps):
 			if args.random:
@@ -1379,9 +1386,11 @@ if __name__ == '__main__':
 				# act[..., 7] = -1
 				# act[..., 4] = -1
 			elif args.ezpolicy:
+				# print(env.obs_parser(obs, 'ag'))
 				obs = env.obs_mirror(obs)
+				# print(env.obs_parser(obs, 'ag'))
 				act = env.ezpolicy(obs)
-				act = torch.cat((act[..., 4:8],act[..., :4]),dim=-1)
+				act = torch.cat((act[1, :]@act_rot_mat,act[0, :]@act_rot_mat),dim=0)
 			else:
 				act = torch.tensor([args.action]*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
