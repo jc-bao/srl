@@ -26,7 +26,7 @@ class AgentBase:
         cwd=f'{wandb.run.dir}')
     else:
       self.cfg.update(
-        cwd=f'./results/{cfg.cwd}')
+        cwd=f'results/{cfg.cwd}')
     os.makedirs(self.cfg.cwd, exist_ok=True)
 
     '''seed '''
@@ -90,6 +90,7 @@ class AgentBase:
 
     '''record params'''
     self.total_step = 0
+    self.total_save = 0
     self.r_max = -np.inf
     # params for tmp buffer to record traj info
     self.traj_idx = torch.arange(
@@ -413,7 +414,11 @@ class AgentBase:
       data = {'step': self.total_step, 'curri': self.cfg.curri}
       for name, obj in name_obj_list:
         data[name] = obj.state_dict()
-      save_path = f"{cwd}/{file_tag}.pth"
+      last_save_path = f"{cwd}/{file_tag}_{self.total_save}.pth"
+      if os.path.exists(last_save_path):
+        os.remove(last_save_path) # remove this file to save space
+      self.total_save += 1
+      save_path = f"{cwd}/{file_tag}_{self.total_save}.pth"
       torch.save(data, save_path)
       if self.cfg.wandb:
         wandb.save(save_path, base_path=cwd, policy="now")  # upload now

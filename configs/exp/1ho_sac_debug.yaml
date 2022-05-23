@@ -8,6 +8,7 @@ reuse: 1
 steps_per_rollout: 100
 eval_per_rollout: 1
 eval_eps: 1
+eval_per_save: 1
 
 agent_name: AgentSAC
 act_net: ActorFixSAC
