@@ -1383,7 +1383,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=3, base_steps=10, max_ag_unmoved_steps=10, early_termin_step=10, os_rate=1.0
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, base_steps=100, max_ag_unmoved_steps=10, early_termin_step=100, os_rate=1.0
 	, max_handover_time=2, inhand_rate=0, table_gap=0.3)
 	start = time.time()
 	# action_list = [
