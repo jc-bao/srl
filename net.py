@@ -291,13 +291,16 @@ class CriticTwin(nn.Module):  # shared parameter
     # min Q value
     return torch.min(self.get_q_all(state, action), dim=-1, keepdim=True)[0]
 
-  def get_q_all(self, state, action):
+  def get_q_all(self, state, action, get_mirror_std=False):
     if self.cfg.shared_critic:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1, state.shape[-1])
       action = torch.stack((action, action@self.EP.act_rot_mat),dim=1).view(-1, action.shape[-1])
       tmp = self.net_sa(torch.cat((state, action), dim=-1))
       q_stack = torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1).view(-1,2,2) # [batch, 2, 2]
-      return q_stack.mean(dim=1)
+      if get_mirror_std:
+        return q_stack.mean(dim=1), q_stack.std(dim=1)
+      else:
+        return q_stack.mean(dim=1)
     else:
       tmp = self.net_sa(torch.cat((state, action), dim=1))
       return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)

@@ -44,6 +44,7 @@ shared_actor: false
 critic_pool_type: mean
 critic_net: CriticTwin
 shared_critic: false
+mirror_q_reg_coef: 0.1
 net_dim: 256
 net_layer: 4
 # attention block number

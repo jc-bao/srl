@@ -416,7 +416,7 @@ class AgentBase:
         data[name] = obj.state_dict()
       last_save_path = f"{cwd}/{file_tag}_{self.total_save}.pth"
       if os.path.exists(last_save_path):
-        os.remove(last_save_path) # remove this file to save space
+        os.remove(last_save_path)  # remove this file to save space
       self.total_save += 1
       save_path = f"{cwd}/{file_tag}_{self.total_save}.pth"
       torch.save(data, save_path)
@@ -466,13 +466,13 @@ class AgentSAC(AgentBase):
         self.buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
       self.soft_update(self.cri_target, self.cri,
-                      self.cfg.soft_update_tau)
+                       self.cfg.soft_update_tau)
 
       '''objective of alpha (temperature parameter automatic adjustment)'''
       a_noise_pg, log_prob = self.act.get_action_logprob(
         state)  # policy gradient
       obj_alpha = (self.alpha_log * (log_prob -
-                  self.target_entropy).detach()).mean()
+                                     self.target_entropy).detach()).mean()
       self.optimizer_update(self.alpha_optim, obj_alpha)
 
       '''objective of actor'''
@@ -483,7 +483,8 @@ class AgentSAC(AgentBase):
       q_value_pg = self.cri(state, a_noise_pg)
       obj_actor = -(q_value_pg + log_prob * alpha).mean()
       self.optimizer_update(self.act_optimizer, obj_actor)
-      self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau) # SAC don't use act_target network
+      # SAC don't use act_target network
+      self.soft_update(self.act_target, self.act, self.cfg.soft_update_tau)
 
     return AttrDict(
       critic_loss=obj_critic.item(),
@@ -501,10 +502,13 @@ class AgentSAC(AgentBase):
       alpha = self.alpha_log.exp().detach()
       q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
         (next_q + next_log_prob * alpha)
-    qs = self.cri.get_q_all(trans.state, trans.action)
-    # obj_critic = (self.criterion(qs[..., [0]], q_label) +
-    #               self.criterion(qs[..., [1]], q_label)) / 2
-    obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
+    if self.cfg.mirror_q_reg_coef > 0:
+      qs, q_std = self.cri.get_q_all(trans.state, trans.action, get_mirror_std=True)
+      obj_critic = self.criterion(
+        qs, q_label * torch.ones_like(qs)) + q_std.mean() * self.cfg.mirror_q_reg_coef
+    else:
+      qs = self.cri.get_q_all(trans.state, trans.action)
+      obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
     return obj_critic, trans.state
 
   def get_obj_critic_per(self, buffer, batch_size):
@@ -631,6 +635,7 @@ class AgentREDqSAC(AgentSAC):
 
     buffer.td_error_update(td_error.detach())
     return obj_critic, state
+
 
 class AgentREDQSAC(AgentSAC):
   def __init__(self, cfg):
