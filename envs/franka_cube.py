@@ -1,4 +1,5 @@
 from socket import EAI_OVERFLOW
+from this import d
 import numpy as np
 import os
 import sys
@@ -679,20 +680,20 @@ class FrankaCube(gym.Env):
 			in_hand = torch.rand((self.cfg.num_envs,),
 													 device=self.device) < self.cfg.inhand_rate
 			self.inhand_idx = reset_idx & in_hand
-			# if self.cfg.obj_sample_mode == 'uniform':
-			# 	self.block_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-			# elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
-			# 	self.block_workspace[reset_idx] = self.goal_workspace[reset_idx] + torch.bernoulli(torch.ones_like(self.goal_workspace[reset_idx], device=self.device, dtype=torch.float)*self.cfg.os_rate).long()
-			# 	self.block_workspace %= self.cfg.num_robots
-			# else:
-			# 	raise NotImplementedError
-			# self.init_ag[reset_idx] = self.torch_block_space.sample((done_env_num,self.cfg.num_goals))+self.origin_shift[self.block_workspace[reset_idx].flatten()].view(done_env_num, self.cfg.num_goals, 3)
 			for _ in range(5):
 				if self.cfg.obj_sample_mode == 'uniform':
 					extra_block_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
 				elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
 					tiled_goal_ws = self.goal_workspace[reset_idx].repeat(self.cfg.extra_goal_sample,1,1)
-					extra_block_ws = tiled_goal_ws + torch.bernoulli(torch.ones(tiled_goal_ws.shape[1:], device=self.device, dtype=torch.float)*self.cfg.os_rate).long().repeat(self.cfg.extra_goal_sample,1,1)
+					if self.cfg.num_goals <= self.cfg.max_handover_time:
+						extra_block_ws = tiled_goal_ws + torch.bernoulli(torch.ones(tiled_goal_ws.shape[1:], device=self.device, dtype=torch.float)*self.cfg.os_rate).long().repeat(self.cfg.extra_goal_sample,1,1)
+					else: # limit the max handover times
+						same_side_g_num = self.cfg.num_goals - self.cfg.max_handover_time
+						rand_side_g_num = self.cfg.max_handover_time
+						drifted_ws = torch.bernoulli(torch.ones((done_env_num.item(), rand_side_g_num), device=self.device, dtype=torch.float)*self.cfg.os_rate).long()
+						not_drifted_ws = torch.zeros((done_env_num.item(), same_side_g_num), device=self.device).long()
+						new_ws = torch.cat((drifted_ws,not_drifted_ws), dim=-1).repeat(self.cfg.extra_goal_sample,1,1) 
+						extra_block_ws = tiled_goal_ws + new_ws
 					extra_block_ws %= self.cfg.num_robots
 				elif self.cfg.obj_sample_mode == 'task_distri':
 					rand_number = torch.rand((done_env_num,), device=self.device)
@@ -1382,7 +1383,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, base_steps=100, max_ag_unmoved_steps=100, early_termin_step=100, os_rate=0.8)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=3, base_steps=10, max_ag_unmoved_steps=10, early_termin_step=10, os_rate=0.8, max_handover_time=1, inhand_rate=0)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 

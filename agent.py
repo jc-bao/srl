@@ -461,13 +461,13 @@ class AgentSAC(AgentBase):
         self.buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
       self.soft_update(self.cri_target, self.cri,
-                       self.cfg.soft_update_tau)
+                      self.cfg.soft_update_tau)
 
       '''objective of alpha (temperature parameter automatic adjustment)'''
       a_noise_pg, log_prob = self.act.get_action_logprob(
         state)  # policy gradient
       obj_alpha = (self.alpha_log * (log_prob -
-                   self.target_entropy).detach()).mean()
+                  self.target_entropy).detach()).mean()
       self.optimizer_update(self.alpha_optim, obj_alpha)
 
       '''objective of actor'''
