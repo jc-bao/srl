@@ -34,7 +34,7 @@ class FrankaCube(gym.Env):
 		# setup isaac
 		self.gym = gymapi.acquire_gym()
 		self.sim = self.gym.create_sim(
-			self.cfg.sim_device_id, self.cfg.graphics_device_id, self.cfg.physics_engine, self.cfg.sim_params)
+			self.cfg.sim_device_id, self.cfg.graphies_device_id, self.cfg.physics_engine, self.cfg.sim_params)
 		self._create_ground_plane()
 		self._create_envs()
 		self.gym.prepare_sim(self.sim)
@@ -661,9 +661,9 @@ class FrankaCube(gym.Env):
 				(goal_dist[..., 1] > self.cfg.block_size*2) | \
 						torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
 			if satisfied_idx.sum() >= done_env_num:
-				self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
-				self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
 				break
+		self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
+		self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
 		for i in range(self.cfg.num_robots):
 			multi_goal_in_same_ws |= ((self.goal_workspace==i).sum(dim=-1) > 1)
