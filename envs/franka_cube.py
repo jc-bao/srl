@@ -34,7 +34,7 @@ class FrankaCube(gym.Env):
 		# setup isaac
 		self.gym = gymapi.acquire_gym()
 		self.sim = self.gym.create_sim(
-			self.cfg.sim_device_id, self.cfg.graphies_device_id, self.cfg.physics_engine, self.cfg.sim_params)
+			self.cfg.sim_device_id, self.cfg.graphics_device_id, self.cfg.physics_engine, self.cfg.sim_params)
 		self._create_ground_plane()
 		self._create_envs()
 		self.gym.prepare_sim(self.sim)
