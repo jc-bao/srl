@@ -450,7 +450,7 @@ class ActorAttnBlock(nn.Module):
                 self.single_goal_dim, cfg.net_dim), nn.ReLU())
     self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
-    if self.cfg.actor_pool_type == 'bert':
+    if self.cfg.actor_pool_type == 'bert' or self.cfg.actor_pool_type == 'bert2':
       self.bert_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
       self.bert_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
@@ -466,6 +466,8 @@ class ActorAttnBlock(nn.Module):
     grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
     x = torch.cat((grip, obj, g), -1)
     x = self.embed(x).transpose(0, 1)  # Tensor(num_goals, num_envs, net_dim)
+    if self.cfg.actor_pool_type == 'bert2':
+      x = torch.cat((self.bert_query.repeat(1,x.shape[1],1), x), 0) # Tensor(num_goals+1, num_envs, net_dim)
     token = self.enc(x)
     if self.cfg.actor_pool_type == 'mean':
       return token.mean(dim=0)
@@ -473,6 +475,8 @@ class ActorAttnBlock(nn.Module):
       return token.max(dim=0)[0]
     elif self.cfg.actor_pool_type == 'bert':
       return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
+    elif self.cfg.actor_pool_type == 'bert2':
+      return self.bert_attn(token[[0]], token[1:], token[1:])[0].squeeze(0)
     elif self.cfg.actor_pool_type == 'cross':
       return self.cross_attn(query, token, token)[0].squeeze(0)
     else:
