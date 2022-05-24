@@ -1,6 +1,15 @@
-render: false
-shared_critic: true
-name: main
+wandb: true
 project: corl-main-h1
+name: main
+
+render: false
+
+shared_critic: true
 net_layer: 6
 shared_net_layer: 4
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
