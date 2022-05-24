@@ -62,6 +62,7 @@ os_rate: 0.2
 max_handover_time: 100
 goal_os_rate: 0.5
 # robot
+enable_robot_id: false
 num_robots: 2
 bound_robot: true
 action_shift: [0,0,0,0]

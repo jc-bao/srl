@@ -450,9 +450,9 @@ class ActorAttnBlock(nn.Module):
                 self.single_goal_dim, cfg.net_dim), nn.ReLU())
     self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
-    if self.cfg.actor_pool_type == 'berd':
-      self.berd_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
-      self.berd_attn = nn.MultiheadAttention(
+    if self.cfg.actor_pool_type == 'bert':
+      self.bert_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
+      self.bert_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
 
   def forward(self, state):
@@ -471,8 +471,8 @@ class ActorAttnBlock(nn.Module):
       return token.mean(dim=0)
     elif self.cfg.actor_pool_type == 'max':
       return token.max(dim=0)[0]
-    elif self.cfg.actor_pool_type == 'berd':
-      return self.berd_attn(self.berd_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
+    elif self.cfg.actor_pool_type == 'bert':
+      return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
     elif self.cfg.actor_pool_type == 'cross':
       return self.cross_attn(query, token, token)[0].squeeze(0)
     else:
@@ -534,9 +534,9 @@ class CriticAttnBlock(nn.Module):
                 self.single_goal_dim+self.EP.action_dim, cfg.net_dim), nn.ReLU())
     self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
-    if self.cfg.critic_pool_type == 'berd':
-      self.berd_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
-      self.berd_attn = nn.MultiheadAttention(
+    if self.cfg.critic_pool_type == 'bert':
+      self.bert_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
+      self.bert_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
 
   def forward(self, state, action=None):
@@ -561,8 +561,8 @@ class CriticAttnBlock(nn.Module):
       return token.mean(dim=0)
     elif self.cfg.critic_pool_type == 'max':
       return token.max(dim=0)[0]
-    elif self.cfg.critic_pool_type == 'berd':
-      return self.berd_attn(self.berd_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
+    elif self.cfg.critic_pool_type == 'bert':
+      return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
     elif self.cfg.critic_pool_type == 'cross':
       return self.cross_attn(query, token, token)[0].squeeze(0)
     else:

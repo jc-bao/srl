@@ -99,7 +99,15 @@ class FrankaCube(gym.Env):
 		# [p_r0[3],v_r0[3],p_g0[1]]
 		# [rot_block_i[4], p_block_i[3]]* block_num
 		# [p_goal_i[3]]*num_goals)
-		self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
+		if self.cfg.enable_robot_id:
+			self.robot_id = (torch.arange(self.cfg.num_robots, device=self.device)/self.cfg.num_robots).repeat(self.cfg.num_envs, 1)
+			id_rot_mat = torch.tensor([
+				[0, 1],
+				[1, 0]
+			], device=self.device)
+			self.obs_rot_mat = torch.block_diag(*([id_rot_mat]+[robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
+		else:
+			self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
 		self.single_act_rot_mat = torch.tensor(
 			[[-1.,0,0,0],[0,-1,0,0],[0,0,1,0],[0,0,0,1]], device=self.device)
 		self.last_act_rot_mat = torch.block_diag(torch.eye(4,dtype=torch.float,device=self.device),self.single_act_rot_mat)
@@ -833,6 +841,8 @@ class FrankaCube(gym.Env):
 			block_obs.view(self.cfg.num_envs, -1),  # objects
 			goal_normed.view(self.cfg.num_envs, self.cfg.num_goals*3),
 		), dim=-1)
+		if self.cfg.enable_robot_id:
+			obs = torch.cat((self.robot_id, obs), dim=-1)
 
 		# rew
 		rew = self.compute_reward(
@@ -1159,6 +1169,8 @@ class FrankaCube(gym.Env):
 
 	def update_config(self, cfg):
 		cfg.update(enable_camera_sensors=cfg.num_cameras > 0)
+		if cfg.enable_robot_id:
+			cfg.per_shared_dim += 1
 		cfg.update(
 			# dim
 			action_dim=cfg.per_action_dim * cfg.num_robots,
