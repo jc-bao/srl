@@ -1,3 +1,4 @@
+from cgitb import reset
 from gc import get_stats
 from re import S
 import torch
@@ -43,6 +44,12 @@ class AgentBase:
       kwargs.num_cameras = 0
     self.env = gym.make(cfg.env_name, **kwargs)
     self.cfg.update(env_params=self.env.env_params(), env_cfg=self.env.cfg)
+    reset_params = AttrDict()
+    if self.cfg.curri is not None:
+      for k, v in self.cfg.curri.items():
+        reset_params[k] = v['now']
+      self.env.reset(config=reset_params)
+      print(f'[Env] reset to {reset_params}')
     # alias for env_params
     self.EP = self.cfg.env_params
     # rollout steps
