@@ -46,9 +46,9 @@ critic_net: CriticTwin
 shared_critic: false
 mirror_q_reg_coef: 0
 net_dim: 256
-net_layer: 4
+net_layer: 6
 # attention block number
-shared_net_layer: 3
+shared_net_layer: 4
 n_head: 4 # attention params
 net_type: attn # {'mlp', 'dense', 'attn'}
 if_act_target: true
