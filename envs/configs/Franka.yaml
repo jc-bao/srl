@@ -22,6 +22,7 @@ num_cameras: 16
 num_envs: 1024 
 max_num_goals: 4
 # extra sample to keep goal away
+max_sample_time: 5
 extra_goal_sample: 10
 num_goals: 1
 base_steps: 50 

@@ -648,7 +648,7 @@ class FrankaCube(gym.Env):
 		# reset goals
 		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
 		if done_env_num > 0:
-			for _ in range(5):
+			for k in range(self.cfg.max_sample_time):
 				if self.cfg.goal_sample_mode == 'uniform':
 					extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
 				elif self.cfg.goal_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
@@ -669,6 +669,9 @@ class FrankaCube(gym.Env):
 							torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
 				if satisfied_idx.sum() >= done_env_num:
 					break
+				elif k == self.cfg.max_sample_time-1:
+					print('[Env] Warning: goal sampling failed')
+					satisfied_idx = 0
 			self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
 			self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
@@ -1394,8 +1397,8 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=1, base_steps=100, max_ag_unmoved_steps=10, early_termin_step=100, os_rate=1.0
-	, max_handover_time=2, inhand_rate=0, table_gap=0.3)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=7, base_steps=100, max_ag_unmoved_steps=10, early_termin_step=100, os_rate=1.0
+	, max_handover_time=2, inhand_rate=0, table_gap=0.3, extra_goal_sample=1000)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
