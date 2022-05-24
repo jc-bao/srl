@@ -279,16 +279,19 @@ class CriticTwin(nn.Module):  # shared parameter
                                   *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1))  # concat(state, action)
     else:
       raise NotImplementedError
-    # self.net_q1 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
-    #                             nn.Linear(cfg.net_dim, 1))  # q1 value
-    # self.net_q2 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
-    #                             nn.Linear(cfg.net_dim, 1))  # q2 value
-    self.net_q1_body = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer))
-    self.net_q1_out = nn.Linear(cfg.net_dim, 1)
-    self.net_q1 = nn.Sequential(self.net_q1_body, self.net_q1_out)
-    self.net_q2_body = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer))
-    self.net_q2_out = nn.Linear(cfg.net_dim, 1)
-    self.net_q2 = nn.Sequential(self.net_q1_body, self.net_q1_out)
+    if self.cfg.mirror_feature_reg_coef > 0: # TODO make it more elegant
+      self.net_q1_body = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer))
+      self.net_q1_out = nn.Linear(cfg.net_dim, 1)
+      self.net_q1 = nn.Sequential(self.net_q1_body, self.net_q1_out)
+      self.net_q2_body = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer))
+      self.net_q2_out = nn.Linear(cfg.net_dim, 1)
+      self.net_q2 = nn.Sequential(self.net_q1_body, self.net_q1_out)
+    else:
+      self.net_q1 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
+                                  nn.Linear(cfg.net_dim, 1))  # q1 value
+      self.net_q2 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
+                                  nn.Linear(cfg.net_dim, 1))  # q2 value
+      
 
   def forward(self, state, action):
     return torch.mean(self.get_q_all(state, action))
