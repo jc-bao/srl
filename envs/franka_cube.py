@@ -639,31 +639,30 @@ class FrankaCube(gym.Env):
 		done_env_num = reset_idx.sum()
 		# reset goals
 		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-		for _ in range(5):
-			if done_env_num == 0:
-				break
-			if self.cfg.goal_sample_mode == 'uniform':
-				extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
-			elif self.cfg.goal_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
-				extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),1), device=self.device).repeat(self.cfg.extra_goal_sample,1,self.cfg.num_goals)
-				goal_ws_shift = torch.bernoulli(torch.ones((done_env_num.item(),self.cfg.num_goals-1), device=self.device, dtype=torch.float)*self.cfg.goal_os_rate).long()
-				self.num_os_goal[reset_idx] = goal_ws_shift.sum(dim=-1)
-				extra_goal_ws_shift = goal_ws_shift.repeat(self.cfg.extra_goal_sample,1,1)
-				extra_goal_ws[...,1:] += extra_goal_ws_shift
-				extra_goal_ws %= self.cfg.num_robots
-			sampled_goal = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num.item(),self.cfg.num_goals))
-			goal_drift = torch.tensor([0,0,self.cfg.block_size/2], device=self.device)
-			sampled_goal = (sampled_goal - goal_drift)*self.cfg.goal_scale + goal_drift
-			extra_goals = sampled_goal + \
-				self.origin_shift[extra_goal_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num.item(), self.cfg.num_goals, 3)
-			goal_dist = torch.abs(extra_goals.unsqueeze(-3) - extra_goals.unsqueeze(-2))
-			satisfied_idx = ((goal_dist[...,0] > self.cfg.block_length*1.2) | \
-				(goal_dist[..., 1] > self.cfg.block_size*2) | \
-						torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
-			if satisfied_idx.sum() >= done_env_num:
-				break
-		self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
-		self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
+		if done_env_num > 0:
+			for _ in range(5):
+				if self.cfg.goal_sample_mode == 'uniform':
+					extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
+				elif self.cfg.goal_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
+					extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),1), device=self.device).repeat(self.cfg.extra_goal_sample,1,self.cfg.num_goals)
+					goal_ws_shift = torch.bernoulli(torch.ones((done_env_num.item(),self.cfg.num_goals-1), device=self.device, dtype=torch.float)*self.cfg.goal_os_rate).long()
+					self.num_os_goal[reset_idx] = goal_ws_shift.sum(dim=-1)
+					extra_goal_ws_shift = goal_ws_shift.repeat(self.cfg.extra_goal_sample,1,1)
+					extra_goal_ws[...,1:] += extra_goal_ws_shift
+					extra_goal_ws %= self.cfg.num_robots
+				sampled_goal = self.torch_goal_space.sample((self.cfg.extra_goal_sample, done_env_num.item(),self.cfg.num_goals))
+				goal_drift = torch.tensor([0,0,self.cfg.block_size/2], device=self.device)
+				sampled_goal = (sampled_goal - goal_drift)*self.cfg.goal_scale + goal_drift
+				extra_goals = sampled_goal + \
+					self.origin_shift[extra_goal_ws.flatten()].view(self.cfg.extra_goal_sample, done_env_num.item(), self.cfg.num_goals, 3)
+				goal_dist = torch.abs(extra_goals.unsqueeze(-3) - extra_goals.unsqueeze(-2))
+				satisfied_idx = ((goal_dist[...,0] > self.cfg.block_length*1.2) | \
+					(goal_dist[..., 1] > self.cfg.block_size*2) | \
+							torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
+				if satisfied_idx.sum() >= done_env_num:
+					break
+			self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
+			self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
 		for i in range(self.cfg.num_robots):
 			multi_goal_in_same_ws |= ((self.goal_workspace==i).sum(dim=-1) > 1)
