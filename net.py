@@ -279,10 +279,16 @@ class CriticTwin(nn.Module):  # shared parameter
                                   *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.shared_net_layer-1))  # concat(state, action)
     else:
       raise NotImplementedError
-    self.net_q1 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
-                                nn.Linear(cfg.net_dim, 1))  # q1 value
-    self.net_q2 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
-                                nn.Linear(cfg.net_dim, 1))  # q2 value
+    # self.net_q1 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
+    #                             nn.Linear(cfg.net_dim, 1))  # q1 value
+    # self.net_q2 = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer),
+    #                             nn.Linear(cfg.net_dim, 1))  # q2 value
+    self.net_q1_body = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer))
+    self.net_q1_out = nn.Linear(cfg.net_dim, 1)
+    self.net_q1 = nn.Sequential(self.net_q1_body, self.net_q1_out)
+    self.net_q2_body = nn.Sequential(*[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()]*(self.cfg.net_layer-1-self.cfg.shared_net_layer))
+    self.net_q2_out = nn.Linear(cfg.net_dim, 1)
+    self.net_q2 = nn.Sequential(self.net_q1_body, self.net_q1_out)
 
   def forward(self, state, action):
     return torch.mean(self.get_q_all(state, action))
@@ -291,16 +297,26 @@ class CriticTwin(nn.Module):  # shared parameter
     # min Q value
     return torch.min(self.get_q_all(state, action), dim=-1, keepdim=True)[0]
 
-  def get_q_all(self, state, action, get_mirror_std=False):
+  def get_q_all(self, state, action, get_mirror_std=False, get_embedding_norm=False):
     if self.cfg.shared_critic:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1, state.shape[-1])
       action = torch.stack((action, action@self.EP.act_rot_mat),dim=1).view(-1, action.shape[-1])
       tmp = self.net_sa(torch.cat((state, action), dim=-1))
-      q_stack = torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1).view(-1,2,2) # [batch, 2, 2]
-      if get_mirror_std:
-        return q_stack.mean(dim=1), q_stack.std(dim=1)
+      if get_embedding_norm:
+        embedding1 = self.net_q1_body(tmp)
+        q1 = self.net_q1_out(embedding1)
+        embedding2 = self.net_q2_body(tmp)
+        q2 = self.net_q2_out(embedding1)
+        embedding_stack = torch.cat((embedding1, embedding2), dim=-1).view(-1,self.cfg.net_dim,2) 
+        q_stack = torch.cat((q1, q2), dim=-1).view(-1,2,2) # [batch, 2(mirror), 2]
+        embedding_norm = torch.norm(embedding_stack, dim=1)/self.cfg.net_dim
+        return q_stack.mean(dim=1), embedding_norm
       else:
-        return q_stack.mean(dim=1)
+        q_stack = torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1).view(-1,2,2) # [batch, 2(mirror), 2]
+        if get_mirror_std:
+          return q_stack.mean(dim=1), q_stack.std(dim=1)
+        else:
+          return q_stack.mean(dim=1)
     else:
       tmp = self.net_sa(torch.cat((state, action), dim=1))
       return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)

@@ -514,6 +514,10 @@ class AgentSAC(AgentBase):
       qs, q_std = self.cri.get_q_all(trans.state, trans.action, get_mirror_std=True)
       obj_critic = self.criterion(
         qs, q_label * torch.ones_like(qs)) + q_std.mean() * self.cfg.mirror_q_reg_coef
+    elif self.cfg.mirror_feature_reg_coef > 0:
+      qs, feature_norm = self.cri.get_q_all(trans.state, trans.action, get_embedding_norm=True)
+      obj_critic = self.criterion(
+        qs, q_label * torch.ones_like(qs)) + feature_norm.mean() * self.cfg.mirror_feature_reg_coef
     else:
       qs = self.cri.get_q_all(trans.state, trans.action)
       obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
