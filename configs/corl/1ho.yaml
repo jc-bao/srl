@@ -1,2 +1,6 @@
 render: false
 shared_critic: true
+name: main
+project: corl-main-h1
+net_layer: 6
+shared_net_layer: 4
