@@ -411,7 +411,7 @@ class AgentBase:
     name_obj_list = [(name, obj)
                      for name, obj in name_obj_list if obj is not None]
     if if_save:
-      data = {'step': self.total_step, 'curri': self.cfg.curri}
+      data = {'step': self.total_step, 'curri': self.cfg.curri, 'total_save': self.total_save}
       for name, obj in name_obj_list:
         data[name] = obj.state_dict()
       last_save_path = f"{cwd}/{file_tag}_{self.total_save}.pth"
@@ -434,6 +434,7 @@ class AgentBase:
         data = torch.load(f, map_location=lambda storage, loc: storage)
       if self.cfg.resume_mode == 'continue':
         self.total_step = data['step']
+        self.total_save = data['total_save']
       if self.cfg.load_curri is None:
         self.cfg.load_curri = (self.cfg.resume_mode == 'continue')
       print('[Load] load curri:', self.cfg.load_curri)
