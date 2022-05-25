@@ -115,6 +115,7 @@ class FrankaCube(gym.Env):
 			[[0,0,0,0,-1.,0,0,0],[0,0,0,0,0,-1,0,0],[0,0,0,0,0,0,1,0],[0,0,0,0,0,0,0,1],
 			[-1.,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0]
 			], device=self.device)
+		self.dual_act_rot_mat = torch.block_diag(torch.eye(self.cfg.action_dim, device=self.device, dtype=torch.float), self.act_rot_mat)
 
 		self.reset()
 
@@ -1372,6 +1373,7 @@ class FrankaCube(gym.Env):
 			# rot matrixs
 			obs_rot_mat = self.obs_rot_mat, 
 			act_rot_mat = self.act_rot_mat, 
+			dual_act_rot_mat = self.dual_act_rot_mat, 
 			single_act_rot_mat = self.single_act_rot_mat, 
 			last_act_rot_mat = self.last_act_rot_mat,
 			# functions
