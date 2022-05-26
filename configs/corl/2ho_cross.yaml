@@ -2,12 +2,12 @@
 
 wandb: true
 project: handover2
-name: +bertA
+name: +crossA
 
 # load
-wid: 3gx9bvly
+wid: s18i9ovn
 load_project: handover1
-load_tag: latest_23
+load_tag: latest_24
 resume_mode: restart
 
 render: false
@@ -28,7 +28,7 @@ g_random_relabel_bar: 0
 # mirror replay
 shared_critic: true
 
-actor_pool_type: bert2
+actor_pool_type: cross2
 
 # env
 defaults:
