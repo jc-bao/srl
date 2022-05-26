@@ -230,6 +230,16 @@ class AgentBase:
             self.cfg) if 'PPO' in self.cfg.agent_name else ReplayBuffer(self.cfg)
           self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step,
             self.buffer.total_dim), device=self.cfg.device, dtype=torch.float32)
+          self.act.EP = self.EP
+          self.cri.EP = self.EP
+          self.act_target.EP = self.EP
+          self.cri_target.EP = self.EP
+          if self.cfg.curri.num_goals.change_other_back:
+            for k, v in self.cfg.curri.items():
+              if k != 'num_goals':
+                print(f'[Curri] change {k} to {v["init"]}')
+                self.cfg.curri[k]['now'] = self.cfg.curri[k]['init']
+                reset_params[k] = self.cfg.curri[k]['now']
       self.env.reset(config=reset_params)
     results.update(curri=reset_params)
     return results

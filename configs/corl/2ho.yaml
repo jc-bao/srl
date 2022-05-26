@@ -23,4 +23,4 @@ g_random_relabel_bar: 0
 shared_critic: true
 
 defaults:
-  - override /curri: num_gap_os
+  - override /curri: os_gap_num
