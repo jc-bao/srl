@@ -31,3 +31,5 @@ shared_critic: true
 # env
 defaults:
   - env: 2ho
+
+max_collect_steps: !!float 40e6
