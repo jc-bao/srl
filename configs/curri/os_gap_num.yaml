@@ -18,5 +18,5 @@ num_goals:
   end: 2
   step: 1
   indicator: torch.mean(handover_success_rate[1:]).item() 
-  bar: 0.9
+  bar: 0.96
   change_other_back: true 
