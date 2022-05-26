@@ -1,14 +1,8 @@
 # @package _global_
 
 wandb: true
-project: handover2
-name: Base
-
-# load
-wid: 2oa7y41m
-load_prject: handover1
-load_tag: latest_24
-resume_mode: restart
+project: corl-main
+name: main
 
 render: false
 
@@ -28,6 +22,5 @@ g_random_relabel_bar: 0
 # mirror replay
 shared_critic: true
 
-# env
 defaults:
-  - env: 2ho
+  - override /curri: os_gap_num
