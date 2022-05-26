@@ -6,7 +6,7 @@ name: Base
 
 # load
 wid: 2oa7y41m
-load_prject: handover1
+load_project: handover1
 load_tag: latest_24
 resume_mode: restart
 
