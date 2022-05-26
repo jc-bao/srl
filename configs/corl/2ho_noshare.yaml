@@ -2,7 +2,7 @@
 
 wandb: true
 project: handover2
-name: -shareQ
+name: -shareC
 
 # load
 wid: 3npj4nhm
@@ -24,6 +24,8 @@ if_act_target: false
 # partial relabel
 g_random_relabel_rate: 1.0 
 g_random_relabel_bar: 0
+
+# mirror replay
 
 # env
 defaults:
