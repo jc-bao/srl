@@ -2,12 +2,12 @@
 
 wandb: true
 project: handover2
-name: +shareA+ID
+name: Base
 
 # load
-wid: 23xhghk2
+wid: 3gx9bvly
 load_project: handover1
-load_tag: latest_24
+load_tag: latest_23
 resume_mode: restart
 
 render: false
@@ -27,12 +27,11 @@ g_random_relabel_bar: 0
 
 # mirror replay
 shared_critic: true
-shared_actor: true
+
+actor_pool_type: bert2
 
 # env
 defaults:
   - override /env: 2ho
-env:
-  enable_robot_id: true
 
 max_collect_steps: !!float 40e6
