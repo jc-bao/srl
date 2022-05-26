@@ -37,12 +37,16 @@ class AgentBase:
 
     '''env setup'''
     print('[Agent] env setup')
-    kwargs = cfg.env
-    kwargs.sim_device_id = self.cfg.gpu_id
-    kwargs.rl_device_id = self.cfg.gpu_id
+    self.env_kwargs = cfg.env
+    self.env_kwargs.sim_device_id = self.cfg.gpu_id
+    self.env_kwargs.rl_device_id = self.cfg.gpu_id
     if not self.cfg.render:
-      kwargs.num_cameras = 0
-    self.env = gym.make(cfg.env_name, **kwargs)
+      self.env_kwargs.num_cameras = 0
+    # handle special case: change goal number
+    if self.cfg.curri is not None and 'num_goals' in self.cfg.curri:
+      self.env_kwargs.num_goals = self.cfg.curri.num_goals.now
+      print(f'[Env] change number of goals from {self.env_kwargs.num_goals} to {self.cfg.curri.num_goals.now} in the init...')
+    self.env = gym.make(cfg.env_name, **self.env_kwargs)
     self.cfg.update(env_params=self.env.env_params(), env_cfg=self.env.cfg)
     reset_params = AttrDict()
     if self.cfg.curri is not None:
@@ -210,6 +214,22 @@ class AgentBase:
         if eval(v['indicator']) > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
           self.cfg.curri[k]['now'] += v['step']
         reset_params[k] = self.cfg.curri[k]['now']
+        if 'num_goals' in reset_params and reset_params[
+            'num_goals'] != self.env.cfg.num_goals:
+          self.env_kwargs.num_goals = reset_params['num_goals']
+          print(f'[Env] change num_goals to {self.env_kwargs.num_goals}, rebuild env...')
+          self.env.close()
+          del self.env
+          self.env = gym.make(self.cfg.env_name, **self.env_kwargs)
+          self.cfg.update(env_params=self.env.env_params(), env_cfg=self.env.cfg)
+          self.EP = self.cfg.env_params
+          print(f'[Agent] change num_goals to {self.env_kwargs.num_goals}, rebuild buffer...')
+          del self.buffer
+          del self.traj_list
+          self.buffer = ReplayBufferList(
+            self.cfg) if 'PPO' in self.cfg.agent_name else ReplayBuffer(self.cfg)
+          self.traj_list = torch.empty((self.EP.num_envs, self.EP.max_env_step,
+            self.buffer.total_dim), device=self.cfg.device, dtype=torch.float32)
       self.env.reset(config=reset_params)
     results.update(curri=reset_params)
     return results
@@ -497,7 +517,9 @@ class AgentSAC(AgentBase):
     return AttrDict(
       critic_loss=obj_critic.item(),
       actor_loss=-obj_actor.item(),
-      alpha_log=self.alpha_log.exp().detach().item()
+      alpha_log=self.alpha_log.exp().detach().item(),
+      ag_random_relabel_rate=self.buffer.ag_random_relabel_rate.item(),
+      g_random_relabel_rate=self.buffer.g_random_relabel_rate.item(),
     )
 
   def get_obj_critic_raw(self, buffer, batch_size):
