@@ -1,0 +1,25 @@
+# @package _global_
+
+wandb: true
+project: handover1
+name: parbar10 
+
+render: false
+
+net_layer: 6
+shared_net_layer: 4
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+
+# partial relabel
+g_random_relabel_rate: 1 
+g_random_relabel_bar: 10
+
+# mirror replay
+shared_critic: true
+
+max_collect_steps: !!float 30e6
