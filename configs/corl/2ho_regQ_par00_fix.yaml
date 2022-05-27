@@ -2,7 +2,7 @@
 
 wandb: true
 project: handover2
-name: +regQ0.1+par0.0+far
+name: +regQ0.1+par0.0+fix
 
 # load
 wid: 2gvwywed
