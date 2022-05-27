@@ -506,6 +506,7 @@ class FrankaCube(gym.Env):
 		self.goal_workspace = torch.zeros((self.cfg.num_envs, self.cfg.num_goals), device=self.device, dtype=torch.long)
 		self.block_workspace = torch.zeros((self.cfg.num_envs, self.cfg.num_goals), device=self.device, dtype=torch.long)
 		self.num_os_goal = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.long)
+		self.goal_mask = torch.zeros((self.cfg.num_envs, self.cfg.num_goals), device=self.device, dtype=torch.float)
 		# table
 		self.table_states = self.root_state_tensor[:, self.cfg.num_robots:self.cfg.num_robots*2]
 
@@ -674,6 +675,11 @@ class FrankaCube(gym.Env):
 					print('[Env] Warning: goal sampling failed')
 					satisfied_idx = 0
 			self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
+			num_goals = int(self.cfg.current_num_goals)
+			rand_num_rate = self.cfg.current_num_goals - num_goals
+			self.goal_mask[reset_idx, :num_goals] = 1.0
+			self.goal_mask[reset_idx, num_goals] = (torch.rand(done_env_num.item(), device=self.device) < rand_num_rate).float()
+			self.goal_mask[reset_idx, num_goals+1:] = 0.0
 			self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
 		for i in range(self.cfg.num_robots):
@@ -895,6 +901,8 @@ class FrankaCube(gym.Env):
 			reached_ag.float(),
 			# ag unmoved steps
 			self.ag_unmoved_steps,
+			# goal masks
+			self.goal_mask.view(self.cfg.num_envs, -1),
 		), dim=-1)
 		self.last_step_ag = self.block_states[..., :3].clone()
 
@@ -1181,7 +1189,7 @@ class FrankaCube(gym.Env):
 			shared_dim=cfg.per_shared_dim * cfg.num_robots, 
 			state_dim=cfg.per_shared_dim * cfg.num_robots + cfg.per_seperate_dim * \
 			cfg.num_goals + cfg.per_goal_dim*cfg.num_goals,
-			info_dim=cfg.info_dim + cfg.num_goals*cfg.per_goal_dim + cfg.num_robots*3 + cfg.num_goals*2,
+			info_dim=cfg.info_dim + cfg.num_goals*cfg.per_goal_dim + cfg.num_robots*3 + cfg.num_goals*3,
 			seperate_dim=cfg.per_seperate_dim * cfg.num_goals,
 			goal_dim=cfg.per_goal_dim * cfg.num_goals,
 			# device
@@ -1281,6 +1289,7 @@ class FrankaCube(gym.Env):
 			grip_pos_start = 6+self.cfg.goal_dim
 			reached_ag_start = grip_pos_start + self.cfg.num_robots*3
 			ag_unmoved_steps_start = reached_ag_start + self.cfg.num_goals
+			goal_mask_start = ag_unmoved_steps_start + self.cfg.num_goals
 			return AttrDict(
 				success = info[..., 0], 
 				step= info[...,1],
@@ -1291,7 +1300,8 @@ class FrankaCube(gym.Env):
 				ag = info[..., 6:6+self.cfg.goal_dim], 
 				grip_pos = info[..., grip_pos_start:reached_ag_start],
 				reached_ag = info[...,reached_ag_start:ag_unmoved_steps_start], 
-				ag_unmoved_steps = info[...,ag_unmoved_steps_start:ag_unmoved_steps_start+self.cfg.num_goals], 
+				ag_unmoved_steps = info[...,ag_unmoved_steps_start:goal_mask_start], 
+				goal_mask = info[...,goal_mask_start:goal_mask_start+self.cfg.num_goals], 
 			)
 		elif name == 'success':
 			return info[..., 0]
@@ -1308,11 +1318,13 @@ class FrankaCube(gym.Env):
 		elif name == 'ag':
 			return info[..., 6:6+self.cfg.goal_dim]
 		elif name == 'grip_pos':
-			return info[..., 6+self.cfg.goal_dim:6+self.cfg.goal_dim+self.cfg.num_robot*3]
+			return info[..., 6+self.cfg.goal_dim:6+self.cfg.goal_dim+self.cfg.num_robots*3]
 		elif name == 'reached_ag':
-			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robot*3:6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals]
+			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals]
 		elif name == 'ag_unmoved_steps':
-			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals*2]
+			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2]
+		elif name == 'goal_mask':
+			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3]
 		else:
 			raise NotImplementedError
 
@@ -1332,11 +1344,13 @@ class FrankaCube(gym.Env):
 		if 'ag' in new_info:
 			old_info[..., 6:6+self.cfg.num_goals*3] = new_info.ag
 		if 'grip_pos' in new_info:
-			old_info[..., 6+self.cfg.num_goals*3:6+self.cfg.num_goals*3+self.cfg.num_robot*3] = new_info.grip_pos
+			old_info[..., 6+self.cfg.num_goals*3:6+self.cfg.num_goals*3+self.cfg.num_robots*3] = new_info.grip_pos
 		if 'reached_ag' in new_info:
-			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robot*3:6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals] = new_info.reached_ag
+			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals] = new_info.reached_ag
 		if 'ag_unmoved_steps' in new_info:
-			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals*2] = new_info.ag_unmoved_steps
+			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2] = new_info.ag_unmoved_steps
+		if 'goal_mask' in new_info:
+			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3] = new_info.goal_mask
 		return old_info
 
 	def sample_goal(self, size, norm = True, change_ws=False, g_origin=None):
@@ -1403,8 +1417,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=7, base_steps=100, max_ag_unmoved_steps=10, early_termin_step=100, os_rate=1.0
-	, max_handover_time=2, inhand_rate=0, table_gap=0.3, extra_goal_sample=1000)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=1.5, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.3, extra_goal_sample=1000, base_step=10)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1427,7 +1440,7 @@ if __name__ == '__main__':
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
 			# env.render(mode='human')
-			# info_dict = env.info_parser(info)
+			print(env.info_parser(info, 'goal_mask'))
 			# print(info_dict.step.item())
 		# Image.fromarray(images[0]).save('foo.png')
 

@@ -491,7 +491,7 @@ class ActorAttnBlock(nn.Module):
       self.bert_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
 
-  def forward(self, state):
+  def forward(self, state, mask=None):
     grip = state[..., :self.shared_dim]
     obj = state[..., self.shared_dim:self.shared_dim +
                 self.seperate_dim].reshape(-1, self.num_goals, self.single_seperate_dim)
@@ -506,7 +506,7 @@ class ActorAttnBlock(nn.Module):
       x = torch.cat((self.bert_query.repeat(1,x.shape[1],1), x), 0) # Tensor(num_goals+1, num_envs, net_dim)
     if self.cfg.actor_pool_type == 'cross2':
       x = torch.cat((query, x), 0) # Tensor(num_goals+1, num_envs, net_dim)
-    token = self.enc(x)
+    token = self.enc(x) if mask is None else self.enc(x, mask)
     if self.cfg.actor_pool_type == 'mean':
       return token.mean(dim=0)
     elif self.cfg.actor_pool_type == 'max':

@@ -20,7 +20,7 @@ extra_steps: 5
 # number
 num_cameras: 16
 num_envs: 1024 
-max_num_goals: 4
+current_num_goals: 1
 # extra sample to keep goal away
 max_sample_time: 5
 extra_goal_sample: 10
