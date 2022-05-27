@@ -77,7 +77,7 @@ class ReplayBuffer:  # for off-policy
 			if g_random_relabel_num > 0:
 				fut_ag = fut_ag.view(fut_ag.shape[0],self.EP.num_goals,-1)
 				if self.cfg.g_random_relabel_change_ws:
-					fut_ag[g_random_relabel_idx] = self.EP.sample_goal(size=g_random_relabel_idx.sum(), change_ws=True, g_origin=g_origin[g_random_relabel_idx])
+					fut_ag[g_random_relabel_idx] = self.EP.sample_goal(size=g_random_relabel_idx.sum(), change_ws=True, g_origin=next_info_dict.ag.view(her_batch_size,-1,3)[g_random_relabel_idx])
 				else:
 					fut_ag[g_random_relabel_idx] = self.EP.sample_goal(size=g_random_relabel_idx.sum())
 				fut_ag = fut_ag.view(fut_ag.shape[0],-1)
