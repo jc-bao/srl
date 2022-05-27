@@ -1,0 +1,38 @@
+# @package _global_
+
+wandb: true
+project: handover2
+name: +regQ0.1
+
+# load
+wid: 2gvwywed
+load_project: handover1
+load_tag: latest_24
+resume_mode: restart
+
+render: false
+
+net_layer: 6
+shared_net_layer: 4
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+
+# partial relabel
+g_random_relabel_rate: 0.0 
+g_random_relabel_bar: 0
+
+# mirror replay
+shared_critic: true
+
+# regret Q feature
+mirror_q_reg_coef: 0.1
+
+# env
+defaults:
+  - override /env: 2ho
+
+max_collect_steps: !!float 40e6
