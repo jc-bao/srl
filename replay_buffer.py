@@ -57,6 +57,7 @@ class ReplayBuffer:  # for off-policy
 		batch_size = indices.shape[0]
 		her_batch_size = int(batch_size * her_rate)
 		if her_batch_size > 0:
+			g_origin = self.EP.obs_parser(trans_dict.state[:her_batch_size], 'g').view(her_batch_size,-1,3)
 			next_info_dict = self.EP.info_parser(next_trans_dict.info[:her_batch_size])
 			tleft = next_info_dict.tleft.long()
 			next_idx_global = indices[:her_batch_size] + 1
@@ -67,12 +68,23 @@ class ReplayBuffer:  # for off-policy
 			fut_ag = self.data_parser(fut_trans,'info.ag')
 			# random relabel
 			unmoved_ag_idx = next_info_dict.ag_unmoved_steps > self.cfg.g_random_relabel_bar # 5 
-			g_random_relabel_idx = unmoved_ag_idx & (torch.rand(unmoved_ag_idx.shape, device=self.device) < self.cfg.g_random_relabel_rate)
+			rand_mask = (torch.rand(unmoved_ag_idx.shape, device=self.device) < self.cfg.g_random_relabel_rate)
+			g_random_relabel_idx = unmoved_ag_idx & rand_mask
+			g_fix_relabel_idx = unmoved_ag_idx & (~rand_mask)
 			g_random_relabel_num = g_random_relabel_idx.sum()
+			g_fix_relabel_num = g_fix_relabel_idx.sum()
 			self.g_random_relabel_rate = g_random_relabel_num / her_batch_size 
 			if g_random_relabel_num > 0:
 				fut_ag = fut_ag.view(fut_ag.shape[0],self.EP.num_goals,-1)
-				fut_ag[g_random_relabel_idx] = self.EP.sample_goal(size=g_random_relabel_idx.sum())
+				if self.cfg.g_random_relabel_change_ws:
+					fut_ag[g_random_relabel_idx] = self.EP.sample_goal(size=g_random_relabel_idx.sum(), change_ws=True, g_origin=g_origin[g_random_relabel_idx])
+				else:
+					fut_ag[g_random_relabel_idx] = self.EP.sample_goal(size=g_random_relabel_idx.sum())
+				fut_ag = fut_ag.view(fut_ag.shape[0],-1)
+			# fix relabel
+			if self.cfg.not_change_unmoved and g_fix_relabel_num > 0:
+				fut_ag = fut_ag.view(fut_ag.shape[0],self.EP.num_goals,-1)
+				fut_ag[g_fix_relabel_idx] = g_origin[g_fix_relabel_idx]
 				fut_ag = fut_ag.view(fut_ag.shape[0],-1)
 			self.EP.obs_updater(trans_dict.state[:her_batch_size], AttrDict(g=fut_ag))
 			self.EP.obs_updater(next_trans_dict.state[:her_batch_size], AttrDict(g=fut_ag))

@@ -1339,8 +1339,12 @@ class FrankaCube(gym.Env):
 			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robot*3+self.cfg.num_goals*2] = new_info.ag_unmoved_steps
 		return old_info
 
-	def sample_goal(self, size, norm = True):
-		goal_workspace = torch.randint(self.cfg.num_robots,size=(size, ), device=self.device)
+	def sample_goal(self, size, norm = True, change_ws=False, g_origin=None):
+		if change_ws:
+			init_ws = (g_origin[..., 0] > 0).long()
+			goal_workspace = (init_ws+1)%2
+		else:
+			goal_workspace = torch.randint(self.cfg.num_robots,size=(size, ), device=self.device)
 		goal = self.torch_goal_space.sample((size,))+self.origin_shift[goal_workspace]
 		if norm:
 			return (goal-self.goal_mean)/self.goal_std
