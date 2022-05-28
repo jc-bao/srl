@@ -678,8 +678,9 @@ class FrankaCube(gym.Env):
 			num_goals = int(self.cfg.current_num_goals)
 			rand_num_rate = self.cfg.current_num_goals - num_goals
 			self.goal_mask[reset_idx, :num_goals] = 1.0
-			self.goal_mask[reset_idx, num_goals] = (torch.rand(done_env_num.item(), device=self.device) < rand_num_rate).float()
-			self.goal_mask[reset_idx, num_goals+1:] = 0.0
+			if num_goals < self.cfg.num_goals:
+				self.goal_mask[reset_idx, num_goals] = (torch.rand(done_env_num.item(), device=self.device) < rand_num_rate).float()
+				self.goal_mask[reset_idx, num_goals+1:] = 0.0
 			self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
 		for i in range(self.cfg.num_robots):
@@ -1324,9 +1325,9 @@ class FrankaCube(gym.Env):
 		elif name == 'ag_unmoved_steps':
 			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2]
 		elif name == 'goal_mask':
-			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3]
+			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3].bool()
 		else:
-			raise NotImplementedError
+			return None
 
 	def info_updater(self, old_info, new_info:AttrDict):
 		if 'success' in new_info:

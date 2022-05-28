@@ -150,7 +150,7 @@ class AgentBase:
     # loop
     collected_eps = 0
     while collected_eps < target_eps or (num_ep < 1).any():
-      ten_a = self.act(ten_s).detach()
+      ten_a = self.act(ten_s, self.EP.info_parser(ten_info, 'goal_mask')).detach()
       ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
       if self.cfg.render and render:
@@ -214,6 +214,8 @@ class AgentBase:
         if eval(v['indicator']) > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
           self.cfg.curri[k]['now'] += v['step']
         reset_params[k] = self.cfg.curri[k]['now']
+        '''
+        Old version of goal number curriculum, need to flush out buffer
         if 'num_goals' in reset_params and reset_params[
             'num_goals'] != self.env.cfg.num_goals:
           self.env_kwargs.num_goals = reset_params['num_goals']
@@ -240,6 +242,7 @@ class AgentBase:
                 print(f'[Curri] change {k} to {v["init"]}')
                 self.cfg.curri[k]['now'] = self.cfg.curri[k]['init']
                 reset_params[k] = self.cfg.curri[k]['now']
+        '''
       self.env.reset(config=reset_params)
     results.update(curri=reset_params)
     return results
@@ -263,11 +266,11 @@ class AgentBase:
     useless_steps = 0  # data explored but dropped
     # loop
     s, rew, done, info = self.env.reset()
-    act = self.act.get_action(s).detach()
+    act = self.act.get_action(s, self.EP.info_parser(info, 'goal_mask')).detach()
     while collected_steps < target_steps or (num_ep < 1).any():
       # setup next state
       s, rew, done, info = self.env.step(act)  # different
-      act = self.act.get_action(s).detach()
+      act = self.act.get_action(s, self.EP.info_parser(info, 'goal_mask')).detach()
 
       # update buffer
       num_ep[done.type(torch.bool)] += 1
@@ -392,7 +395,7 @@ class AgentBase:
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
       trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
-      next_a = self.act_target(trans.next_state)  # stochastic policy
+      next_a = self.act_target(trans.next_state, self.EP.info_parser(trans.info, 'goal_mask'))  # stochastic policy
       critic_targets: torch.Tensor = self.cri_target(
         trans.next_state, next_a)
       (next_q, min_indices) = torch.min(
@@ -500,7 +503,7 @@ class AgentSAC(AgentBase):
     obj_critic = obj_actor = torch.zeros(1, device=self.cfg.device)[0]
     for _ in range(int(self.buffer.now_len / self.buffer.max_len * self.cfg.updates_per_rollout)):
       '''objective of critic (loss function of critic)'''
-      obj_critic, state = self.get_obj_critic(
+      obj_critic, trans = self.get_obj_critic(
         self.buffer, self.cfg.batch_size)
       self.optimizer_update(self.cri_optimizer, obj_critic)
       self.soft_update(self.cri_target, self.cri,
@@ -508,7 +511,7 @@ class AgentSAC(AgentBase):
 
       '''objective of alpha (temperature parameter automatic adjustment)'''
       a_noise_pg, log_prob = self.act.get_action_logprob(
-        state)  # policy gradient
+        trans.state, self.EP.info_parser(trans.info, 'goal_mask'))  # policy gradient
       obj_alpha = (self.alpha_log * (log_prob -
                                      self.target_entropy).detach()).mean()
       self.optimizer_update(self.alpha_optim, obj_alpha)
@@ -518,7 +521,7 @@ class AgentSAC(AgentBase):
       with torch.no_grad():
         self.alpha_log[:] = self.alpha_log.clamp(-20, 2)
 
-      q_value_pg = self.cri(state, a_noise_pg)
+      q_value_pg = self.cri(trans.state, a_noise_pg, self.EP.info_parser(trans.info, 'goal_mask'))
       obj_actor = -(q_value_pg + log_prob * alpha).mean()
       self.optimizer_update(self.act_optimizer, obj_actor)
       # SAC don't use act_target network
@@ -535,44 +538,26 @@ class AgentSAC(AgentBase):
   def get_obj_critic_raw(self, buffer, batch_size):
     with torch.no_grad():
       trans = buffer.sample_batch(batch_size, her_rate=self.cfg.her_rate)
+      mask = self.EP.info_parser(trans.info, 'goal_mask')
       next_a, next_log_prob = self.act_target.get_action_logprob(
-        trans.next_state)  # stochastic policy
-      next_q = self.cri_target.get_q_min(trans.next_state, next_a)
+        trans.next_state, mask)  # stochastic policy
+      next_q = self.cri_target.get_q_min(trans.next_state, next_a, mask=mask)
 
       alpha = self.alpha_log.exp().detach()
       q_label = trans.rew.unsqueeze(-1) + trans.mask.unsqueeze(-1) * \
         (next_q + next_log_prob * alpha)
     if self.cfg.mirror_q_reg_coef > 0:
-      qs, q_std = self.cri.get_q_all(trans.state, trans.action, get_mirror_std=True)
+      qs, q_std = self.cri.get_q_all(trans.state, trans.action, get_mirror_std=True, mask=mask)
       obj_critic = self.criterion(
         qs, q_label * torch.ones_like(qs)) + q_std.mean() * self.cfg.mirror_q_reg_coef
     elif self.cfg.mirror_feature_reg_coef > 0:
-      qs, feature_norm = self.cri.get_q_all(trans.state, trans.action, get_embedding_norm=True)
+      qs, feature_norm = self.cri.get_q_all(trans.state, trans.action, get_embedding_norm=True, mask=mask)
       obj_critic = self.criterion(
         qs, q_label * torch.ones_like(qs)) + feature_norm.mean() * self.cfg.mirror_feature_reg_coef
     else:
-      qs = self.cri.get_q_all(trans.state, trans.action)
+      qs = self.cri.get_q_all(trans.state, trans.action, mask=mask)
       obj_critic = self.criterion(qs, q_label * torch.ones_like(qs))
-    return obj_critic, trans.state
-
-  def get_obj_critic_per(self, buffer, batch_size):
-    with torch.no_grad():
-      reward, mask, action, state, next_s, is_weights = buffer.sample_batch(
-        batch_size)
-
-      next_a, next_log_prob = self.act_target.get_action_logprob(
-        next_s)  # stochastic policy
-      next_q = self.cri_target.get_q_min(next_s, next_a)
-
-      alpha = self.alpha_log.exp().detach()
-      q_label = reward + mask * (next_q + next_log_prob * alpha)
-    q1, q2 = self.cri.get_q_all(state, action)
-    td_error = (self.criterion(q1, q_label) +
-                self.criterion(q2, q_label)) / 2.
-    obj_critic = (td_error * is_weights).mean()
-
-    buffer.td_error_update(td_error.detach())
-    return obj_critic, state
+    return obj_critic, trans
 
 
 class AgentModSAC(AgentSAC):

@@ -100,10 +100,14 @@ class ActorFixSAC(nn.Module):
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
         (self.cfg.net_layer-self.cfg.shared_net_layer-1),)
     elif cfg.net_type == 'attn':
-      self.net_state = nn.Sequential(
+      self.net_state = mySequential(
         ActorAttnBlock(cfg),
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
         (self.cfg.net_layer-self.cfg.shared_net_layer-1))
+      # self.net_state_attn = ActorAttnBlock(cfg)
+      # self.net_state_mlp = nn.Sequential(
+      #   *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
+      #   (self.cfg.net_layer-self.cfg.shared_net_layer-1))
     elif cfg.net_type == 'mlp':
       self.net_state = nn.Sequential(
         nn.Linear(self.EP.state_dim, cfg.net_dim), nn.ReLU(),
@@ -126,10 +130,14 @@ class ActorFixSAC(nn.Module):
     self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
     self.soft_plus = nn.Softplus()
 
-  def forward(self, state):
+  def forward(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
-    tmp = self.net_state(state)
+    if self.cfg.net_type == 'attn':
+      # tmp = self.get_attn_net_state(state, mask)
+      tmp = self.net_state(state, mask)
+    else:
+      tmp = self.net_state(state)
     a_avg = self.net_a_avg(tmp).tanh()
     if self.cfg.shared_actor:
       a_avg = a_avg.view(-1,self.EP.action_dim)
@@ -140,10 +148,14 @@ class ActorFixSAC(nn.Module):
       a_avg = a_avg.view(-1,2,self.EP.action_dim).mean(dim=1)
     return a_avg
 
-  def get_action(self, state):
+  def get_action(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
-    t_tmp = self.net_state(state)
+    if self.cfg.net_type == 'attn':
+      # t_tmp = self.get_attn_net_state(state, mask)
+      t_tmp = self.net_state(state, mask)
+    else:
+      t_tmp = self.net_state(state)
     a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
     a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
     act = torch.normal(a_avg, a_std).tanh()  # re-parameterize
@@ -156,10 +168,21 @@ class ActorFixSAC(nn.Module):
       act = act.view(-1,2,self.EP.action_dim).mean(dim=1)
     return act
 
-  def get_a_log_std(self, state):
+  # TODO Rename this here and in `forward` and `get_action`
+  # def get_attn_net_state(self, state, mask):
+  #   result = self.net_state_attn(state, mask)[0]
+  #   print(result.shape)
+  #   result = self.net_state_mlp(result)
+  #   return result
+
+  def get_a_log_std(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
-    t_tmp = self.net_state(state)
+    if self.cfg.net_type == 'attn':
+      # t_tmp = self.get_attn_net_state(state, mask)
+      t_tmp = self.net_state(state, mask)
+    else:
+      t_tmp = self.net_state(state)
     a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
     if self.cfg.shared_actor:
       a_std = a_std.view(-1,2,self.EP.per_action_dim)
@@ -168,10 +191,14 @@ class ActorFixSAC(nn.Module):
       a_std = a_std.view(-1,2,self.EP.action_dim).mean(dim=1)
     return a_std
 
-  def get_logprob(self, state, action):
+  def get_logprob(self, state, action, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
-    t_tmp = self.net_state(state)
+    if self.cfg.net_type == 'attn':
+      # t_tmp = self.get_attn_net_state(state, mask)
+      t_tmp = self.net_state(state, mask)
+    else:
+      t_tmp = self.net_state(state)
     a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
     a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
     a_std = a_std_log.exp()
@@ -187,10 +214,14 @@ class ActorFixSAC(nn.Module):
       log_prob = log_prob.view(-1,2,self.EP.action_dim).mean(dim=1)
     return log_prob
 
-  def get_action_logprob(self, state):
+  def get_action_logprob(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
-    t_tmp = self.net_state(state)
+    if self.cfg.net_type == 'attn':
+      # t_tmp = self.get_attn_net_state(state, mask)
+      t_tmp = self.net_state(state, mask)
+    else:
+      t_tmp = self.net_state(state)
     a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
     a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
     a_std = a_std_log.exp()
@@ -310,18 +341,21 @@ class CriticTwin(nn.Module):  # shared parameter
                                   nn.Linear(cfg.net_dim, 1))  # q2 value
       
 
-  def forward(self, state, action):
-    return torch.mean(self.get_q_all(state, action))
+  def forward(self, state, action, mask=None):
+    return torch.mean(self.get_q_all(state, action, mask))
 
-  def get_q_min(self, state, action):
+  def get_q_min(self, state, action, mask=None):
     # min Q value
-    return torch.min(self.get_q_all(state, action), dim=-1, keepdim=True)[0]
+    return torch.min(self.get_q_all(state, action, mask=mask), dim=-1, keepdim=True)[0]
 
-  def get_q_all(self, state, action, get_mirror_std=False, get_embedding_norm=False):
+  def get_q_all(self, state, action, mask=None, get_mirror_std=False, get_embedding_norm=False):
     if self.cfg.shared_critic:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1, state.shape[-1])
       action = torch.stack((action, action@self.EP.act_rot_mat),dim=1).view(-1, action.shape[-1])
-      tmp = self.net_sa(torch.cat((state, action), dim=-1))
+      if self.cfg.net_type == 'attn':
+        tmp = self.net_sa(torch.cat((state, action), dim=-1), mask=mask)
+      else:
+        tmp = self.net_sa(torch.cat((state, action), dim=-1))
       if get_embedding_norm:
         embedding1 = self.net_q1_body(tmp)
         q1 = self.net_q1_out(embedding1)
@@ -338,7 +372,10 @@ class CriticTwin(nn.Module):  # shared parameter
         else:
           return q_stack.mean(dim=1)
     else:
-      tmp = self.net_sa(torch.cat((state, action), dim=1))
+      if self.cfg.net_type == 'attn':
+        tmp = self.net_sa(torch.cat((state, action), dim=-1), mask=mask)
+      else:
+        tmp = self.net_sa(torch.cat((state, action), dim=-1))
       return torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1)
 
 
@@ -484,7 +521,7 @@ class ActorAttnBlock(nn.Module):
     self.embed = nn.Sequential(
       nn.Linear(self.shared_dim + self.single_seperate_dim +
                 self.single_goal_dim, cfg.net_dim), nn.ReLU())
-    self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
+    self.enc = mySequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
     if self.cfg.actor_pool_type in ['bert', 'bert2']:
       self.bert_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
@@ -505,22 +542,33 @@ class ActorAttnBlock(nn.Module):
     if self.cfg.actor_pool_type == 'bert2':
       x = torch.cat((self.bert_query.repeat(1,x.shape[1],1), x), 0) # Tensor(num_goals+1, num_envs, net_dim)
     if self.cfg.actor_pool_type == 'cross2':
-      x = torch.cat((query, x), 0) # Tensor(num_goals+1, num_envs, net_dim)
-    token = self.enc(x) if mask is None else self.enc(x, mask)
-    if self.cfg.actor_pool_type == 'mean':
-      return token.mean(dim=0)
-    elif self.cfg.actor_pool_type == 'max':
-      return token.max(dim=0)[0]
-    elif self.cfg.actor_pool_type == 'bert':
-      return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
-    elif self.cfg.actor_pool_type == 'bert2':
-      return self.bert_attn(token[[0]], token[1:], token[1:])[0].squeeze(0)
-    elif self.cfg.actor_pool_type == 'cross':
-      return self.cross_attn(query, token, token)[0].squeeze(0)
-    elif self.cfg.actor_pool_type == 'cross2':
-      return self.cross_attn(token[[0]], token[1:], token[1:])[0].squeeze(0)
+      x = torch.cat((query, x), 0) # Tensor[num_goals+1, num_envs, net_dim]
+    token, mask = self.enc(x, mask) # Tensor[num_goals, num_envs, net_dim], Tensor[num_envs, num_goals]
+    if mask is None:
+      if self.cfg.actor_pool_type == 'mean':
+        return token.mean(dim=0)
+      elif self.cfg.actor_pool_type == 'max':
+        return token.max(dim=0)[0]
+      elif self.cfg.actor_pool_type == 'bert':
+        return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
+      elif self.cfg.actor_pool_type == 'bert2':
+        return self.bert_attn(token[[0]], token[1:], token[1:])[0].squeeze(0)
+      elif self.cfg.actor_pool_type == 'cross':
+        return self.cross_attn(query, token, token)[0].squeeze(0)
+      elif self.cfg.actor_pool_type == 'cross2':
+        return self.cross_attn(token[[0]], token[1:], token[1:])[0].squeeze(0)
+      else:
+        raise NotImplementedError
     else:
-      raise NotImplementedError
+      if self.cfg.actor_pool_type == 'mean':
+        token[mask.transpose(0, 1) == 0] = 0.0
+        return token.sum(dim=0)/mask.sum(dim=1, keepdim=True)
+      elif self.cfg.actor_pool_type == 'max':
+        token[mask.transpose(0, 1) == 0] = -torch.inf
+        return token.max(dim=0)[0]
+      else:
+        raise NotImplementedError
+
 
 
 class CriticDeepsetBlock(nn.Module):
@@ -576,14 +624,14 @@ class CriticAttnBlock(nn.Module):
     self.embed = nn.Sequential(
       nn.Linear(self.shared_dim + self.single_seperate_dim +
                 self.single_goal_dim+self.EP.action_dim, cfg.net_dim), nn.ReLU())
-    self.enc = nn.Sequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
+    self.enc = mySequential(*[AttnEncoderLayer(self.cfg.net_dim, n_head=self.cfg.n_head, dim_ff=self.cfg.net_dim,
                                                 pre_lnorm=True, dropout=0.0) for _ in range(self.cfg.shared_net_layer-1)])
     if self.cfg.critic_pool_type == 'bert':
       self.bert_query = nn.parameter.Parameter(torch.randn(self.cfg.net_dim))
       self.bert_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
 
-  def forward(self, state, action=None):
+  def forward(self, state, action=None, mask=None):
     if action is None:
       action = state[..., -self.action_dim:]
     batch_shape = state.shape[:-1] # [batch] or [batch, stack]
@@ -600,17 +648,27 @@ class CriticAttnBlock(nn.Module):
     action = action.unsqueeze(-2).repeat(*([1]*batch_shape_len), self.num_goals, 1)
     x = torch.cat((grip, obj, g, action), -1)  # batch, obj, feature
     x = self.embed(x).transpose(0, 1)
-    token = self.enc(x)
-    if self.cfg.critic_pool_type == 'mean':
-      return token.mean(dim=0)
-    elif self.cfg.critic_pool_type == 'max':
-      return token.max(dim=0)[0]
-    elif self.cfg.critic_pool_type == 'bert':
-      return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
-    elif self.cfg.critic_pool_type == 'cross':
-      return self.cross_attn(query, token, token)[0].squeeze(0)
+    token, mask = self.enc(x, mask)
+    if mask is None:
+      if self.cfg.critic_pool_type == 'mean':
+        return token.mean(dim=0)
+      elif self.cfg.critic_pool_type == 'max':
+        return token.max(dim=0)[0]
+      elif self.cfg.critic_pool_type == 'bert':
+        return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
+      elif self.cfg.critic_pool_type == 'cross':
+        return self.cross_attn(query, token, token)[0].squeeze(0)
+      else:
+        raise NotImplementedError
     else:
-      raise NotImplementedError
+      if self.cfg.actor_pool_type == 'mean':
+        token[mask.transpose(0, 1) == 0] = 0.0
+        return token.sum(dim=0)/mask.sum(dim=1, keepdim=True)
+      elif self.cfg.actor_pool_type == 'max':
+        token[mask.transpose(0, 1) == 0] = -torch.inf
+        return token.max(dim=0)[0]
+      else:
+        raise NotImplementedError
 
 
 class AttnEncoderLayer(nn.Module):
@@ -635,20 +693,21 @@ class AttnEncoderLayer(nn.Module):
     self.pff_norm = nn.LayerNorm(hidden_size)
     self.pre_lnorm = pre_lnorm
 
-  def forward(self, src, src_mask=None):
+  def forward(self, src, mask):
     if self.pre_lnorm:
       pre = self.self_attn_norm(src)
       # residual connection
-      src = src + self.dropout(self.self_attn(pre, pre, pre, src_mask)[0])
+      token, weight = self.self_attn(pre, pre, pre, ~mask)
+      src = src + self.dropout(token)
       pre = self.pff_norm(src)
       src = src + self.pff(pre)  # residual connection
     else:
       # residual connection + layerNorm
-      src2 = self.dropout(self.self_attn(src, src, src, src_mask)[0])
+      src2 = self.dropout(self.self_attn(src, src, src, ~mask)[0]) # mask 1-want it 0-drop it
       src = self.self_attn_norm(src + src2)
       # residual connection + layerNorm
       src = self.pff_norm(src + self.pff(src))
-    return src
+    return src, mask
 
 
 class GATEncoderLayer(nn.Module):
@@ -712,3 +771,9 @@ def filter_cfg(config):
     if k != 'env_params':
       cfg[k] = config[k]
   return cfg, EP
+
+class mySequential(nn.Sequential):
+  def forward(self, *inputs):
+    for module in self._modules.values():
+      inputs = module(*inputs) if type(inputs) == tuple else module(inputs)
+    return inputs
