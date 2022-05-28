@@ -104,10 +104,6 @@ class ActorFixSAC(nn.Module):
         ActorAttnBlock(cfg),
         *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
         (self.cfg.net_layer-self.cfg.shared_net_layer-1))
-      # self.net_state_attn = ActorAttnBlock(cfg)
-      # self.net_state_mlp = nn.Sequential(
-      #   *[nn.Linear(cfg.net_dim, cfg.net_dim), nn.ReLU()] *
-      #   (self.cfg.net_layer-self.cfg.shared_net_layer-1))
     elif cfg.net_type == 'mlp':
       self.net_state = nn.Sequential(
         nn.Linear(self.EP.state_dim, cfg.net_dim), nn.ReLU(),
@@ -121,6 +117,15 @@ class ActorFixSAC(nn.Module):
       self.net_a_avg = nn.Linear(
         cfg.net_dim, self.EP.per_action_dim)  # the average of action
       self.net_a_std = nn.Linear(
+        cfg.net_dim, self.EP.per_action_dim)  # the log_std of action
+    elif self.cfg.actor_pool_type == 'cross3':
+      self.net_a_avg_0 = nn.Linear(
+        cfg.net_dim, self.EP.per_action_dim)  # the average of action
+      self.net_a_std_0 = nn.Linear(
+        cfg.net_dim, self.EP.per_action_dim)  # the log_std of action
+      self.net_a_avg_1 = nn.Linear(
+        cfg.net_dim, self.EP.per_action_dim)  # the average of action
+      self.net_a_std_1 = nn.Linear(
         cfg.net_dim, self.EP.per_action_dim)  # the log_std of action
     else:
       self.net_a_avg = nn.Linear(
@@ -140,7 +145,12 @@ class ActorFixSAC(nn.Module):
       tmp = self.net_state(state, mask)
     else:
       tmp = self.net_state(state)
-    a_avg = self.net_a_avg(tmp).tanh()
+    if self.cfg.actor_pool_type == 'cross3':
+      a_avg_0 = self.net_a_avg_0(tmp[0]).tanh()
+      a_avg_1 = self.net_a_avg_1(tmp[1]).tanh()
+      a_avg = torch.cat((a_avg_0, a_avg_1), dim=1)
+    else:
+      a_avg = self.net_a_avg(tmp).tanh()
     if self.cfg.shared_actor:
       a_avg = a_avg.view(-1,self.EP.action_dim)
       a_avg @= self.EP.last_act_rot_mat
@@ -156,12 +166,19 @@ class ActorFixSAC(nn.Module):
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
-      # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)
     else:
       t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
-    a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
+    if self.cfg.actor_pool_type == 'cross3':
+      a_avg_0 = self.net_a_avg_0(t_tmp[0]).tanh()
+      a_avg_1 = self.net_a_avg_1(t_tmp[1]).tanh()
+      a_avg = torch.cat((a_avg_0, a_avg_1), dim=1)
+      a_std_0 = self.net_a_std_0(t_tmp[0]).clamp(-20, 2).exp()
+      a_std_1 = self.net_a_std_1(t_tmp[1]).clamp(-20, 2).exp()
+      a_std = torch.cat((a_std_0, a_std_1), dim=1)
+    else:
+      a_avg = self.net_a_avg(t_tmp)  # NOTICE! it is a_avg without .tanh()
+      a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
     act = torch.normal(a_avg, a_std).tanh()  # re-parameterize
     if self.cfg.shared_actor:
       act = act.view(-1,self.EP.action_dim)
@@ -172,24 +189,21 @@ class ActorFixSAC(nn.Module):
       act = act.view(-1,2,self.EP.action_dim).mean(dim=1)
     return act
 
-  # TODO Rename this here and in `forward` and `get_action`
-  # def get_attn_net_state(self, state, mask):
-  #   result = self.net_state_attn(state, mask)[0]
-  #   print(result.shape)
-  #   result = self.net_state_mlp(result)
-  #   return result
-
   def get_a_log_std(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
-      # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)
     else:
       t_tmp = self.net_state(state)
-    a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
+    if self.cfg.actor_pool_type == 'cross3':
+      a_std_0 = self.net_a_std_0(t_tmp[0]).clamp(-20, 2).exp()
+      a_std_1 = self.net_a_std_1(t_tmp[1]).clamp(-20, 2).exp()
+      a_std = torch.cat((a_std_0, a_std_1), dim=1)
+    else:
+      a_std = self.net_a_std(t_tmp).clamp(-20, 2).exp()
     if self.cfg.shared_actor:
       a_std = a_std.view(-1,2,self.EP.per_action_dim)
       a_std = a_std.view(a_std.shape[0], -1)
@@ -203,15 +217,22 @@ class ActorFixSAC(nn.Module):
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
-      # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)
     else:
       t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
-    a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
+    if self.cfg.actor_pool_type == 'cross3':
+      a_avg_0 = self.net_a_avg_0(t_tmp[0]).tanh()
+      a_avg_1 = self.net_a_avg_1(t_tmp[1]).tanh()
+      a_avg = torch.cat((a_avg_0, a_avg_1), dim=1)
+      a_std_log_0 = self.net_a_std_0(t_tmp[0]).clamp(-20, 2)
+      a_std_log_1 = self.net_a_std_1(t_tmp[1]).clamp(-20, 2)
+      a_std_log = torch.cat((a_std_log_0, a_std_log_1), dim=1)
+    else:
+      a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
+      a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
     a_std = a_std_log.exp()
     a_noise = a_avg + a_std * torch.randn_like(a_avg, requires_grad=True)
-    noise = a_noise - action 
+    noise = a_noise - action
     log_prob = a_std_log + self.log_sqrt_2pi + \
       noise.pow(2).__mul__(0.5)  # noise.pow(2) * 0.5
     log_prob += (np.log(2.) - a_noise - self.soft_plus(-2. *a_noise)) * 2.
@@ -232,8 +253,16 @@ class ActorFixSAC(nn.Module):
       t_tmp = self.net_state(state, mask)
     else:
       t_tmp = self.net_state(state)
-    a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
-    a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
+    if self.cfg.actor_pool_type == 'cross3':
+      a_avg_0 = self.net_a_avg_0(t_tmp[0]).tanh()
+      a_avg_1 = self.net_a_avg_1(t_tmp[1]).tanh()
+      a_avg = torch.cat((a_avg_0, a_avg_1), dim=1)
+      a_std_log_0 = self.net_a_std_0(t_tmp[0]).clamp(-20, 2)
+      a_std_log_1 = self.net_a_std_1(t_tmp[1]).clamp(-20, 2)
+      a_std_log = torch.cat((a_std_log_0, a_std_log_1), dim=1)
+    else:
+      a_avg = self.net_a_avg(t_tmp)  # NOTICE! it needs a_avg.tanh()
+      a_std_log = self.net_a_std(t_tmp).clamp(-20, 2)
     a_std = a_std_log.exp()
     noise = torch.randn_like(a_avg, requires_grad=True)
     a_noise = a_avg + a_std * noise
@@ -516,8 +545,10 @@ class ActorAttnBlock(nn.Module):
   def __init__(self, cfg):
     # state_dim=[shared_dim, seperate_dim, goal_dim, num_goals]
     self.cfg, self.EP = filter_cfg(cfg)
+    self.device = torch.device(f"cuda:{cfg.gpu_id}")
     super().__init__()
     self.shared_dim = self.EP.shared_dim
+    self.per_shared_dim = self.EP.per_shared_dim
     self.seperate_dim = self.EP.seperate_dim
     self.goal_dim = self.EP.goal_dim
     self.num_goals = self.EP.num_goals
@@ -528,6 +559,13 @@ class ActorAttnBlock(nn.Module):
     if self.cfg.actor_pool_type in ['cross', 'cross2']:
       self.query_embed = nn.Sequential(
         nn.Linear(self.shared_dim, cfg.net_dim), nn.ReLU())
+      self.cross_attn = nn.MultiheadAttention(
+        self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
+    elif self.cfg.actor_pool_type == 'cross3':
+      self.query_embed_0 = nn.Sequential(
+        nn.Linear(self.per_shared_dim, cfg.net_dim), nn.ReLU())
+      self.query_embed_1 = nn.Sequential(
+        nn.Linear(self.per_shared_dim, cfg.net_dim), nn.ReLU())
       self.cross_attn = nn.MultiheadAttention(
         self.cfg.net_dim, self.cfg.n_head, dropout=0.0)
     self.embed = nn.Sequential(
@@ -548,39 +586,47 @@ class ActorAttnBlock(nn.Module):
               self.seperate_dim+self.goal_dim].reshape(-1, self.num_goals, self.single_goal_dim)
     if self.cfg.actor_pool_type in ['cross', 'cross2']:
       query = self.query_embed(grip).unsqueeze(0)
+    if self.cfg.actor_pool_type == 'cross3':
+      grip_seperate = (grip@self.EP.robot_reshape_mat).view(-1, 2, self.per_shared_dim)
+      query_0 = self.query_embed_0(grip_seperate[:,0,:]).unsqueeze(0)
+      query_1 = self.query_embed_1(grip_seperate[:,1,:]).unsqueeze(0)
     grip = grip.unsqueeze(1).repeat(1, self.num_goals, 1)
     x = torch.cat((grip, obj, g), -1)
     x = self.embed(x).transpose(0, 1)  # Tensor(num_goals, num_envs, net_dim)
     if self.cfg.actor_pool_type == 'bert2':
       x = torch.cat((self.bert_query.repeat(1,x.shape[1],1), x), 0) # Tensor(num_goals+1, num_envs, net_dim)
+      mask = torch.cat((torch.ones((mask.shape[0], 1), device=self.device).bool(), mask), dim=1) # Tensor[num_envs, num_goals+1]
     if self.cfg.actor_pool_type == 'cross2':
       x = torch.cat((query, x), 0) # Tensor[num_goals+1, num_envs, net_dim]
+      mask = torch.cat((torch.ones((mask.shape[0], 1), device=self.device).bool(), mask), dim=1) # Tensor[num_envs, num_goals+1]
+    if self.cfg.actor_pool_type == 'cross3':
+        x = torch.cat((query_0, query_1, x), 0) # Tensor[num_goals+2, num_envs, net_dim]
+        mask = torch.cat((torch.ones((mask.shape[0], 2), device=self.device).bool(), mask), dim=1) # Tensor[num_envs, num_goals+2]
     token, mask = self.enc(x, mask) # Tensor[num_goals, num_envs, net_dim], Tensor[num_envs, num_goals]
-    if mask is None:
-      if self.cfg.actor_pool_type == 'mean':
+    if self.cfg.actor_pool_type == 'mean':
+      if mask is None:
         return token.mean(dim=0)
-      elif self.cfg.actor_pool_type == 'max':
-        return token.max(dim=0)[0]
-      elif self.cfg.actor_pool_type == 'bert':
-        return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token)[0].squeeze(0)
-      elif self.cfg.actor_pool_type == 'bert2':
-        return self.bert_attn(token[[0]], token[1:], token[1:])[0].squeeze(0)
-      elif self.cfg.actor_pool_type == 'cross':
-        return self.cross_attn(query, token, token)[0].squeeze(0)
-      elif self.cfg.actor_pool_type == 'cross2':
-        return self.cross_attn(token[[0]], token[1:], token[1:])[0].squeeze(0)
       else:
-        raise NotImplementedError
-    else:
-      if self.cfg.actor_pool_type == 'mean':
         token[mask.transpose(0, 1) == 0] = 0.0
         return token.sum(dim=0)/mask.sum(dim=1, keepdim=True)
-      elif self.cfg.actor_pool_type == 'max':
-        token[mask.transpose(0, 1) == 0] = -torch.inf
+    elif self.cfg.actor_pool_type == 'max':
+      if mask is None:
         return token.max(dim=0)[0]
       else:
-        raise NotImplementedError
-
+        token[mask.transpose(0, 1) == 0] = -torch.inf
+        return token.max(dim=0)[0]
+    elif self.cfg.actor_pool_type == 'bert':
+      return self.bert_attn(self.bert_query.tile(1, token.shape[1], 1), token, token, ~mask)[0].squeeze(0)
+    elif self.cfg.actor_pool_type == 'bert2':
+      return self.bert_attn(token[[0]], token[1:], token[1:], ~mask[:,1:])[0].squeeze(0)
+    elif self.cfg.actor_pool_type == 'cross':
+      return self.cross_attn(query, token, token, ~mask[:,1:])[0].squeeze(0)
+    elif self.cfg.actor_pool_type == 'cross2':
+      return self.cross_attn(token[[0]], token[1:], token[1:], ~mask[:,1:])[0].squeeze(0)
+    elif self.cfg.actor_pool_type == 'cross3':
+      return self.cross_attn(token[:2], token[2:], token[2:], ~mask[:,2:])[0]
+    else:
+      raise NotImplementedError
 
 
 class CriticDeepsetBlock(nn.Module):

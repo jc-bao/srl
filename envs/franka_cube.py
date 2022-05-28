@@ -116,6 +116,25 @@ class FrankaCube(gym.Env):
 			[-1.,0,0,0,0,0,0,0],[0,-1,0,0,0,0,0,0],[0,0,1,0,0,0,0,0],[0,0,0,1,0,0,0,0]
 			], device=self.device)
 		self.dual_act_rot_mat = torch.block_diag(torch.eye(self.cfg.action_dim, device=self.device, dtype=torch.float), self.act_rot_mat)
+		# convert mixture robot obs to seperate robot obs
+		self.robot_reshape_mat = torch.tensor(
+			[
+				[1.,0,0]+[0]*11,
+				[0,1,0]+[0]*11,
+				[0,0,1]+[0]*11,
+				[0]*7+[1,0,0]+[0]*4,
+				[0]*7+[0,1,0]+[0]*4,
+				[0]*7+[0,0,1]+[0]*4,
+				[0]*3+[1,0,0]+[0]*8,
+				[0]*3+[0,1,0]+[0]*8,
+				[0]*3+[0,0,1]+[0]*8,
+				[0]*10+[1,0,0]+[0],
+				[0]*10+[0,1,0]+[0],
+				[0]*10+[0,0,1]+[0],
+				[0]*6+[1]+[0]*7,
+				[0]*13+[1],
+			],device=self.device
+		)
 
 		self.reset()
 
@@ -1385,6 +1404,7 @@ class FrankaCube(gym.Env):
 			per_action_dim=self.cfg.per_action_dim,
 			action_dim=self.cfg.action_dim,
 			state_dim=self.cfg.state_dim,
+			per_shared_dim=self.cfg.per_shared_dim, 
 			shared_dim=self.cfg.shared_dim,
 			seperate_dim=self.cfg.seperate_dim,
 			goal_dim=self.cfg.goal_dim,
@@ -1400,6 +1420,7 @@ class FrankaCube(gym.Env):
 			dual_act_rot_mat = self.dual_act_rot_mat, 
 			single_act_rot_mat = self.single_act_rot_mat, 
 			last_act_rot_mat = self.last_act_rot_mat,
+			robot_reshape_mat = self.robot_reshape_mat,
 			# functions
 			sample_goal=self.sample_goal, 
 			compute_reward=self.compute_reward,
