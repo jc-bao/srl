@@ -89,7 +89,7 @@ class ReplayBuffer:  # for off-policy
 			self.EP.obs_updater(trans_dict.state[:her_batch_size], AttrDict(g=fut_ag))
 			self.EP.obs_updater(next_trans_dict.state[:her_batch_size], AttrDict(g=fut_ag))
 			# recompute
-			next_trans_dict.rew[:her_batch_size] = self.EP.compute_reward(next_info_dict.ag, fut_ag, None)
+			next_trans_dict.rew[:her_batch_size] = self.EP.compute_reward(next_info_dict.ag, fut_ag, AttrDict(goal_mask=next_info_dict.goal_mask))
 		return AttrDict(
 			rew=next_trans_dict.rew,
 			mask=trans_dict.mask,  # mask

@@ -551,7 +551,12 @@ class FrankaCube(gym.Env):
 			ag = ag*self.goal_std + self.goal_mean
 			dg = dg*self.goal_std + self.goal_mean
 		if self.cfg.reward_type == 'sparse':
-			return -torch.mean((torch.norm(ag-dg, dim=-1) > self.cfg.err).type(torch.float32), dim=-1)
+			dist = torch.norm(ag-dg, dim=-1)
+			far_goal = (dist > self.cfg.err).type(torch.float32)
+			if 'goal_mask' in info:
+				return -torch.sum(far_goal*info.goal_mask, dim=-1)/torch.sum(info.goal_mask, dim=-1)
+			else:
+				return -torch.mean(far_goal, dim=-1)
 		elif self.cfg.reward_type == 'sparse+':
 			return torch.mean((torch.norm(ag-dg, dim=-1) < self.cfg.err).type(torch.float32), dim=-1)
 		elif self.cfg.reward_type == 'dense':
@@ -857,7 +862,7 @@ class FrankaCube(gym.Env):
 
 		# rew
 		rew = self.compute_reward(
-			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos), normed=False)
+			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos, goal_mask=self.goal_mask.bool()), normed=False)
 		# reset
 		ag_moved_dist = torch.norm(self.block_states[...,:3]-self.last_step_ag, dim=-1)
 		reached_ag = torch.norm(self.block_states[..., :3]-self.goal, dim=-1) < self.cfg.err
@@ -1440,8 +1445,8 @@ if __name__ == '__main__':
 				act = torch.tensor([args.action]*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
+			print(rew)
 			# env.render(mode='human')
-			print(env.info_parser(info, 'goal_mask'))
 			# print(info_dict.step.item())
 		# Image.fromarray(images[0]).save('foo.png')
 
