@@ -200,8 +200,11 @@ class AgentBase:
       video=video)  # record curriculum
     if self.cfg.curri is not None:
       for k, v in self.cfg.curri.items():
-        if eval(v['indicator']) > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
-          self.cfg.curri[k]['now'] += v['step']
+        try:
+          if eval(v['indicator']) > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
+            self.cfg.curri[k]['now'] += v['step']
+        except Exception as e:
+          print(f'{e}, fail to change curriculum param {k}')
         reset_params[k] = self.cfg.curri[k]['now']
         '''
         Old version of goal number curriculum, need to flush out buffer
