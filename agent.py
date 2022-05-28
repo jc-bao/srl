@@ -136,12 +136,9 @@ class AgentBase:
     success_rate = torch.zeros(
       self.EP.num_envs, device=self.cfg.device)
     handover_success_rate = torch.zeros(
-      self.EP.num_goals+1, device=self.cfg.device)
-    handover_num_ep = torch.ones(self.EP.num_goals+1,
+      (2, self.EP.num_goals+1), device=self.cfg.device)
+    handover_num_ep = torch.ones((2, self.EP.num_goals+1),
                                  device=self.cfg.device)
-    exchange_num_ep = torch.ones(self.EP.num_goals, device=self.cfg.device)
-    exchange_success_rate = torch.zeros(
-      (self.EP.num_goals,), device=self.cfg.device)
     # reset
     ten_s, ten_rewards, ten_dones, ten_info = self.env.reset()
     if self.cfg.render and render:
@@ -158,6 +155,7 @@ class AgentBase:
         for vi, im in zip(videos, images):
           vi.append(im)
       ten_dones = ten_dones.type(torch.bool)
+      ten_goal_num = self.EP.info_parser(ten_info, 'goal_mask').sum(dim=-1)
       num_ep[ten_dones] += 1
       ep_rew += ten_rewards
       ep_step += 1
@@ -165,17 +163,13 @@ class AgentBase:
       success_rate[ten_dones] += self.EP.info_parser(
         ten_info[ten_dones], 'success')
       try:
-        for i in range(self.EP.num_goals+1):
-          now_done = ten_dones & (self.env.num_handovers == i)
-          handover_num_ep[i] += now_done.sum()
-          handover_success_rate[i] += self.EP.info_parser(
-            ten_info[now_done], 'success').sum()
-        for i in range(self.EP.num_goals):
-          now_done = ten_dones & (self.env.num_handovers == 2) & (
-            self.env.num_os_goal == i)
-          exchange_num_ep[i] += now_done.sum()
-          exchange_success_rate[i] += self.EP.info_parser(
-            ten_info[now_done], 'success').sum()
+        for goal_id in range(2):
+          goal_num = int(self.env.cfg.current_num_goals) + goal_id
+          for i in range(self.EP.num_goals+1):
+            now_done = ten_dones & (self.env.num_handovers == i) & (ten_goal_num == goal_num)
+            handover_num_ep[goal_id, i] += now_done.sum()
+            handover_success_rate[goal_id, i] += self.EP.info_parser(
+              ten_info[now_done], 'success').sum()
       except Exception as e:
         print(f'{e}, fail to calcuate handover success rate')
       collected_eps = num_ep.sum()
@@ -191,22 +185,17 @@ class AgentBase:
     success_rate = torch.mean(success_rate/num_ep).item()
     reset_params = {}
     handover_success_rate /= handover_num_ep
-    exchange_success_rate /= exchange_num_ep
-    ho_success_dict = {
-      f'handover{i}_success_rate': handover_success_rate[i].item()
-      for i in range(self.EP.num_goals + 1)
-    }
-    ex_success_dict = {
-      f'exchange{i}_success_rate': exchange_success_rate[i].item()
-      for i in range(self.EP.num_goals)
-    }
+    ho_success_dict = {}
+    for goal_id in range(2):
+      goal_num = int(self.env.cfg.current_num_goals) + goal_id
+      for i in range(goal_num+1):
+        ho_success_dict[f'handover_{i}_{goal_num}_success_rate'] = handover_success_rate[goal_id, i].item()
     results = AttrDict(
       steps=self.total_step,
       ep_rew=torch.mean(ep_rew / num_ep).item(),
       final_rew=final_rew,
       success_rate=success_rate,
       **ho_success_dict,
-      **ex_success_dict,
       ep_steps=torch.mean(ep_step / num_ep).item(),
       video=video)  # record curriculum
     if self.cfg.curri is not None:

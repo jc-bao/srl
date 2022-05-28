@@ -71,7 +71,7 @@ def train(config):
 			print(f'========eval{num_eval}...===========')
 			result = exp_agent.eval_vec_env(
 				render=(num_eval % int(1/config.render_per_eval) == 0))
-			log(result, prefix=f'eval_{exp_agent.EP.num_goals}')
+			log(result, prefix=f'eval')
 
 			if (i % int(1/config.eval_per_save)) == 0:
 				# if result.final_rew > best_rew: 
