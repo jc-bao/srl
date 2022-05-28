@@ -719,10 +719,10 @@ class CriticAttnBlock(nn.Module):
       else:
         raise NotImplementedError
     else:
-      if self.cfg.actor_pool_type == 'mean':
+      if self.cfg.critic_pool_type == 'mean':
         token[mask.transpose(0, 1) == 0] = 0.0
         return token.sum(dim=0)/mask.sum(dim=1, keepdim=True)
-      elif self.cfg.actor_pool_type == 'max':
+      elif self.cfg.critic_pool_type == 'max':
         token[mask.transpose(0, 1) == 0] = -torch.inf
         return token.max(dim=0)[0]
       else:
