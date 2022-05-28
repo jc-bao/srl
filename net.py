@@ -133,6 +133,8 @@ class ActorFixSAC(nn.Module):
   def forward(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
+      if mask is not None:
+        mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
       # tmp = self.get_attn_net_state(state, mask)
       tmp = self.net_state(state, mask)
@@ -151,6 +153,8 @@ class ActorFixSAC(nn.Module):
   def get_action(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
+      if mask is not None:
+        mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
       # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)
@@ -178,6 +182,8 @@ class ActorFixSAC(nn.Module):
   def get_a_log_std(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
+      if mask is not None:
+        mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
       # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)
@@ -194,6 +200,8 @@ class ActorFixSAC(nn.Module):
   def get_logprob(self, state, action, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
+      if mask is not None:
+        mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
       # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)
@@ -217,6 +225,8 @@ class ActorFixSAC(nn.Module):
   def get_action_logprob(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
+      if mask is not None:
+        mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
       # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)
@@ -352,6 +362,8 @@ class CriticTwin(nn.Module):  # shared parameter
     if self.cfg.shared_critic:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1, state.shape[-1])
       action = torch.stack((action, action@self.EP.act_rot_mat),dim=1).view(-1, action.shape[-1])
+      if mask is not None:
+        mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
       if self.cfg.net_type == 'attn':
         tmp = self.net_sa(torch.cat((state, action), dim=-1), mask=mask)
       else:

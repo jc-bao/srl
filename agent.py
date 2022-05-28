@@ -187,7 +187,7 @@ class AgentBase:
     handover_success_rate /= handover_num_ep
     ho_success_dict = {}
     for goal_id in range(2):
-      goal_num = int(self.env.cfg.current_num_goals) + goal_id
+      goal_num = min(int(self.env.cfg.current_num_goals) + goal_id, self.env.cfg.num_goals)
       for i in range(goal_num+1):
         ho_success_dict[f'handover_{i}_{goal_num}_success_rate'] = handover_success_rate[goal_id, i].item()
     results = AttrDict(

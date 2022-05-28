@@ -23,4 +23,5 @@ g_random_relabel_bar: 0
 shared_critic: true
 
 defaults:
+  - override /env: 2ho
   - override /curri: os_gap_num
