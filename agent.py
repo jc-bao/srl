@@ -465,7 +465,7 @@ class AgentBase:
       elif self.cfg.load_path is not None:
         save_path = self.cfg.load_path
       with open(save_path, 'rb') as f:
-        data = torch.load(f, map_location=lambda storage, loc: storage)
+        data = torch.load(f, map_location=self.cfg.device)
       if self.cfg.resume_mode == 'continue':
         self.total_step = data['step']
         self.total_save = data['total_save']
