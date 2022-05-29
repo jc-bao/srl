@@ -481,7 +481,7 @@ class AgentBase:
         obj.load_state_dict(data[name])
       if self.cfg.load_buffer is not None:
         with open(self.cfg.load_buffer, 'rb') as f:
-          self.buffer.data = torch.load(f, map_location=lambda storage, loc: storage)
+          self.buffer.data = torch.load(f, map_location=self.cfg.device)
 
 
 class AgentSAC(AgentBase):
