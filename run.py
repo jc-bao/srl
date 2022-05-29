@@ -48,9 +48,10 @@ def train(config):
 	torch.set_grad_enabled(False)
 
 	# warmup
-	print('warm up...')
-	result = exp_agent.explore_vec_env()
-	log(result, prefix='explore')
+	if config.warm_up:
+		print('warm up...')
+		result = exp_agent.explore_vec_env()
+		log(result, prefix='explore')
 
 	'''start training'''
 	best_rew = -1000

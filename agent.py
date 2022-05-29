@@ -452,6 +452,8 @@ class AgentBase:
       self.total_save += 1
       save_path = f"{cwd}/{file_tag}_{self.total_save}.pth"
       torch.save(data, save_path)
+      buffer_path = f'{cwd.split("/wandb")[0]}/buffer.pth'
+      torch.save(self.buffer.data, buffer_path)
       if self.cfg.wandb:
         wandb.save(save_path, base_path=cwd, policy="now")  # upload now
     else:
@@ -477,6 +479,9 @@ class AgentBase:
             self.cfg['curri'][k]['now'] = v['now']
       for name, obj in name_obj_list:
         obj.load_state_dict(data[name])
+      if self.cfg.load_buffer is not None:
+        with open(self.cfg.load_buffer, 'rb') as f:
+          self.buffer.data = torch.load(f, map_location=lambda storage, loc: storage)
 
 
 class AgentSAC(AgentBase):

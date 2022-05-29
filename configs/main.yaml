@@ -7,6 +7,7 @@ load_curri: null
 load_tag: latest
 load_project: null
 load_folder: ''
+load_buffer: null
 # set wandb wid to load remotely
 wid: null
 # resume mode {null, 'continue', 'restart', 'load_only'}
@@ -77,6 +78,7 @@ explore_noise: 0.2
 update_freq: 2
 policy_noise: 0.3
 policy_update_gap: 1 # after $ of Q updates, update policy
+warm_up: true
 
 # eval
 eval_per_rollout: 0.25
