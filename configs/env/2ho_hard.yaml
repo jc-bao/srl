@@ -4,4 +4,3 @@ max_sample_time: 20
 current_num_goals: 2
 num_robots: 2
 os_rate: 0.8
-table_gap: 0.3
