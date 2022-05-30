@@ -1,0 +1,33 @@
+# @package _global_
+
+wandb: true
+project: corl-main
+name: 8obj
+
+wid: 1yjzsocp
+load_tag: latest_7
+resume_mode: restart
+
+render: false
+
+net_layer: 6
+shared_net_layer: 4
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+
+# partial relabel
+g_random_relabel_rate: 1.0 
+g_random_relabel_bar: 0
+
+# mirror replay
+shared_critic: true
+
+defaults:
+  - override /env: 4ho_hard
+  - override /curri: num
+
+eval_per_save: 0.5

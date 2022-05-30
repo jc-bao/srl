@@ -1,7 +1,7 @@
 current_num_goals:
-  init: 2
-  now: 2
-  end: 8
+  init: 4
+  now: 4
+  end: 6
   step: 0.1
   indicator: handover_success_rate[0,1:].mean().item() 
   bar: 0.7
