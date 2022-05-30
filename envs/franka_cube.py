@@ -607,7 +607,7 @@ class FrankaCube(gym.Env):
 				self.cfg[k] = v
 				print(f'[Curriculum] change {k} from {v_old} to {v}')
 				if k == 'num_goals':
-					self.cfg.max_steps = self.cfg.base_steps*self.cfg.num_goals*self.cfg.num_robots
+					self.cfg.max_steps = self.cfg.base_steps*self.cfg.current_num_goals*self.cfg.num_robots
 				# TODO move this to general update
 			else:
 				print(f'[Curriculum] config has no attribute {k}')
