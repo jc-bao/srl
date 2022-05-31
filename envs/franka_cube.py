@@ -146,8 +146,8 @@ class FrankaCube(gym.Env):
 			# subscribe to keyboard shortcuts
 			camera_setting = gymapi.CameraProperties()
 			self.viewer = self.gym.create_viewer(self.sim, camera_setting)
-			cam_pos = gymapi.Vec3(1, -1, 1)
-			look_at = gymapi.Vec3(0.5, 1, 0)
+			cam_pos = gymapi.Vec3(1.5, -1.5, 2)
+			look_at = gymapi.Vec3(0.0, 0.0, 0.5)
 			self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, look_at)
 			self.gym.subscribe_viewer_keyboard_event(
 				self.viewer, gymapi.KEY_ESCAPE, "QUIT")
@@ -402,11 +402,13 @@ class FrankaCube(gym.Env):
 		for j in range(self.cfg.num_cameras):
 			# create camera
 			camera_properties = gymapi.CameraProperties()
-			camera_properties.width = 320
-			camera_properties.height = 200
+			camera_properties.width = self.cfg.render_size[0] # 320
+			camera_properties.height = self.cfg.render_size[1] # 200
 			h1 = self.gym.create_camera_sensor(self.envs[j], camera_properties)
-			camera_position = gymapi.Vec3(1, -1, 1)
-			camera_target = gymapi.Vec3(0, 0, 0)
+			# camera_position = gymapi.Vec3(1, -1, 1)
+			# camera_target = gymapi.Vec3(0, 0, 0)
+			camera_position = gymapi.Vec3(1.5, -1.5, 2)
+			camera_target = gymapi.Vec3(0.0, 0.0, 0.5)
 			self.gym.set_camera_location(
 				h1, self.envs[j], camera_position, camera_target)
 			self.cameras.append(h1)

@@ -19,6 +19,7 @@ success_bar: !!float -1e-3
 extra_steps: 5
 # number
 num_cameras: 16
+render_size: [320, 200]
 num_envs: 1024 
 current_num_goals: 1
 # extra sample to keep goal away
