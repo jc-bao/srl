@@ -673,8 +673,10 @@ class FrankaCube(gym.Env):
 		done_env_num = reset_idx.sum()
 		# reset goals
 		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
-		sampled_goal_num = 0
 		if done_env_num > 0:
+			sampled_goal_num = 0
+			new_goal = self.goal[reset_idx].clone() 
+			new_goal_ws = self.goal_workspace[reset_idx].clone() 
 			for k in range(self.cfg.max_sample_time):
 				if self.cfg.goal_sample_mode == 'uniform':
 					extra_goal_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
@@ -697,11 +699,13 @@ class FrankaCube(gym.Env):
 				new_sampled_goal_num = satisfied_idx.sum().item()
 				new_goal_num = min(new_sampled_goal_num, done_env_num.item()-sampled_goal_num)
 				if new_goal_num > 0:
-					self.goal[reset_idx[sampled_goal_num:sampled_goal_num+new_goal_num]] = extra_goals[satisfied_idx][:new_goal_num]
-					self.goal_workspace[reset_idx[sampled_goal_num:sampled_goal_num+new_goal_num]] = extra_goal_ws[satisfied_idx][:new_goal_num]
+					new_goal[sampled_goal_num:sampled_goal_num+new_goal_num] = extra_goals[satisfied_idx][:new_goal_num]
+					new_goal_ws[sampled_goal_num:sampled_goal_num+new_goal_num] = extra_goal_ws[satisfied_idx][:new_goal_num]
 				sampled_goal_num+=new_goal_num
 				if sampled_goal_num >= done_env_num.item():
 					break
+			self.goal[reset_idx] = new_goal 
+			self.goal_workspace[reset_idx] = new_goal_ws
 			if sampled_goal_num < (done_env_num.item()):
 				print('[Env] Warning: goal sampling failed')
 			num_goals = int(self.cfg.current_num_goals)
@@ -727,6 +731,8 @@ class FrankaCube(gym.Env):
 													 device=self.device) < self.cfg.inhand_rate
 			self.inhand_idx = reset_idx & in_hand
 			sampled_ag_num = 0
+			new_ag = self.init_ag[reset_idx].clone()
+			new_ag_ws = self.block_workspace[reset_idx].clone()
 			for k in range(self.cfg.max_sample_time):
 				if self.cfg.obj_sample_mode == 'uniform':
 					extra_block_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
@@ -767,11 +773,13 @@ class FrankaCube(gym.Env):
 				new_sampled_ag_num = satisfied_idx.sum().item()
 				new_ag_num = min(new_sampled_ag_num, done_env_num.item()-sampled_ag_num)
 				if new_ag_num > 0:
-					self.init_ag[reset_idx[sampled_ag_num:sampled_ag_num+new_ag_num]] = extra_ags[satisfied_idx][:new_ag_num]
-					self.block_workspace[reset_idx[sampled_ag_num:sampled_ag_num+new_ag_num]] = extra_block_ws[satisfied_idx][:new_ag_num]
+					new_ag[sampled_ag_num:sampled_ag_num+new_ag_num] = extra_ags[satisfied_idx][:new_ag_num]
+					new_ag_ws[sampled_ag_num:sampled_ag_num+new_ag_num] = extra_block_ws[satisfied_idx][:new_ag_num]
 				sampled_ag_num+=new_ag_num
 				if sampled_ag_num >= done_env_num.item():
 					break
+			self.init_ag[reset_idx] = new_ag
+			self.block_workspace[reset_idx] = new_ag_ws
 			if sampled_ag_num < (done_env_num.item()):
 				print('[Env] Warning: ag sampling failed')
 				# if satisfied_idx.sum() >= done_env_num:
@@ -1459,7 +1467,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=8, current_num_goals=1.5, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.3, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200)
+	env = gym.make('FrankaPNP-v0', num_envs=4, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=8, current_num_goals=1.5, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.3, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
