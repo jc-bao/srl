@@ -702,7 +702,6 @@ class FrankaCube(gym.Env):
 				sampled_goal_num+=new_goal_num
 				if sampled_goal_num >= done_env_num.item():
 					break
-			print(k)
 			if sampled_goal_num < (done_env_num.item()):
 				print('[Env] Warning: goal sampling failed')
 			num_goals = int(self.cfg.current_num_goals)
