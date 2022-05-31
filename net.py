@@ -755,7 +755,10 @@ class AttnEncoderLayer(nn.Module):
     if self.pre_lnorm:
       pre = self.self_attn_norm(src)
       # residual connection
-      token, weight = self.self_attn(pre, pre, pre, ~mask)
+      if mask is not None:
+        token, weight = self.self_attn(pre, pre, pre, ~mask)
+      else:
+        token, weight = self.self_attn(pre, pre, pre)
       src = src + self.dropout(token)
       pre = self.pff_norm(src)
       src = src + self.pff(pre)  # residual connection

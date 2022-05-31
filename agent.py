@@ -259,11 +259,11 @@ class AgentBase:
     # loop
     s, rew, done, info = self.env.reset()
     mask = self.EP.info_parser(info, 'goal_mask')
-    act = self.act.get_action(s, mask).detach()
+    act = self.act.get_action(s).detach()
     while collected_steps < target_steps or (num_ep < 1).any():
       # setup next state
       s, rew, done, info = self.env.step(act)  # different
-      act = self.act.get_action(s, self.EP.info_parser(info, 'goal_mask')).detach()
+      act = self.act.get_action(s).detach()
 
       # update buffer
       num_ep[done.type(torch.bool)] += 1
