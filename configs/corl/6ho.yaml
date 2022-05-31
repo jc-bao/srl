@@ -28,6 +28,6 @@ shared_critic: true
 
 defaults:
   - override /env: 4ho_hard
-  - override /curri: num
+  - override /curri: num_46
 
 eval_per_save: 0.5
