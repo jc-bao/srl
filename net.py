@@ -138,6 +138,8 @@ class ActorFixSAC(nn.Module):
   def forward(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
+      if self.cfg.mask_other_robot_obs:
+        state *= self.EP.other_robot_obs_mask
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
@@ -165,6 +167,8 @@ class ActorFixSAC(nn.Module):
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
+      if self.cfg.mask_other_robot_obs:
+        state *= self.EP.other_robot_obs_mask
     if self.cfg.net_type == 'attn':
       t_tmp = self.net_state(state, mask)
     else:
@@ -194,6 +198,8 @@ class ActorFixSAC(nn.Module):
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
+      if self.cfg.mask_other_robot_obs:
+        state *= self.EP.other_robot_obs_mask
     if self.cfg.net_type == 'attn':
       t_tmp = self.net_state(state, mask)
     else:
@@ -216,6 +222,8 @@ class ActorFixSAC(nn.Module):
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
+      if self.cfg.mask_other_robot_obs:
+        state *= self.EP.other_robot_obs_mask
     if self.cfg.net_type == 'attn':
       t_tmp = self.net_state(state, mask)
     else:
@@ -248,6 +256,8 @@ class ActorFixSAC(nn.Module):
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
       if mask is not None:
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
+      if self.cfg.mask_other_robot_obs:
+        state *= self.EP.other_robot_obs_mask
     if self.cfg.net_type == 'attn':
       # t_tmp = self.get_attn_net_state(state, mask)
       t_tmp = self.net_state(state, mask)

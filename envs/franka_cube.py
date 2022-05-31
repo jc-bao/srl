@@ -106,8 +106,10 @@ class FrankaCube(gym.Env):
 				[1, 0]
 			], device=self.device)
 			self.obs_rot_mat = torch.block_diag(*([id_rot_mat]+[robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
+			self.other_robot_obs_mask = torch.tensor([1.,0]+[1]*3+[0]*3+[1]*3+[0]*3+[1,0]+10*self.cfg.num_goals*[1], device=self.device)
 		else:
 			self.obs_rot_mat = torch.block_diag(*([robot_pos_rot_mat]*2+[torch.tensor([[0.,1],[1.,0]],device=self.device)]+[block_other_mat]*self.cfg.num_goals+[pos_rot_mat]*self.cfg.num_goals))
+			self.other_robot_obs_mask = torch.tensor([1]*3+[0]*3+[1]*3+[0]*3+[1,0]+10*self.cfg.num_goals*[1], device=self.device)
 		self.single_act_rot_mat = torch.tensor(
 			[[-1.,0,0,0],[0,-1,0,0],[0,0,1,0],[0,0,0,1]], device=self.device)
 		self.last_act_rot_mat = torch.block_diag(torch.eye(4,dtype=torch.float,device=self.device),self.single_act_rot_mat)
@@ -135,7 +137,6 @@ class FrankaCube(gym.Env):
 				[0]*13+[1],
 			],device=self.device
 		)
-
 		self.reset()
 
 	def set_viewer(self):
@@ -1446,6 +1447,7 @@ class FrankaCube(gym.Env):
 			single_act_rot_mat = self.single_act_rot_mat, 
 			last_act_rot_mat = self.last_act_rot_mat,
 			robot_reshape_mat = self.robot_reshape_mat,
+			other_robot_obs_mask = self.other_robot_obs_mask,
 			# functions
 			sample_goal=self.sample_goal, 
 			compute_reward=self.compute_reward,
