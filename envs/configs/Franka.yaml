@@ -22,6 +22,7 @@ num_cameras: 16
 render_size: [320, 200]
 num_envs: 1024 
 current_num_goals: 1
+enable_mask: True
 # extra sample to keep goal away
 max_sample_time: 5
 extra_goal_sample: 10

@@ -1,0 +1,27 @@
+wandb: true
+project: handover8
+name: render
+
+resume_mode: restart 
+load_tag: latest_7 
+wid: 3cn88b0q
+load_curri: true
+
+render: true
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+shared_critic: true
+
+buffer_size: 10000
+batch_size: 20
+reuse: 0.000001
+steps_per_rollout: 100
+eval_per_rollout: 1
+eval_eps: 128
+
+# defaults:
+#   - override /env: 2ho

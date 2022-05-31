@@ -258,7 +258,8 @@ class AgentBase:
     useless_steps = 0  # data explored but dropped
     # loop
     s, rew, done, info = self.env.reset()
-    act = self.act.get_action(s, self.EP.info_parser(info, 'goal_mask')).detach()
+    mask = self.EP.info_parser(info, 'goal_mask')
+    act = self.act.get_action(s, mask).detach()
     while collected_steps < target_steps or (num_ep < 1).any():
       # setup next state
       s, rew, done, info = self.env.step(act)  # different

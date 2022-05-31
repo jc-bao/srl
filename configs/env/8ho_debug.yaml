@@ -1,0 +1,4 @@
+num_goals: 8
+current_num_goals: 8
+num_envs: 64
+num_cameras: 64
