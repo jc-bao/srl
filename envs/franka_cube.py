@@ -673,6 +673,7 @@ class FrankaCube(gym.Env):
 		done_env_num = reset_idx.sum()
 		# reset goals
 		# self.goal_workspace[reset_idx] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device)
+		sampled_goal_num = 0
 		if done_env_num > 0:
 			for k in range(self.cfg.max_sample_time):
 				if self.cfg.goal_sample_mode == 'uniform':
@@ -693,19 +694,23 @@ class FrankaCube(gym.Env):
 				satisfied_idx = ((goal_dist[...,0] > self.cfg.block_length*1.2) | \
 					(goal_dist[..., 1] > self.cfg.block_size*2) | \
 							torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
-				if satisfied_idx.sum() >= done_env_num:
+				new_sampled_goal_num = satisfied_idx.sum().item()
+				new_goal_num = min(new_sampled_goal_num, done_env_num.item()-sampled_goal_num)
+				if new_goal_num > 0:
+					self.goal[reset_idx[sampled_goal_num:sampled_goal_num+new_goal_num]] = extra_goals[satisfied_idx][:new_goal_num]
+					self.goal_workspace[reset_idx[sampled_goal_num:sampled_goal_num+new_goal_num]] = extra_goal_ws[satisfied_idx][:new_goal_num]
+				sampled_goal_num+=new_goal_num
+				if sampled_goal_num >= done_env_num.item():
 					break
-				elif k == self.cfg.max_sample_time-1:
-					print('[Env] Warning: goal sampling failed')
-					satisfied_idx = 0
-			self.goal[reset_idx] = extra_goals[satisfied_idx][:done_env_num]
+			print(k)
+			if sampled_goal_num < (done_env_num.item()):
+				print('[Env] Warning: goal sampling failed')
 			num_goals = int(self.cfg.current_num_goals)
 			rand_num_rate = self.cfg.current_num_goals - num_goals
 			self.goal_mask[reset_idx, :num_goals] = 1.0
 			if num_goals < self.cfg.num_goals:
 				self.goal_mask[reset_idx, num_goals] = (torch.rand(done_env_num.item(), device=self.device) < rand_num_rate).float()
 				self.goal_mask[reset_idx, num_goals+1:] = 0.0
-			self.goal_workspace[reset_idx] = extra_goal_ws[satisfied_idx][:done_env_num]
 		multi_goal_in_same_ws = torch.zeros((self.cfg.num_envs,), device=self.device, dtype=torch.bool)
 		for i in range(self.cfg.num_robots):
 			multi_goal_in_same_ws |= ((self.goal_workspace==i).sum(dim=-1) > 1)
@@ -722,7 +727,8 @@ class FrankaCube(gym.Env):
 			in_hand = torch.rand((self.cfg.num_envs,),
 													 device=self.device) < self.cfg.inhand_rate
 			self.inhand_idx = reset_idx & in_hand
-			for _ in range(5):
+			sampled_ag_num = 0
+			for k in range(self.cfg.max_sample_time):
 				if self.cfg.obj_sample_mode == 'uniform':
 					extra_block_ws = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),self.cfg.num_goals), device=self.device).repeat(self.cfg.extra_goal_sample,1,1)
 				elif self.cfg.obj_sample_mode == 'bernoulli': # TODO extend to multi arm scenario
@@ -759,10 +765,20 @@ class FrankaCube(gym.Env):
 				satisfied_idx = ((ag_dist[...,0] > self.cfg.block_length*1.2) | \
 					(ag_dist[..., 1] > self.cfg.block_size*2) | \
 							torch.eye(self.cfg.num_goals, device=self.device, dtype=torch.bool)).all(dim=-1).all(dim=-1)
-				if satisfied_idx.sum() >= done_env_num:
-					self.init_ag[reset_idx] = extra_ags[satisfied_idx][:done_env_num]
-					self.block_workspace[reset_idx] = extra_block_ws[satisfied_idx][:done_env_num]
-					break	
+				new_sampled_ag_num = satisfied_idx.sum().item()
+				new_ag_num = min(new_sampled_ag_num, done_env_num.item()-sampled_ag_num)
+				if new_ag_num > 0:
+					self.init_ag[reset_idx[sampled_ag_num:sampled_ag_num+new_ag_num]] = extra_ags[satisfied_idx][:new_ag_num]
+					self.block_workspace[reset_idx[sampled_ag_num:sampled_ag_num+new_ag_num]] = extra_block_ws[satisfied_idx][:new_ag_num]
+				sampled_ag_num+=new_ag_num
+				if sampled_ag_num >= done_env_num.item():
+					break
+			if sampled_ag_num < (done_env_num.item()):
+				print('[Env] Warning: ag sampling failed')
+				# if satisfied_idx.sum() >= done_env_num:
+				# 	self.init_ag[reset_idx] = extra_ags[satisfied_idx][:done_env_num]
+				# 	self.block_workspace[reset_idx] = extra_block_ws[satisfied_idx][:done_env_num]
+				# 	break	
 			if self.inhand_idx.any():
 				# choosed_block = torch.randint(self.cfg.num_goals, (1,), device=self.device)[0]
 				# NOTE can only choose block 0 in hand now TODO fix it
@@ -1444,7 +1460,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=1.5, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.3, extra_goal_sample=1000, base_step=10)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=8, current_num_goals=1.5, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.3, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200)
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
@@ -1466,7 +1482,6 @@ if __name__ == '__main__':
 				act = torch.tensor([args.action]*env.cfg.num_envs, device=env.device)
 				# act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
 			obs, rew, done, info = env.step(act)
-			print(rew)
 			# env.render(mode='human')
 			# print(info_dict.step.item())
 		# Image.fromarray(images[0]).save('foo.png')
