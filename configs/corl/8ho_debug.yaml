@@ -21,9 +21,8 @@ shared_critic: true
 buffer_size: 10000
 batch_size: 20
 reuse: 0.000001
-steps_per_rollout: 100
 eval_per_rollout: 1
-eval_eps: 128
+eval_eps: 2 
 
 defaults:
   - override /env: 8ho_debug
