@@ -22,7 +22,8 @@ buffer_size: 10000
 batch_size: 20
 reuse: 0.000001
 eval_per_rollout: 1
-eval_eps: 2 
+eval_eps: 64 
+render_per_eval: 1
 
 defaults:
   - override /env: 8ho_debug
