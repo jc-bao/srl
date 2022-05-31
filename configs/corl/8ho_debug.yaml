@@ -22,7 +22,7 @@ buffer_size: 10000
 batch_size: 20
 reuse: 0.000001
 eval_per_rollout: 1
-eval_eps: 64 
+eval_eps: 16
 render_per_eval: 1
 
 defaults:

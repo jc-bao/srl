@@ -1,7 +1,7 @@
 num_goals: 8
 current_num_goals: 8
-num_envs: 64
-num_cameras: 64
+num_envs: 16
+num_cameras: 16
 extra_goal_sample: 300
 max_sample_time: 500
 num_robots: 2
