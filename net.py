@@ -425,7 +425,7 @@ class CriticTwin(nn.Module):  # shared parameter
           if self.cfg.mirror_q_pool_type == 'mean':
             return q_stack.mean(dim=1)
           elif self.cfg.mirror_q_pool_type == 'min': 
-            return q_stack.min(dim=1)
+            return q_stack.min(dim=1)[0]
           else: 
             raise NotImplementedError
     else:
