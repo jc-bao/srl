@@ -368,7 +368,7 @@ class FrankaCube(gym.Env):
 				self.goal_handles = []
 				for j in range(self.cfg.num_goals):
 					block_state_pose = gymapi.Transform()
-					block_state_pose.p.x = franka_pos.p.x 
+					block_state_pose.p.x = franka_pos.p.x+self.cfg.block_length
 					block_state_pose.p.y = -0.4 - j * self.cfg.block_size * 1.5
 					block_state_pose.p.z = self.cfg.table_size[2] + self.cfg.block_size/2
 					if np.random.rand() < 0.5:
@@ -1467,7 +1467,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=8, current_num_goals=3, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.0, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200)
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=3, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=8, current_num_goals=3, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform')
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 

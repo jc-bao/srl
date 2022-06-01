@@ -264,6 +264,8 @@ class AgentBase:
       # setup next state
       s, rew, done, info = self.env.step(act)  # different
       act = self.act.get_action(s, self.EP.info_parser(info, 'goal_mask')).detach()
+      # with torch.no_grad():
+      #   cri = self.cri.get_q_all(s, act, self.EP.info_parser(info, 'goal_mask'))
 
       # update buffer
       num_ep[done.type(torch.bool)] += 1

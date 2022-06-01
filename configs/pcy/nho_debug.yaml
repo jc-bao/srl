@@ -1,0 +1,33 @@
+# @package _global_
+
+wandb: true
+project: corl-main
+name: main
+
+resume_mode: load_only
+load_curri: true
+wid: 1ku1z52t
+load_tag: latest_12
+load_project: corl-2022
+
+render: false
+
+net_layer: 6
+shared_net_layer: 4
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+
+# partial relabel
+g_random_relabel_rate: 1.0 
+g_random_relabel_bar: 0
+
+# mirror replay
+shared_critic: true
+
+defaults:
+  - override /env: 2ho_debug
+  - override /curri: os_gap_num
