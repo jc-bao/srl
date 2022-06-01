@@ -74,7 +74,7 @@ asset:
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
   assetFileNameSphere: 'urdf/sphere.urdf'
 # table 
-table_size: [1.0, 1.0, 0.4]
+table_size: [1.0, 2.0, 0.4]
 table_gap: 0.0
 max_table_gap: 0.3 # max table gap to prevent object falling
 rand_table_gap: 0.01

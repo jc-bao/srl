@@ -45,6 +45,7 @@ reward_scale: 1
 act_net: Actor
 actor_pool_type: max
 shared_actor: false
+mask_other_robot_obs: false
 mirror_actor: false
 critic_pool_type: mean
 critic_net: CriticTwin

@@ -2,10 +2,11 @@
 
 wandb: true
 project: corl-main
-name: 7obj
+name: ho28
 
-wid: 1zn2pqt7
-load_tag: latest_37
+load_project: corl-2022
+wid: 23bfj0ac
+load_tag: latest_17
 resume_mode: restart
 
 render: false
@@ -27,7 +28,7 @@ g_random_relabel_bar: 0
 shared_critic: true
 
 defaults:
-  - override /env: 5ho_hard
-  - override /curri: num
+  - override /env: ho_28
+  - override /curri: num_28
 
 eval_per_save: 0.5

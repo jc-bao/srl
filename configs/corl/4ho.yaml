@@ -4,8 +4,8 @@ wandb: true
 project: corl-main
 name: 8obj
 
-wid: 1yjzsocp
-load_tag: latest_7
+wid: 23bfj0ac
+load_tag: latest_17
 resume_mode: restart
 
 render: false
@@ -27,7 +27,5 @@ g_random_relabel_bar: 0
 shared_critic: true
 
 defaults:
-  - override /env: 4ho_hard
-  - override /curri: num_46
-
-eval_per_save: 0.5
+  - override /env: 2ho_hard
+  - override /curri: num
