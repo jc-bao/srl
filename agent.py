@@ -148,6 +148,7 @@ class AgentBase:
     collected_eps = 0
     while collected_eps < target_eps or (num_ep < 1).any():
       ten_a = self.act(ten_s, self.EP.info_parser(ten_info, 'goal_mask')).detach()
+      # ten_a[..., :4] += (torch.rand_like(ten_a[..., :4], device=self.cfg.device)*2-1)*0.5
       ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
       if self.cfg.render and render:

@@ -6,3 +6,4 @@ headless: false
 num_robots: 2
 os_rate: 0.8
 render_size: [1920, 1080]
+table_gap: 0.1
