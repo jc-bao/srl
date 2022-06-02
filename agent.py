@@ -264,8 +264,9 @@ class AgentBase:
     while collected_steps < target_steps or (num_ep < 1).any():
       # setup next state
       s, rew, done, info = self.env.step(act)  # different
-      act = self.act.get_action(s).detach()
-
+      act = self.act.get_action(s, self.EP.info_parser(info, 'goal_mask')).detach()
+      # with torch.no_grad():
+      #   cri = self.cri.get_q_all(s, act, self.EP.info_parser(info, 'goal_mask'))
       # update buffer
       num_ep[done.type(torch.bool)] += 1
       # preprocess info, add [1]trajectory index, [2]traj len, [3]to left

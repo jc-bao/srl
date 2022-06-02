@@ -135,6 +135,7 @@ class ActorFixSAC(nn.Module):
     self.log_sqrt_2pi = np.log(np.sqrt(2 * np.pi))
     self.soft_plus = nn.Softplus()
 
+  @torch.jit.ignore
   def forward(self, state, mask=None):
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
@@ -159,6 +160,37 @@ class ActorFixSAC(nn.Module):
     elif self.cfg.mirror_actor:
       a_avg = a_avg.view(-1,2*self.EP.action_dim)
       a_avg @= self.EP.dual_act_rot_mat
+      a_avg = a_avg.view(-1,2,self.EP.action_dim).mean(dim=1)
+    return a_avg
+  
+  @torch.jit.export
+  def take_action(self, state):
+    mask = None
+    if self.cfg.shared_actor or self.cfg.mirror_actor:
+      state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
+      if self.cfg.mask_other_robot_obs:
+        state *= self.EP.other_robot_obs_mask
+      if mask is not None:
+        mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
+    if self.cfg.net_type == 'attn':
+      # tmp = self.get_attn_net_state(state, mask)
+      tmp = self.net_state(state, mask)
+    else:
+      tmp = self.net_state(state)
+    if self.cfg.actor_pool_type == 'cross3':
+      a_avg_0 = self.net_a_avg_0(tmp[0]).tanh()
+      a_avg_1 = self.net_a_avg_1(tmp[1]).tanh()
+      a_avg = torch.cat((a_avg_0, a_avg_1), dim=1)
+    else:
+      a_avg = self.net_a_avg(tmp).tanh()
+    if self.cfg.shared_actor:
+      a_avg = a_avg.view(-1,self.EP.action_dim)
+      # a_avg @= self.EP.last_act_rot_mat
+      a_avg = a_avg@self.EP.last_act_rot_mat
+    elif self.cfg.mirror_actor:
+      a_avg = a_avg.view(-1,2*self.EP.action_dim)
+      # a_avg @= self.EP.dual_act_rot_mat
+      a_avg = a_avg@self.EP.dual_act_rot_mat
       a_avg = a_avg.view(-1,2,self.EP.action_dim).mean(dim=1)
     return a_avg
 
@@ -418,10 +450,16 @@ class CriticTwin(nn.Module):  # shared parameter
         return q_stack.mean(dim=1), embedding_norm
       else:
         q_stack = torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1).view(-1,2,2) # [batch, 2(mirror), 2(twin)]
+        # print(q_stack.mean(dim=-1)[0,0].item(), ', ', q_stack.mean(dim=-1)[0,1].item())
         if get_mirror_std:
           return q_stack.mean(dim=1), q_stack.std(dim=1)
         else:
-          return q_stack.mean(dim=1)
+          if self.cfg.mirror_q_pool_type == 'mean':
+            return q_stack.mean(dim=1)
+          elif self.cfg.mirror_q_pool_type == 'min': 
+            return q_stack.min(dim=1)[0]
+          else: 
+            raise NotImplementedError
     else:
       if self.cfg.net_type == 'attn':
         tmp = self.net_sa(torch.cat((state, action), dim=-1), mask=mask)
