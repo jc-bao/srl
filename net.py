@@ -174,14 +174,14 @@ class ActorFixSAC(nn.Module):
   
   @torch.jit.export
   def take_action(self, state):
-    state[..., :3] = (state[..., :3]-self.goal_mean)/self.goal_std
-    state[..., 3:6] = (state[..., 3:6]-self.goal_mean)/self.goal_std
-    state[..., 6:9] = (state[..., 6:9]-self.goal_mean)/self.goal_std
-    state[..., 9:12] = (state[..., 9:12]-self.goal_mean)/self.goal_std
-    state[..., 18:21] = (state[..., 18:21]-self.goal_mean)/self.goal_std
-    state[..., 25:28] = (state[..., 25:28]-self.goal_mean)/self.goal_std
-    state[..., 28:31] = (state[..., 28:31]-self.goal_mean)/self.goal_std
-    state[..., 31:34] = (state[..., 31:34]-self.goal_mean)/self.goal_std
+    # state[..., :3] = (state[..., :3]-self.goal_mean)/self.goal_std
+    # state[..., 3:6] = (state[..., 3:6]-self.goal_mean)/self.goal_std
+    # state[..., 6:9] = (state[..., 6:9]-self.vel_mean)/self.vel_std
+    # state[..., 9:12] = (state[..., 9:12]-self.vel_mean)/self.vel_std
+    # state[..., 18:21] = (state[..., 18:21]-self.goal_mean)/self.goal_std
+    # state[..., 25:28] = (state[..., 25:28]-self.goal_mean)/self.goal_std
+    # state[..., 28:31] = (state[..., 28:31]-self.goal_mean)/self.goal_std
+    # state[..., 31:34] = (state[..., 31:34]-self.goal_mean)/self.goal_std
     state = torch.stack((state, state@self.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
     tmp = self.net_state(state)
     a_avg = self.net_a_avg(tmp).tanh()

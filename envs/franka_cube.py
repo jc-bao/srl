@@ -1,5 +1,6 @@
 from socket import EAI_OVERFLOW
 from this import d
+from tkinter import E
 import numpy as np
 import os
 import sys
@@ -186,6 +187,8 @@ class FrankaCube(gym.Env):
 		# 	[[0.1840,  0.4244, -0.1571, -2.3733,  0.1884,  2.7877,  2.2164, 0.02, 0.02]],
 		# 	device=self.device,)
 		self.predefined_dof_pos = torch.load(self.cfg_path/'default_joint_pos.pt').to(self.device)
+		# DEUBG!!!
+		self.predefined_dof_pos = self.predefined_dof_pos[[0]]
 		random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
 		self.franka_default_dof_pos = torch.empty((self.cfg.num_envs*self.cfg.num_robots, self.predefined_dof_pos.shape[-1]), device=self.device)
 		self.franka_default_dof_pos = self.predefined_dof_pos[random_idx]
@@ -708,6 +711,8 @@ class FrankaCube(gym.Env):
 				if sampled_goal_num >= done_env_num.item():
 					break
 			self.goal[reset_idx, :max_num_goals] = new_goal 
+			# !!! DEBUG
+			self.goal[reset_idx] = torch.tensor([[-0.2,0.1,0.42],[-0.2,-0.1,0.42]], device=self.device, dtype=torch.float) 
 			self.goal_workspace[reset_idx, :max_num_goals] = new_goal_ws
 			if sampled_goal_num < (done_env_num.item()):
 				print('[Env] Warning: goal sampling failed')
@@ -782,6 +787,8 @@ class FrankaCube(gym.Env):
 				if sampled_ag_num >= done_env_num.item():
 					break
 			self.init_ag[reset_idx, :max_num_goals] = new_ag
+			# !!! DEBUG
+			self.init_ag[reset_idx] = torch.tensor([[-0.35,0.1,0.42],[-0.35,-0.1,0.42]], device=self.device, dtype=torch.float)
 			self.block_workspace[reset_idx, :max_num_goals] = new_ag_ws
 			if sampled_ag_num < (done_env_num.item()):
 				print('[Env] Warning: ag sampling failed')
@@ -1465,12 +1472,12 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-r', '--random', action='store_true')
 	parser.add_argument('-e', '--ezpolicy', action='store_true')
-	parser.add_argument('-a', '--action', nargs='+', type=float, default = [0,0,0,0])
+	parser.add_argument('-a', '--action', nargs='+', type=float, default = [0,0,0,0,0,0,0,0])
 	args = parser.parse_args()
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=3, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=8, current_num_goals=3, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform')
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform')
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
