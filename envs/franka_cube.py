@@ -1421,6 +1421,9 @@ class FrankaCube(gym.Env):
 			# info for relable
 			max_ag_unmoved_steps = self.cfg.max_ag_unmoved_steps, 
 			ag_moved_threshold = self.cfg.ag_moved_threshold,
+			# normalize info
+			goal_mean = self.goal_mean,
+			goal_std = self.goal_std, 
 			# dims
 			num_robots = self.cfg.num_robots, 
 			per_action_dim=self.cfg.per_action_dim,

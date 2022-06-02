@@ -93,6 +93,9 @@ class ActorSAC(nn.Module):
 class ActorFixSAC(nn.Module):
   def __init__(self, cfg):
     self.cfg, self.EP = filter_cfg(cfg)
+    # self.cfg['env_params'] = self.EP
+    # torch.save(self.cfg, '2ho_seperate.pkl')
+    # exit()
     for k,v in self.EP.items():
       setattr(self, k, v)
     super().__init__()
@@ -150,7 +153,8 @@ class ActorFixSAC(nn.Module):
         mask = torch.stack((mask, mask), dim=1).view(-1, mask.shape[-1])
     if self.cfg.net_type == 'attn':
       # tmp = self.get_attn_net_state(state, mask)
-      tmp = self.net_state(state, mask)
+      # tmp = self.net_state(state, mask)
+      tmp = self.net_state(state)
     else:
       tmp = self.net_state(state)
     if self.cfg.actor_pool_type == 'cross3':
@@ -170,6 +174,14 @@ class ActorFixSAC(nn.Module):
   
   @torch.jit.export
   def take_action(self, state):
+    state[..., :3] = (state[..., :3]-self.goal_mean)/self.goal_std
+    state[..., 3:6] = (state[..., 3:6]-self.goal_mean)/self.goal_std
+    state[..., 6:9] = (state[..., 6:9]-self.goal_mean)/self.goal_std
+    state[..., 9:12] = (state[..., 9:12]-self.goal_mean)/self.goal_std
+    state[..., 18:21] = (state[..., 18:21]-self.goal_mean)/self.goal_std
+    state[..., 25:28] = (state[..., 25:28]-self.goal_mean)/self.goal_std
+    state[..., 28:31] = (state[..., 28:31]-self.goal_mean)/self.goal_std
+    state[..., 31:34] = (state[..., 31:34]-self.goal_mean)/self.goal_std
     state = torch.stack((state, state@self.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
     tmp = self.net_state(state)
     a_avg = self.net_a_avg(tmp).tanh()
@@ -185,7 +197,8 @@ class ActorFixSAC(nn.Module):
       if self.cfg.mask_other_robot_obs:
         state *= self.EP.other_robot_obs_mask
     if self.cfg.net_type == 'attn':
-      t_tmp = self.net_state(state, mask)
+      t_tmp = self.net_state(state)
+      # t_tmp = self.net_state(state, mask)
     else:
       t_tmp = self.net_state(state)
     if self.cfg.actor_pool_type == 'cross3':
