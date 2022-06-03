@@ -846,7 +846,13 @@ class FrankaCube(gym.Env):
 			dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
 			self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 			# grip
-			grip_acts = self.franka_dof_poses[..., [self.franka_hand_index]] + self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel
+			if self.cfg.grip_control_mode == 'continuous':
+				grip_acts = self.franka_dof_poses[..., [self.franka_hand_index]] + self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel
+			elif self.cfg.grip_control_mode == 'discrete':
+				grip_acts = (self.actions[..., [3]]>0.3).float() * 0.04 + \
+					((-0.3<self.actions[..., [3]]) & (self.actions[..., [3]]<=0.3)).float() * 0.02
+			else:
+				raise NotImplementedError
 			# reset gripper
 			self.franka_dof_targets[..., self.franka_hand_index:
 															self.franka_hand_index+2] = grip_acts.repeat(1, 1, 2)
