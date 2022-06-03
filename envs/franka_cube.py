@@ -529,10 +529,12 @@ class FrankaCube(gym.Env):
 		if self.cfg.reward_type == 'sparse':
 			dist = torch.norm(ag-dg, dim=-1)
 			far_goal = (dist > self.cfg.err).type(torch.float32)
+			rew = -info.if_press_block.squeeze(-1)*self.cfg.contact_force_penalty
 			if 'goal_mask' in info:
-				return -torch.sum(far_goal*info.goal_mask, dim=-1)/torch.sum(info.goal_mask, dim=-1)
+				rew -= torch.sum(far_goal*info.goal_mask, dim=-1)/torch.sum(info.goal_mask, dim=-1)
 			else:
-				return -torch.mean(far_goal, dim=-1)
+				rew -= torch.mean(far_goal, dim=-1)
+			return rew
 		elif self.cfg.reward_type == 'sparse+':
 			return torch.mean((torch.norm(ag-dg, dim=-1) < self.cfg.err).type(torch.float32), dim=-1)
 		elif self.cfg.reward_type == 'dense':
@@ -881,9 +883,13 @@ class FrankaCube(gym.Env):
 
 		# rew
 		if self.cfg.contact_force_penalty > 0:
-			print(self.net_cf[:, self.block_handles])
+			if_press_block = \
+				((self.net_cf[:,self.lfinger_handles,2] > self.cfg.contact_force_threshold).any(dim=-1) | \
+				(self.net_cf[:,self.rfinger_handles,2] > self.cfg.contact_force_threshold).any(dim=-1)).unsqueeze(-1).float()
+		else:
+			if_press_block = torch.zeros((self.cfg.num_envs, 1), dtype=torch.float, device=self.device)	
 		rew = self.compute_reward(
-			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos, goal_mask=self.goal_mask.bool()), normed=False)
+			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos, goal_mask=self.goal_mask.bool(), if_press_block=if_press_block), normed=False)
 		# reset
 		ag_moved_dist = torch.norm(self.block_states[...,:3]-self.last_step_ag, dim=-1)
 		reached_ag = torch.norm(self.block_states[..., :3]-self.goal, dim=-1) < self.cfg.err
@@ -930,6 +936,7 @@ class FrankaCube(gym.Env):
 			self.ag_unmoved_steps,
 			# goal masks
 			self.goal_mask.view(self.cfg.num_envs, -1),
+			if_press_block
 		), dim=-1)
 		self.last_step_ag = self.block_states[..., :3].clone()
 
@@ -1261,6 +1268,8 @@ class FrankaCube(gym.Env):
 			if "physx" in cfg:
 				for opt in cfg["physx"].keys():
 					if opt == "contact_collection":
+						if cfg.contact_force_penalty > 0:
+							cfg["physx"][opt] = 1
 						setattr(sim_params.physx, opt,
 										gymapi.ContactCollection(cfg["physx"][opt]),)
 					else:
@@ -1329,6 +1338,7 @@ class FrankaCube(gym.Env):
 				reached_ag = info[...,reached_ag_start:ag_unmoved_steps_start], 
 				ag_unmoved_steps = info[...,ag_unmoved_steps_start:goal_mask_start], 
 				goal_mask = info[...,goal_mask_start:goal_mask_start+self.cfg.num_goals], 
+				if_press_block = info[..., [goal_mask_start+self.cfg.num_goals]]
 			)
 		elif name == 'success':
 			return info[..., 0]
@@ -1352,6 +1362,8 @@ class FrankaCube(gym.Env):
 			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2]
 		elif name == 'goal_mask':
 			return info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3].bool()
+		elif name == 'if_press_block':
+			return info[6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3].bool()
 		else:
 			return None
 
@@ -1378,6 +1390,8 @@ class FrankaCube(gym.Env):
 			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2] = new_info.ag_unmoved_steps
 		if 'goal_mask' in new_info:
 			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*2:6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3] = new_info.goal_mask
+		if 'if_press_block' in new_info:
+			old_info[..., 6+self.cfg.goal_dim+self.cfg.num_robots*3+self.cfg.num_goals*3] = new_info.if_press_block
 		return old_info
 
 	def sample_goal(self, size, norm = True, change_ws=False, g_origin=None):
