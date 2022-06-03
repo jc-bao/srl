@@ -540,7 +540,7 @@ class FrankaCube(gym.Env):
 		self.hand_vel_std = 2*self.cfg.max_vel / 12**0.5
 		self.num_bodies = self.rigid_body_states.shape[1]
 		# store for obs 
-		self.hand_pos = []
+		self.hand_pos = [] # [robot_id, env_id, pos]
 		self.hand_vel = []
 		self.hand_rot = []
 		self.franka_lfinger_poses = []
@@ -837,9 +837,24 @@ class FrankaCube(gym.Env):
 				pos_errs = torch.clip(pos_errs+self.grip_pos-self.origin_shift, self.torch_robot_space.low,
 														self.torch_robot_space.high) - self.grip_pos + self.origin_shift
 			dposes = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
-			self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 			# grip
-			grip_acts = self.franka_dof_poses[..., [self.franka_hand_index]] + self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel
+			if self.cfg.grip_control_mode == 'continuous':
+				self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
+				grip_acts = self.franka_dof_poses[..., [self.franka_hand_index]] + self.actions[..., [3]] * self.cfg.dt * self.cfg.max_grip_vel
+			elif self.cfg.grip_control_mode == 'discrete':
+				thereshold = 0.5
+				self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
+				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
+					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
+			elif self.cfg.grip_control_mode == 'discrete_with_stop':
+				thereshold = 0.8
+				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
+					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
+				not_moved_robot_id = (self.actions[..., 3] < -thereshold) | (self.actions[..., 3] > thereshold)
+				dposes[not_moved_robot_id] = torch.zeros((6,1), dtype=torch.float, device=self.device)
+				self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
+			else:
+				raise NotImplementedError
 			# reset gripper
 			self.franka_dof_targets[..., self.franka_hand_index:
 															self.franka_hand_index+2] = grip_acts.repeat(1, 1, 2)
@@ -871,7 +886,7 @@ class FrankaCube(gym.Env):
 			self.gym.refresh_dof_state_tensor(self.sim)
 			self.gym.refresh_rigid_body_state_tensor(self.sim)
 			self.gym.refresh_jacobian_tensors(self.sim)
-			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
+			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1) # Tenosr(num_envs, num_robots, 3)
 			self.target_hand_pos[reset_idx] = self.hand_pos_tensor[reset_idx] 
 		if not self.cfg.headless:
 			self.render(mode='human')

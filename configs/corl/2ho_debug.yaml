@@ -2,13 +2,12 @@
 
 wandb: false
 project: corl-main
-name: main
+name: render
 
+resume_mode: load_only 
+load_tag: latest_19
+wid: 372uaqdq
 load_curri: true
-resume_mode: load_only
-wid: 23bfj0ac
-load_project: corl-2022
-load_tag: latest_17
 
 render: false
 
@@ -20,19 +19,16 @@ act_net: ActorFixSAC
 critic_net: CriticTwin
 net_type: attn
 if_act_target: false
-
-# partial relabel
-g_random_relabel_rate: 1.0 
-g_random_relabel_bar: 0
-
-# mirror replay
 shared_critic: true
+shared_actor: true
+mask_other_robot_obs: true 
 
 buffer_size: 10000
-batch_size: 1
-reuse: 100
-steps_per_rollout: 100
+batch_size: 20
+reuse: 0.000001
 eval_per_rollout: 1
+eval_eps: 100
+render_per_eval: 1
 
 defaults:
   - override /env: 2ho_debug

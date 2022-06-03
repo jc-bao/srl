@@ -3,3 +3,5 @@ current_num_goals: 2
 os_rate: 0.8
 num_envs: 1
 num_cameras: 0
+headless: false
+table_gap: 0.1

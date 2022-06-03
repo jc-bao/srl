@@ -46,6 +46,7 @@ debug_viz: true
 damping: 0.05
 max_vel: 2
 max_grip_vel: 0.1 
+grip_control_mode: continuous # {continuous, discrete, discrete_with_stop}
 max_ik_iter: 10
 ik_err: 0.005 # for iteration version of IK
 # max_vel: 1.8 # max move 0.05 per step
