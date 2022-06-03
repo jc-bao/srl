@@ -435,56 +435,6 @@ class FrankaCube(gym.Env):
 		self.success_step_buf = torch.zeros(
 			self.cfg.num_envs, device=self.device, dtype=torch.long)
 
-		# hand = self.gym.find_actor_rigid_body_handle(
-		# 	self.envs[0], self.frankas[0], "panda_link7")
-		# lfinger = self.gym.find_actor_rigid_body_handle(
-		# 	self.envs[0], self.frankas[0], "panda_leftfinger")
-		# rfinger = self.gym.find_actor_rigid_body_handle(
-		# 	self.envs[0], self.frankas[0], "panda_rightfinger")
-
-		# hand_pose = self.gym.get_rigid_transform(self.envs[0], hand)
-		# lfinger_pose = self.gym.get_rigid_transform(self.envs[0], lfinger)
-		# rfinger_pose = self.gym.get_rigid_transform(self.envs[0], rfinger)
-
-		# finger_pose = gymapi.Transform()
-		# finger_pose.p = (lfinger_pose.p + rfinger_pose.p) * 0.5
-		# finger_pose.r = lfinger_pose.r
-
-		# hand_pose_inv = hand_pose.inverse()
-		# grasp_pose_axis = 1
-		# franka_local_grasp_pose = hand_pose_inv * finger_pose
-		# franka_local_grasp_pose.p += gymapi.Vec3(
-		# 	*get_axis_params(0.04, grasp_pose_axis))
-		# self.franka_local_grasp_pos = to_torch(
-		# 	[
-		# 		franka_local_grasp_pose.p.x,
-		# 		franka_local_grasp_pose.p.y,
-		# 		franka_local_grasp_pose.p.z,
-		# 	],
-		# 	device=self.device,
-		# ).repeat((self.cfg.num_envs, 1))
-		# self.franka_local_grasp_rot = to_torch(
-		# 	[
-		# 		franka_local_grasp_pose.r.x,
-		# 		franka_local_grasp_pose.r.y,
-		# 		franka_local_grasp_pose.r.z,
-		# 		franka_local_grasp_pose.r.w,
-		# 	],
-		# 	device=self.device,
-		# ).repeat((self.cfg.num_envs, 1))
-
-		# self.gripper_forward_axis = to_torch([0, 0, 1], device=self.device).repeat(
-		# 	(self.cfg.num_envs, 1)
-		# )
-		# self.gripper_up_axis = to_torch([0, 1, 0], device=self.device).repeat(
-		# 	(self.cfg.num_envs, 1)
-		# )
-
-		# self.franka_lfinger_pos = torch.zeros_like(self.franka_local_grasp_pos)
-		# self.franka_rfinger_pos = torch.zeros_like(self.franka_local_grasp_pos)
-		# self.franka_lfinger_rot = torch.zeros_like(self.franka_local_grasp_rot)
-		# self.franka_rfinger_rot = torch.zeros_like(self.franka_local_grasp_rot)
-
 		self.j_eefs = []
 		for franka_id in range(self.cfg.num_robots):
 			# dof
@@ -891,10 +841,10 @@ class FrankaCube(gym.Env):
 			self.gym.refresh_dof_state_tensor(self.sim)
 			self.gym.refresh_rigid_body_state_tensor(self.sim)
 			self.gym.refresh_jacobian_tensors(self.sim)
-			if self.cfg.contact_force_penalty > 0:
-				self.gym.refresh_net_contact_force_tensor(self.sim)
 			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1) # Tenosr(num_envs, num_robots, 3)
 			self.target_hand_pos[reset_idx] = self.hand_pos_tensor[reset_idx] 
+		if self.cfg.contact_force_penalty > 0:
+			self.gym.refresh_net_contact_force_tensor(self.sim)
 		if not self.cfg.headless:
 			self.render(mode='human')
 		if self.device == "cpu":
