@@ -15,6 +15,7 @@ max_ag_unmoved_steps: 25
 ag_moved_threshold: 0.002
 # rew
 reward_type: sparse
+contact_force_penalty: 0.0
 success_bar: !!float -1e-3
 extra_steps: 5
 # number
@@ -87,6 +88,8 @@ friction: 0.01
 goal_space: [0.4, 0.3, 0.2]
 goal_scale: 1.0
 goal_ground_rate: 0.5
+# noise
+pos_noise: 0.0
 
 # sim:
 physics_engine: SIM_PHYSX 

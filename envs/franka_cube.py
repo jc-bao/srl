@@ -564,6 +564,11 @@ class FrankaCube(gym.Env):
 										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
 		self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
 		self.target_hand_pos = self.hand_pos_tensor.clone()
+		if self.cfg.contact_force_penalty > 0:
+			# get contact force tensor
+			_net_cf = self.gym.acquire_net_contact_force_tensor(self.sim)
+			self.net_cf = gymtorch.wrap_tensor(_net_cf).view(
+			self.cfg.num_envs, -1, 3)
 
 	def compute_reward(self, ag, dg, info, normed=True):
 		ag = ag.view(-1, self.cfg.num_goals, 3)
@@ -886,6 +891,8 @@ class FrankaCube(gym.Env):
 			self.gym.refresh_dof_state_tensor(self.sim)
 			self.gym.refresh_rigid_body_state_tensor(self.sim)
 			self.gym.refresh_jacobian_tensors(self.sim)
+			if self.cfg.contact_force_penalty > 0:
+				self.gym.refresh_net_contact_force_tensor(self.sim)
 			self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1) # Tenosr(num_envs, num_robots, 3)
 			self.target_hand_pos[reset_idx] = self.hand_pos_tensor[reset_idx] 
 		if not self.cfg.headless:
@@ -899,10 +906,16 @@ class FrankaCube(gym.Env):
 		# update obs, rew, done, info
 		self.grip_pos = (torch.stack(self.franka_lfinger_poses,dim=1) +
 										 torch.stack(self.franka_rfinger_poses,dim=1))/2 + self.finger_shift
+		if self.cfg.pos_noise > 0:
+			self.grip_pos += (torch.randn_like(self.grip_pos, device=self.device)*2-1) * self.cfg.pos_noise
 		grip_pos_normed = (self.grip_pos-self.goal_mean)/self.goal_std
 		hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
 		finger_widths_normed = (self.finger_widths.unsqueeze(-1)-self.finger_width_mean) / self.finger_width_std
-		block_pos_normed = (self.block_states[..., :3]-self.goal_mean) / self.goal_std # CHECK multi robot
+		if self.cfg.pos_noise > 0:
+			noise = (torch.randn_like(self.block_states[..., :3], device=self.device)*2-1)*self.cfg.pos_noise
+			block_pos_normed = (self.block_states[..., :3]+noise-self.goal_mean) / self.goal_std # CHECK multi robot
+		else:
+			block_pos_normed = (self.block_states[..., :3]-self.goal_mean) / self.goal_std # CHECK multi robot
 		# NOTE make sure achieved goal is close to end
 		block_obs = torch.cat((self.block_states[..., 3:7], block_pos_normed), dim=-1)
 		goal_normed = (self.goal-self.goal_mean)/self.goal_std
@@ -917,6 +930,8 @@ class FrankaCube(gym.Env):
 			obs = torch.cat((self.robot_id, obs), dim=-1)
 
 		# rew
+		if self.cfg.contact_force_penalty > 0:
+			print(self.net_cf[:, self.block_handles])
 		rew = self.compute_reward(
 			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos, goal_mask=self.goal_mask.bool()), normed=False)
 		# reset
