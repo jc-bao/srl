@@ -91,6 +91,7 @@ goal_scale: 1.0
 goal_ground_rate: 0.5
 # noise
 pos_noise: 0.0
+mask_robot_vel: false
 
 # sim:
 physics_engine: SIM_PHYSX 

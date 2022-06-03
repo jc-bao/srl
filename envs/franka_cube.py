@@ -807,9 +807,10 @@ class FrankaCube(gym.Env):
 				thereshold = 0.5
 				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
 					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
-				only_move_gripper_id = (self.progress_buf % 2 == 0)
-				dposes[only_move_gripper_id] = torch.zeros((6,1), dtype=torch.float, device=self.device)
-				grip_acts[~only_move_gripper_id] = self.franka_dof_targets[~only_move_gripper_id, :, self.franka_hand_index].unsqueeze(-1)
+				if i < self.cfg.control_freq_inv/2:
+					grip_acts = self.franka_dof_targets[..., self.franka_hand_index].unsqueeze(-1)
+				else:
+					dposes = torch.zeros((6,1), dtype=torch.float, device=self.device)
 				self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 			else:
 				raise NotImplementedError
@@ -862,7 +863,10 @@ class FrankaCube(gym.Env):
 		if self.cfg.pos_noise > 0:
 			self.grip_pos += (torch.randn_like(self.grip_pos, device=self.device)*2-1) * self.cfg.pos_noise
 		grip_pos_normed = (self.grip_pos-self.goal_mean)/self.goal_std
-		hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
+		if self.cfg.mask_robot_vel:
+			hand_vel_normed = torch.zeros((self.cfg.num_envs, self.cfg.num_robots, 3), device=self.device, dtype=torch.float)
+		else:
+			hand_vel_normed = (torch.stack(self.hand_vel,dim=1)-self.hand_vel_mean)/self.hand_vel_std
 		finger_widths_normed = (self.finger_widths.unsqueeze(-1)-self.finger_width_mean) / self.finger_width_std
 		if self.cfg.pos_noise > 0:
 			noise = (torch.randn_like(self.block_states[..., :3], device=self.device)*2-1)*self.cfg.pos_noise
