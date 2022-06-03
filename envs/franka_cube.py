@@ -804,11 +804,12 @@ class FrankaCube(gym.Env):
 				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
 					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
 			elif self.cfg.grip_control_mode == 'discrete_with_stop':
-				thereshold = 0.8
+				thereshold = 0.5
 				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
 					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
-				not_moved_robot_id = (self.actions[..., 3] < -thereshold) | (self.actions[..., 3] > thereshold)
-				dposes[not_moved_robot_id] = torch.zeros((6,1), dtype=torch.float, device=self.device)
+				only_move_gripper_id = (self.progress_buf % 2 == 0)
+				dposes[only_move_gripper_id] = torch.zeros((6,1), dtype=torch.float, device=self.device)
+				grip_acts[~only_move_gripper_id] = self.franka_dof_targets[~only_move_gripper_id, :, self.franka_hand_index].unsqueeze(-1)
 				self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 			else:
 				raise NotImplementedError
@@ -890,6 +891,7 @@ class FrankaCube(gym.Env):
 			if_press_block = torch.zeros((self.cfg.num_envs, 1), dtype=torch.float, device=self.device)	
 		rew = self.compute_reward(
 			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos, goal_mask=self.goal_mask.bool(), if_press_block=if_press_block), normed=False)
+		print(rew)
 		# reset
 		ag_moved_dist = torch.norm(self.block_states[...,:3]-self.last_step_ag, dim=-1)
 		reached_ag = torch.norm(self.block_states[..., :3]-self.goal, dim=-1) < self.cfg.err

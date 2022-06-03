@@ -16,7 +16,7 @@ ag_moved_threshold: 0.002
 # rew
 reward_type: sparse
 contact_force_penalty: 0.0
-contact_force_threshold: 3.0
+contact_force_threshold: 2.0
 success_bar: !!float -1e-3
 extra_steps: 5
 # number
