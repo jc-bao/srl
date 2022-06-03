@@ -891,7 +891,6 @@ class FrankaCube(gym.Env):
 			if_press_block = torch.zeros((self.cfg.num_envs, 1), dtype=torch.float, device=self.device)	
 		rew = self.compute_reward(
 			self.block_states[..., :3], self.goal, AttrDict(grip_pos=self.grip_pos, goal_mask=self.goal_mask.bool(), if_press_block=if_press_block), normed=False)
-		print(rew)
 		# reset
 		ag_moved_dist = torch.norm(self.block_states[...,:3]-self.last_step_ag, dim=-1)
 		reached_ag = torch.norm(self.block_states[..., :3]-self.goal, dim=-1) < self.cfg.err
