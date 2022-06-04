@@ -810,6 +810,7 @@ class FrankaCube(gym.Env):
 				grip_closed = self.franka_dof_poses[..., self.franka_hand_index] < (0.045/2)
 				need_move_grip = ((grip_acts.squeeze(-1) > 0.03) & grip_closed) | ((grip_acts.squeeze(-1) < 0.01) & ~grip_closed)  
 				dposes[need_move_grip] = 0.0
+				print(self.actions[0,0,3])
 				# if i < self.cfg.control_freq_inv/2:
 				# 	grip_acts = self.franka_dof_targets[..., self.franka_hand_index].unsqueeze(-1)
 				# else:
