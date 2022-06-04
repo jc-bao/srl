@@ -802,11 +802,11 @@ class FrankaCube(gym.Env):
 				thereshold = 0.5
 				self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
-					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
+					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.03
 			elif self.cfg.grip_control_mode == 'discrete_with_stop':
 				thereshold = 0.5
 				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
-					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
+					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.03
 				grip_closed = self.franka_dof_poses[..., self.franka_hand_index] < (0.045/2)
 				need_move_grip = ((grip_acts.squeeze(-1) > 0.03) & grip_closed) | ((grip_acts.squeeze(-1) < 0.01) & ~grip_closed)  
 				dposes[need_move_grip] = 0.0
