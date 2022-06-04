@@ -807,10 +807,13 @@ class FrankaCube(gym.Env):
 				thereshold = 0.5
 				grip_acts = (self.actions[..., [3]]>thereshold).float() * 0.04 + \
 					((-thereshold<self.actions[..., [3]]) & (self.actions[..., [3]]<=thereshold)).float() * 0.02
-				if i < self.cfg.control_freq_inv/2:
-					grip_acts = self.franka_dof_targets[..., self.franka_hand_index].unsqueeze(-1)
-				else:
-					dposes = torch.zeros((6,1), dtype=torch.float, device=self.device)
+				grip_closed = self.franka_dof_poses[..., self.franka_hand_index] < (0.045/2)
+				need_move_grip = ((grip_acts.squeeze(-1) > 0.03) & grip_closed) | ((grip_acts.squeeze(-1) < 0.01) & ~grip_closed)  
+				dposes[need_move_grip] = 0.0
+				# if i < self.cfg.control_freq_inv/2:
+				# 	grip_acts = self.franka_dof_targets[..., self.franka_hand_index].unsqueeze(-1)
+				# else:
+				# 	dposes = torch.zeros((6,1), dtype=torch.float, device=self.device)
 				self.franka_dof_targets[..., :self.franka_hand_index] = self.control_ik_old(dposes)
 			else:
 				raise NotImplementedError
