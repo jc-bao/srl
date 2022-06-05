@@ -671,7 +671,7 @@ class FrankaCube(gym.Env):
 					print('[Env] Warning: goal sampling failed')
 			elif self.cfg.goal_shape == 'tower1':
 				self.goal_workspace[reset_idx, :max_num_goals] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),1), device=self.device).repeat(1, max_num_goals)
-				self.goal[reset_idx, :max_num_goals] = self.torch_goal_space.sample((done_env_num.item(),1)).repeat(1, max_num_goals, 1) + self.origin_shift[self.goal_workspace[reset_idx,0]]
+				self.goal[reset_idx, :max_num_goals] = (self.torch_goal_space.sample((done_env_num.item(),1)) + self.origin_shift[self.goal_workspace[reset_idx,0]].unsqueeze(1)).repeat(1, max_num_goals, 1)
 				self.goal[reset_idx, :max_num_goals, 2] = torch.arange(max_num_goals, device=self.device) * self.cfg.block_size + self.cfg.block_size/2 + self.cfg.table_size[2]
 			elif self.cfg.goal_shape == 'tower2':
 				all_goal_idx = torch.arange(self.cfg.num_goals, device=self.device).repeat(done_env_num.item(),1)
