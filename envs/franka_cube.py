@@ -680,7 +680,6 @@ class FrankaCube(gym.Env):
 				tower2_mask = (tower1_size<=all_goal_idx) & (all_goal_idx<max_num_goals)
 				self.goal_workspace[reset_idx] = tower2_mask.long()
 				self.goal[reset_idx, :max_num_goals] = self.torch_goal_space.sample((done_env_num.item(),1)).repeat(1, max_num_goals, 1) + self.origin_shift[self.goal_workspace[reset_idx,:max_num_goals]]
-				print(self.goal_workspace)
 				self.goal[reset_idx, :, 2] = -self.cfg.block_size/2 + self.cfg.table_size[2]
 				for goal_id in range(max_num_goals):
 					tower1_cum = torch.sum(tower1_mask[:,:goal_id+1], dim=1)
