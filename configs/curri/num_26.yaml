@@ -3,7 +3,7 @@ current_num_goals:
   now: 2
   end: 6
   step: 0.501
-  indicator: results.success_rate 
+  indicator: handover_success_rate[0, :].mean().item() 
   bar: 0.7
 table_gap: # env properties
   init: 0.3
