@@ -29,6 +29,7 @@ enable_mask: True
 max_sample_time: 5
 extra_goal_sample: 10
 num_goals: 1
+goal_shape: rearrange # {rearrange, tower1, tower2, tower_n}
 base_steps: 50 
 max_steps: null
 # dim
