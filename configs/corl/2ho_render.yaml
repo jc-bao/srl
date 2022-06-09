@@ -1,3 +1,5 @@
+# @package _global_
+
 wandb: true
 project: debug
 name: 2ho_render
@@ -25,4 +27,4 @@ eval_per_rollout: 1
 eval_eps: 16
 
 defaults:
-  - override /env: 2ho
+  - override /env: 2ho_render
