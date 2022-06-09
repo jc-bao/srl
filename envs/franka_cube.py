@@ -157,7 +157,8 @@ class FrankaCube(gym.Env):
 			# set the camera position based on up axis
 			sim_params = self.gym.get_sim_params(self.sim)
 			if sim_params.up_axis == gymapi.UP_AXIS_Z:
-				cam_pos = gymapi.Vec3(1.0, -1.0, 1.0)
+				# cam_pos = gymapi.Vec3(1.0, -1.0, 1.0)
+				cam_pos = gymapi.Vec3(0.01, 0.0, 2.0)
 				cam_target = gymapi.Vec3(0.0, 0.0, 0.4)
 			else:
 				cam_pos = gymapi.Vec3(20.0, 3.0, 25.0)
@@ -1485,7 +1486,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('-r', '--random', action='store_true')
 	parser.add_argument('-e', '--ezpolicy', action='store_true')
-	parser.add_argument('-a', '--action', nargs='+', type=float, default = [0,0,0,0])
+	parser.add_argument('-a', '--action', nargs='+', type=float, default = [0,0,0,0,0,0,0,0])
 	args = parser.parse_args()
 	'''
 	run policy

@@ -1,6 +1,4 @@
-num_goals: 8
-extra_goal_sample: 2000
-max_sample_time: 20
+num_goals: 2
 current_num_goals: 2
 num_robots: 2
-os_rate: 0.8
+os_rate: 1.0 
