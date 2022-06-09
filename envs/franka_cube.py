@@ -408,7 +408,7 @@ class FrankaCube(gym.Env):
 			h1 = self.gym.create_camera_sensor(self.envs[j], camera_properties)
 			# camera_position = gymapi.Vec3(1, -1, 1)
 			# camera_target = gymapi.Vec3(0, 0, 0)
-			camera_position = gymapi.Vec3(1.5, -1.5, 2)
+			camera_position = gymapi.Vec3(1.0, -1.0, 1.5)
 			camera_target = gymapi.Vec3(0.0, 0.0, 0.5)
 			self.gym.set_camera_location(
 				h1, self.envs[j], camera_position, camera_target)
