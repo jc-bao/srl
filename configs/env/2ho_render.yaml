@@ -4,4 +4,4 @@ num_robots: 2
 os_rate: 1.0 
 num_envs: 4
 num_cameras: 4
-render_size: [1000, 1000]
+render_size: [1920, 1080]

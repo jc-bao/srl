@@ -673,6 +673,11 @@ class FrankaCube(gym.Env):
 				self.goal_workspace[reset_idx, :max_num_goals] = new_goal_ws
 				if sampled_goal_num < (done_env_num.item()):
 					print('[Env] Warning: goal sampling failed')
+			elif self.cfg.goal_shape == 'human':
+				self.goal[reset_idx, :, 1] = (torch.rand_like(self.goal[reset_idx, :, 1], device=self.device)*2-1)*0.2
+				self.goal[reset_idx, :, 2] = 0.42
+				self.goal[reset_idx, 0, 0] = 0.22
+				self.goal[reset_idx, 1, 0] = -0.22
 			elif self.cfg.goal_shape == 'tower1':
 				self.goal_workspace[reset_idx, :max_num_goals] = torch.randint(self.cfg.num_robots,size=(done_env_num.item(),1), device=self.device).repeat(1, max_num_goals)
 				self.goal[reset_idx, :max_num_goals] = (self.torch_goal_space.sample((done_env_num.item(),1)) + self.origin_shift[self.goal_workspace[reset_idx,0]].unsqueeze(1)).repeat(1, max_num_goals, 1)
@@ -782,6 +787,11 @@ class FrankaCube(gym.Env):
 					self.init_ag[self.inhand_idx, choosed_block] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
 						(torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch([self.cfg.block_length*0.7, 0., 0.], device=self.device)
 					self.block_workspace[self.inhand_idx, choosed_block] = choosed_robot 
+			if self.cfg.goal_shape == 'human':
+				self.init_ag[reset_idx, :, 1] = (torch.rand_like(self.goal[reset_idx, :, 1], device=self.device)*2-1)*0.2	
+				self.init_ag[reset_idx,:,2] = 0.42
+				self.init_ag[reset_idx, 0, 0] = -0.45
+				self.init_ag[reset_idx, 1, 0] = 0.45
 			self.num_handovers = (self.block_workspace != self.goal_workspace).sum(dim=-1)
 			self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
 			self.ag_unmoved_steps[reset_idx] = 0
@@ -1499,7 +1509,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform')
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='human')
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
