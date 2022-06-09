@@ -12,6 +12,9 @@ load_curri: true
 
 render: true
 
+net_layer: 6
+shared_net_layer: 4
+
 agent_name: AgentSAC
 act_net: ActorFixSAC
 critic_net: CriticTwin
