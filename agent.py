@@ -476,10 +476,14 @@ class AgentBase:
         self.cfg.load_curri = (self.cfg.resume_mode == 'continue')
       print('[Load] load curri:', self.cfg.load_curri)
       if self.cfg.load_curri:
+        reset_params = AttrDict()
         for k, v in data['curri'].items():
           if k in self.cfg.curri:
             print(f'[Load] set {k} to {v["now"]}')
             self.cfg['curri'][k]['now'] = v['now']
+            reset_params[k] = v['now']
+        self.env.reset(config=reset_params)
+        print(f'[Env] reset to {reset_params}')
       for name, obj in name_obj_list:
         obj.load_state_dict(data[name])
       if self.cfg.load_buffer is not None:

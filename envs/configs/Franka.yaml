@@ -15,6 +15,8 @@ max_ag_unmoved_steps: 25
 ag_moved_threshold: 0.002
 # rew
 reward_type: sparse
+contact_force_penalty: 0.0
+contact_force_threshold: 2.0
 success_bar: !!float -1e-3
 extra_steps: 5
 # number
@@ -27,6 +29,7 @@ enable_mask: True
 max_sample_time: 5
 extra_goal_sample: 10
 num_goals: 1
+goal_shape: rearrange # {rearrange, tower1, tower2, tower_n}
 base_steps: 50 
 max_steps: null
 # dim
@@ -37,7 +40,7 @@ per_seperate_dim: 7 # block state
 seperate_dim: null
 per_goal_dim: 3
 goal_dim: null
-info_dim: 6 #is_success1, step1, early_termin, traj_idx, traj_len, tleft, achieved_goal3n, grip pos, reached_ag
+info_dim: 7 #is_success1, step1, early_termin, traj_idx, traj_len, tleft, achieved_goal3n, grip pos, reached_ag, if_press_block(last)
 # control
 control_freq_inv: 10 # TODO check
 filter_param: 0.4
@@ -46,7 +49,7 @@ debug_viz: true
 damping: 0.05
 max_vel: 2
 max_grip_vel: 0.1 
-grip_control_mode: continuous # {continuous, discrete}
+grip_control_mode: continuous # {continuous, discrete, discrete_with_stop}
 max_ik_iter: 10
 ik_err: 0.005 # for iteration version of IK
 # max_vel: 1.8 # max move 0.05 per step
@@ -87,6 +90,9 @@ friction: 0.01
 goal_space: [0.4, 0.3, 0.2]
 goal_scale: 1.0
 goal_ground_rate: 0.5
+# noise
+pos_noise: 0.0
+mask_robot_vel: false
 
 # sim:
 physics_engine: SIM_PHYSX 
