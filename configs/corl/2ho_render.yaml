@@ -28,6 +28,7 @@ reuse: 0.000001
 steps_per_rollout: 100
 eval_per_rollout: 1
 eval_eps: 16
+render_per_eval: 1
 
 defaults:
   - override /env: 2ho_render
