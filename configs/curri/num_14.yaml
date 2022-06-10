@@ -1,0 +1,7 @@
+current_num_goals:
+  init: 1
+  now: 1
+  end: 4
+  step: 0.501
+  indicator: handover_success_rate[0, 1].item() 
+  bar: 0.7
