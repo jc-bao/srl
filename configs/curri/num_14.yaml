@@ -5,3 +5,17 @@ current_num_goals:
   step: 0.501
   indicator: handover_success_rate[0, 1].item() 
   bar: 0.7
+table_gap: # env properties
+  init: 0.1
+  now: 0.10 
+  end: 0.30
+  step: 0.05
+  indicator: results.handover_1_2_success_rate 
+  bar: 0.3 # reward bar to change curriculum
+os_rate: 
+  init: 0.2
+  now: 0.2
+  end: 0.8
+  step: 0.3
+  indicator: results.handover_0_1_success_rate
+  bar: 0.7
