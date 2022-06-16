@@ -53,6 +53,7 @@ shared_critic: false
 mirror_q_reg_coef: 0
 mirror_q_pool_type: mean
 mirror_feature_reg_coef: 0
+only_use_one_side_in_mirror_cri: false
 net_dim: 256
 net_layer: 4
 # attention block number

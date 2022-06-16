@@ -261,11 +261,14 @@ class AgentBase:
     mask = self.EP.info_parser(info, 'goal_mask')
     act = self.act.get_action(s, mask).detach()
     while collected_steps < target_steps or (num_ep < 1).any():
+      # if done.any():
+      #   print('======================================')
+      # else:
+      #   qs = self.cri.get_q_all(s, act, mask)
       # setup next state
       s, rew, done, info = self.env.step(act)  # different
-      act = self.act.get_action(s, self.EP.info_parser(info, 'goal_mask')).detach()
-      # with torch.no_grad():
-      #   cri = self.cri.get_q_all(s, act, self.EP.info_parser(info, 'goal_mask'))
+      mask = self.EP.info_parser(info, 'goal_mask')
+      act = self.act.get_action(s, mask).detach()
 
       # update buffer
       num_ep[done.type(torch.bool)] += 1

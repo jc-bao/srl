@@ -447,12 +447,19 @@ class CriticTwin(nn.Module):  # shared parameter
         q_stack = torch.cat((q1, q2), dim=-1).view(-1,2,2) # [batch, 2(mirror), 2(twin)]
         embedding_stack = torch.stack((embedding1.view(-1,2,self.cfg.net_dim), embedding2.view(-1,2,self.cfg.net_dim)), dim=-1) # [batch, 2(mirror), feature_dim, 2(twin)]
         embedding_norm = torch.norm((embedding_stack[:,0,:,:] - embedding_stack[:,1,:,:]), dim=1)/np.sqrt(self.cfg.net_dim) # [batch, 2(twin)] 
-        return q_stack.mean(dim=1), embedding_norm
+        if self.cfg.only_use_one_side_in_mirror_cri: 
+          return q_stack[:,0,:], embedding_norm
+        else:
+          return q_stack.mean(dim=1), embedding_norm
       else:
         q_stack = torch.cat((self.net_q1(tmp), self.net_q2(tmp)), dim=-1).view(-1,2,2) # [batch, 2(mirror), 2(twin)]
-        # print(q_stack.mean(dim=-1)[0,0].item(), ', ', q_stack.mean(dim=-1)[0,1].item())
+        # print(q_stack.mean(dim=-1)[0,0].item(), ' , ', q_stack.mean(dim=-1)[0,1].item())
+        # print(q_stack)[0,0].item(), ', ', q_stack.mean(dim=-1)[0,1].item())
         if get_mirror_std:
-          return q_stack.mean(dim=1), q_stack.std(dim=1)
+          if self.cfg.only_use_one_side_in_mirror_cri: 
+            return q_stack[:,0,:], embedding_norm
+          else:
+            return q_stack.mean(dim=1), q_stack.std(dim=1)
         else:
           if self.cfg.mirror_q_pool_type == 'mean':
             return q_stack.mean(dim=1)
