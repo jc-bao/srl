@@ -457,7 +457,7 @@ class CriticTwin(nn.Module):  # shared parameter
         # print(q_stack)[0,0].item(), ', ', q_stack.mean(dim=-1)[0,1].item())
         if get_mirror_std:
           if self.cfg.only_use_one_side_in_mirror_cri: 
-            return q_stack[:,0,:], embedding_norm
+            return q_stack[:,0,:], q_stack.std(dim=1) 
           else:
             return q_stack.mean(dim=1), q_stack.std(dim=1)
         else:
