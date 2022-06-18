@@ -3,6 +3,6 @@ num_robots: 2
 num_goals: 1
 os_rate: 0.5
 inhand_rate: 0.2 # init obj in hand
-headless: true
+headless: false
 
-table_gap: 0.3
+table_gap: 0.0

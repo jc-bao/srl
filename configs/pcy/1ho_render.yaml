@@ -1,0 +1,35 @@
+# @package _global_
+
+wandb: true
+project: debug
+name: 1ho_render
+
+resume_mode: load_only 
+load_project: corl-main
+load_tag: latest_25 
+wid: 19giuwfl
+load_curri: true
+
+render: false
+
+net_layer: 6
+shared_net_layer: 4
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+shared_critic: true
+
+buffer_size: 10000
+batch_size: 20
+reuse: 0.000001
+steps_per_rollout: 100
+eval_per_rollout: 1
+eval_eps: 16
+render_per_eval: 1
+
+defaults:
+  - override /env: 1ho_debug 
+  - override /curri: os_gap_num

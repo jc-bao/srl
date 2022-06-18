@@ -157,8 +157,8 @@ class FrankaCube(gym.Env):
 			# set the camera position based on up axis
 			sim_params = self.gym.get_sim_params(self.sim)
 			if sim_params.up_axis == gymapi.UP_AXIS_Z:
-				# cam_pos = gymapi.Vec3(1.0, -1.0, 1.0)
-				cam_pos = gymapi.Vec3(0.01, 0.0, 2.0)
+				cam_pos = gymapi.Vec3(1.0, -1.0, 1.0)
+				# cam_pos = gymapi.Vec3(0.01, 0.0, 2.0)
 				cam_target = gymapi.Vec3(0.0, 0.0, 0.4)
 			else:
 				cam_pos = gymapi.Vec3(20.0, 3.0, 25.0)
@@ -1491,7 +1491,7 @@ if __name__ == '__main__':
 	'''
 	run policy
 	'''
-	env = gym.make('FrankaPNP-v0', num_envs=4, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=4, current_num_goals=3, os_rate=1.0, max_handover_time=2, inhand_rate=0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2')
+	env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2')
 	start = time.time()
 	# action_list = [
 	# 	*([[1,0,0,1]]*4), 
