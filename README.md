@@ -61,11 +61,11 @@ curri:
 
 ## Issues
 
-- [ ] HER relabel lead to fluctuations in success rate
+- [x] HER relabel lead to fluctuations in success rate
   - [x] check relabel boundary case
   - [x] check relabel reward, mask
-  - [ ] check trajectory buffer
-  - [ ] check 
+  - [x] check trajectory buffer
+  - [x] check 
 
 ## TODO
 
