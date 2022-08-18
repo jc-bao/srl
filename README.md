@@ -22,22 +22,11 @@ python run.py
 python run.py +exp=1ho_debug
 
 '''train'''
-# train 1 object pick and place
-python run.py +exp=1pnp entity=YOUR_WANDB_NAME
-# train handover 1 object
-python run.py +exp=1ho entity=YOUR_WANDB_NAME
-# train handover 1 object without upload render videos
-python run.py +exp=1ho render=false entity=YOUR_WANDB_NAME
-# train handover 2 object
-python run.py +exp=2ho entity=YOUR_WANDB_NAME
-# resume from remote and train handover 3 object
-python run.py +exp=3ho_resume wid=LOAD_RUN_WID entity=YOUR_WANDB_NAME
-# resume from local and train handover 3 object
-python run.py +exp=3ho_resume load_path=PATH_TO_FILE
+# run main experinment
+python run.py +corl=nho
 
 '''eval'''
-# load handover 1 object from remote WID and show isaac GUI to eval
-python run.py +exp=1ho_eval wid=YOUR_WANDB_RUN_WID entity=YOUR_WANDB_NAME
+python run.py +corl=2ho_render 
 
 '''env'''
 # render env with handwriting policy
