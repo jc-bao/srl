@@ -33,9 +33,9 @@ goal_shape: rearrange # {rearrange, tower1, tower2, tower_n}
 base_steps: 50 
 max_steps: null
 # dim
-per_action_dim: 4
+per_action_dim: 5
 state_dim: null # calculate later
-per_shared_dim: 7 # pos3, vel3, finger1 
+per_shared_dim: 8 # pos3, zrot1, vel3, finger1 
 per_seperate_dim: 7 # block state
 seperate_dim: null
 per_goal_dim: 3
@@ -49,6 +49,7 @@ debug_viz: true
 damping: 0.05
 max_vel: 2
 max_grip_vel: 0.1 
+zrot_scale: 0.5
 grip_control_mode: continuous # {continuous, discrete, discrete_with_stop}
 max_ik_iter: 10
 ik_err: 0.005 # for iteration version of IK
@@ -92,7 +93,7 @@ goal_scale: 1.0
 goal_ground_rate: 0.5
 # noise
 pos_noise: 0.0
-mask_robot_vel: false
+mask_robot_vel: false 
 
 # sim:
 physics_engine: SIM_PHYSX 
