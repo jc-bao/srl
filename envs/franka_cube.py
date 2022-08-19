@@ -211,8 +211,8 @@ class FrankaCube(gym.Env):
     franka_asset_file = self.cfg.asset.assetFileNameFranka
     # load franka asset
     asset_options = gymapi.AssetOptions()
-    # asset_options.flip_visual_attachments = True
-    asset_options.flip_visual_attachments = False
+    asset_options.flip_visual_attachments = True
+    # asset_options.flip_visual_attachments = False
     asset_options.fix_base_link = True
     asset_options.collapse_fixed_joints = True
     asset_options.disable_gravity = True
