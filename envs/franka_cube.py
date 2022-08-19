@@ -1237,16 +1237,16 @@ class FrankaCube(gym.Env):
         assert self.cfg.num_goals == 1, "ezpolicy only works for 1 goal"
         pos = obs[..., :3]*self.single_goal_std + \
             self.single_goal_mean + self.origin_shift
-        obj = obs[..., 17:20].view(
+        obj = obs[..., self.cfg.shared_dim: self.cfg.shared_dim + 3 * self.cfg.num_goals].view(
             self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
-        goal = obs[..., 20:23].view(
+        goal = obs[..., self.cfg.shared_dim + 3 * self.cfg.num_goals:self.cfg.shared_dim + 6 * self.cfg.num_goals].view(
             self.cfg.num_envs, self.cfg.num_goals, 3)*self.goal_std+self.goal_mean
         if self.cfg.num_robots == 1:
             up_step = 6
             reach_step = 26
             grasp_step = 30
             end_step = 80
-            action = torch.zeros((self.cfg.num_envs, 4),
+            action = torch.zeros((self.cfg.num_envs, self.cfg.per_action_dim),
                                  device=self.device, dtype=torch.float32)
             for env_id in range(self.cfg.num_envs):
                 pos_now = pos[env_id]
@@ -1284,7 +1284,7 @@ class FrankaCube(gym.Env):
             g_side = g[0] > 0
             if self.progress_buf[0] < 6:
                 self.ag_side = ag[0] > 0
-            action = torch.zeros((2, 4),
+            action = torch.zeros((2, self.cfg.per_action_dim),
                                  device=self.device, dtype=torch.float32)
             if g_side and self.ag_side:
                 if self.progress_buf[0] < up_step:
@@ -1643,8 +1643,12 @@ if __name__ == '__main__':
     '''
     run policy
     '''
-    env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=1, headless=True, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0,
-                   max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2')
+    env = gym.make(
+        'FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=1, headless=True, 
+        bound_robot=True, sim_device_id=0, rl_device_id=0, 
+        num_goals=2 if not args.ezpolicy else 1, current_num_goals=2 if not args.ezpolicy else 1, 
+        os_rate=1.0, max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, 
+        early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2')
     start = time.time()
     # action_list = [
     # 	*([[1,0,0,1]]*4),
