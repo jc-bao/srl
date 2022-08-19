@@ -1,4 +1,3 @@
-from socket import EAI_OVERFLOW
 import numpy as np
 import os
 import sys

@@ -1,0 +1,9 @@
+num_goals: 2
+current_num_goals: 2
+num_robots: 2
+os_rate: 1.0 
+num_envs: 2
+num_cameras: 2
+robot_type: ['franka', 'xarm']
+franka_init_pos: center
+render_size: [1000, 1000]

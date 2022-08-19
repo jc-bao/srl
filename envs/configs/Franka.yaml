@@ -69,6 +69,7 @@ os_rate: 0.8
 max_handover_time: 100
 goal_os_rate: 0.5
 # robot
+robot_type: ['franka', 'franka']
 enable_robot_id: false
 num_robots: 2
 bound_robot: true
@@ -76,8 +77,8 @@ action_shift: [0,0,0,0]
 asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
-  # assetFileNameFranka: 'urdf/xarm_description/xarm.urdf'
-  # assetFileNameFranka: 'urdf/kuka_allegro_description/kuka.urdf'
+  assetFileNameXarm: 'urdf/xarm_description/xarm.urdf'
+  assetFileNameKuka: 'urdf/kuka_allegro_description/kuka.urdf'
   assetFileNameSphere: 'urdf/sphere.urdf'
 # table 
 table_size: [1.0, 2.0, 0.4]

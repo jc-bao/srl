@@ -199,8 +199,19 @@ class FrankaCube(gym.Env):
       raise NotImplementedError
     self.franka_default_dof_state = self.franka_default_dof_pos.unsqueeze(-1).repeat(1,1,2)
     self.franka_default_dof_state[...,-1] = 0.
-    orns = [[0.924, -0.383, 0., 0.],[0.383, 0.924, 0., 0.]]
-    # orns = [[1.0, 0., 0., 0.],[-1.0, 0., 0., 0.]]
+    if self.cfg.robot_type[0] == 'franka':
+      orn0 = [0.924, -0.383, 0., 0.]
+    elif self.cfg.robot_type[0] == 'xarm':
+      orn0 = [1.0, 0.0, 0., 0]
+    else:
+      orn0 = [1.0, 0.0, 0.0, 0.0]
+    if self.cfg.robot_type[1] == 'franka':
+      orn1 = [0.383, 0.924, 0., 0.]
+    elif self.cfg.robot_type[1] == 'xarm':
+      orn1 = [1.0, 0.0, 0., 0.0]
+    else:
+      orn1 = [-1.0, 0.0, 0.0, 0.0]
+    orns = [orn0,orn1]
     self.franka_default_orn = to_torch(
       [[orns[i%2] for i in range(self.cfg.num_robots)]], device=self.device).repeat(self.cfg.num_envs, 1, 1)
     lower = gymapi.Vec3(-self.cfg.env_spacing, -self.cfg.env_spacing, 0.0)
@@ -221,6 +232,13 @@ class FrankaCube(gym.Env):
     asset_options.use_mesh_materials = True
     franka_asset = self.gym.load_asset(
       self.sim, asset_root, franka_asset_file, asset_options
+    )
+    asset_options.flip_visual_attachments = False
+    xarm_asset = self.gym.load_asset(
+      self.sim, asset_root, self.cfg.asset.assetFileNameXarm, asset_options
+    )
+    kuka_asset = self.gym.load_asset(
+      self.sim, asset_root, self.cfg.asset.assetFileNameKuka, asset_options
     )
     franka_dof_stiffness = to_torch(
       [400, 400, 400, 400, 400, 400, 400, 1.0e6, 1.0e6],
@@ -331,18 +349,45 @@ class FrankaCube(gym.Env):
     self.default_grip_pos = self.origin_shift.unsqueeze(0).repeat(self.cfg.num_envs,1,1).clone()
 
     # compute aggregate size
+
     num_franka_bodies = self.gym.get_asset_rigid_body_count(franka_asset)
+    num_kuka_bodies = self.gym.get_asset_rigid_body_count(kuka_asset)
+    num_xarm_bodies = self.gym.get_asset_rigid_body_count(xarm_asset)
     num_franka_shapes = self.gym.get_asset_rigid_shape_count(franka_asset)
+    num_kuka_shapes = self.gym.get_asset_rigid_shape_count(kuka_asset)
+    num_xarm_shapes = self.gym.get_asset_rigid_shape_count(xarm_asset)
     num_table_bodies = self.gym.get_asset_rigid_body_count(table_asset)
     num_table_shapes = self.gym.get_asset_rigid_shape_count(table_asset)
     num_block_bodies = self.gym.get_asset_rigid_body_count(block_asset)
     num_block_shapes = self.gym.get_asset_rigid_shape_count(block_asset)
     num_goal_bodies = self.gym.get_asset_rigid_body_count(goal_asset)
     num_goal_shapes = self.gym.get_asset_rigid_shape_count(goal_asset)
+    if self.cfg.robot_type[0] == 'franka':
+      num_robot0_shapes = num_franka_shapes
+      num_robot0_bodies = num_franka_bodies
+    elif self.cfg.robot_type[0] == 'kuka':
+      num_robot0_shapes = num_kuka_shapes
+      num_robot0_bodies = num_kuka_bodies
+    elif self.cfg.robot_type[0] == 'xarm':
+      num_robot0_shapes = num_xarm_shapes
+      num_robot0_bodies = num_xarm_bodies
+    else:
+      raise NotImplementedError
+    if self.cfg.robot_type[1] == 'franka':
+      num_robot1_shapes = num_franka_shapes
+      num_robot1_bodies = num_franka_bodies
+    elif self.cfg.robot_type[1] == 'kuka':
+      num_robot1_shapes = num_kuka_shapes
+      num_robot1_bodies = num_kuka_bodies
+    elif self.cfg.robot_type[1] == 'xarm':
+      num_robot1_shapes = num_xarm_shapes
+      num_robot1_bodies = num_xarm_bodies
+    else:
+      raise NotImplementedError
     max_agg_bodies = (
-      (num_franka_bodies+num_table_bodies)*self.cfg.num_robots+ self.cfg.num_goals * (num_block_bodies+num_goal_bodies))
+      num_robot0_bodies+num_robot1_bodies+(num_table_bodies)*self.cfg.num_robots+ self.cfg.num_goals * (num_block_bodies+num_goal_bodies))
     max_agg_shapes = (
-      (num_franka_shapes+num_table_shapes)*self.cfg.num_robots + self.cfg.num_robots + self.cfg.num_goals * (num_block_shapes+num_goal_shapes))
+      num_robot0_shapes+num_robot1_shapes+(num_table_shapes)*self.cfg.num_robots + self.cfg.num_robots + self.cfg.num_goals * (num_block_shapes+num_goal_shapes))
 
     self.cameras = []
     self.frankas = []
@@ -359,10 +404,22 @@ class FrankaCube(gym.Env):
       franka_actors = []
       for franka_id in range(self.cfg.num_robots):
         franka_pos = franka_start_poses[i+franka_id*self.cfg.num_envs]
+        robot_name = self.cfg.robot_type[franka_id]
         # Key: create Panda
-        franka_actor = self.gym.create_actor(
-          env_ptr, franka_asset, franka_pos, f"franka{franka_id}", i, 0, i
-        )
+        if robot_name == 'franka':
+          franka_actor = self.gym.create_actor(
+            env_ptr, franka_asset, franka_pos, f"franka{franka_id}", i, 0, i
+          )
+        elif robot_name == 'xarm':
+          franka_actor = self.gym.create_actor(
+            env_ptr, xarm_asset, franka_pos, f"franka{franka_id}", i+100, 1, i
+          )
+        elif robot_name == 'kuka':
+          franka_actor = self.gym.create_actor(
+            env_ptr, kuka_asset, franka_pos, f"franka{franka_id}", i, 0, i
+          )
+        else:
+          raise NotImplementedError
         self.gym.set_actor_dof_properties(
           env_ptr, franka_actor, franka_dof_props)
         franka_actors.append(franka_actor)
@@ -599,6 +656,14 @@ class FrankaCube(gym.Env):
       random_idx = torch.randint(low=0, high=self.predefined_dof_pos.shape[0], size=(self.cfg.num_envs*self.cfg.num_robots,), device=self.device)
       self.franka_default_dof_state[:,:,0] = self.predefined_dof_pos[random_idx]
     elif self.cfg.franka_init_pos == 'center' and self.need_set_init_pose:
+      if self.cfg.robot_type[0] == 'xarm':
+        for i in range(self.cfg.num_envs):
+          self.franka_default_dof_state[2*i, :,:] = 0.0
+          self.franka_default_dof_state[2*i, 2,0] = 0.5
+      elif self.cfg.robot_type[1] == 'xarm':
+        for i in range(self.cfg.num_envs):
+          self.franka_default_dof_state[2*i+1, :,:] = 0.0
+          self.franka_default_dof_state[2*i+1, 2,0] = 0.5
       act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
       obs, rew, done, info = self.step(act)
       self.reset_buf[:] = True
@@ -1476,6 +1541,7 @@ class FrankaCube(gym.Env):
     for _ in trange(200):
       # setup control params
       orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
+      print(orn_errs[0,0])
       filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
       # filtered_pos_target = pos_target
       pos_errs = filtered_pos_target - self.hand_pos_tensor 
@@ -1504,10 +1570,9 @@ class FrankaCube(gym.Env):
       self.gym.refresh_rigid_body_state_tensor(self.sim)
       self.gym.refresh_jacobian_tensors(self.sim)
       self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
-      # act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
-      # self.reset_buf[:] = False
-      # self.step(act)
-      # print(pos_errs)
+      act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
+      self.reset_buf[:] = False
+      self.step(act)
     print('end:', self.hand_pos_tensor - pos_target)
 
   def close(self):
@@ -1565,7 +1630,7 @@ if __name__ == '__main__':
   '''
   run policy
   '''
-  env = gym.make('FrankaPNP-v0', num_envs=16, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2', robot_base_mode='auto', franka_init_pos = 'predefined')
+  env = gym.make('FrankaPNP-v0', num_envs=16, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2', robot_base_mode='auto', franka_init_pos = 'center', robot_type=['xarm', 'franka'])
   start = time.time()
   # action_list = [
   # 	*([[1,0,0,1]]*4), 
