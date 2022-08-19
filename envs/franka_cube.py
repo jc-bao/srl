@@ -12,6 +12,7 @@ import torch
 from attrdict import AttrDict
 import pathlib
 import math
+import matplotlib.pyplot as plt
 # import pytorch_kinematics as pk
 
 
@@ -905,6 +906,9 @@ class FrankaCube(gym.Env):
         )
         filtered_pos_target = self.hand_pos_tensor
         filtered_zrot_target = current_z
+        _axis = torch.zeros((self.cfg.num_envs, self.cfg.num_robots,
+                            3), dtype=torch.float, device=self.device)
+        _axis[..., 2] = 1
         # step physics and render each frame
         for i in range(self.cfg.control_freq_inv):
             # setup control params
@@ -1198,59 +1202,6 @@ class FrankaCube(gym.Env):
                 images.append(image.reshape((image.shape[0], -1, 4)))
             return images
 
-    def control_ik(self, dpose):
-        # solve damped least squares
-        num_it = 0
-        lmbda = torch.eye(6, device=self.device) * (self.cfg.damping ** 2)
-        # init_joint = self.franka_dof_poses[...,:self.franka_hand_index]
-        current_joint = self.franka_dof_poses[...,
-                                              :self.franka_hand_index].clone()
-        target_ee_pos = self.chain.forward_kinematics(
-            current_joint.view(-1, self.franka_hand_index),
-            world=pk.Transform3d(
-                pos=[0, -0.5, 0.4],
-                rot=[0, 0, np.pi/2], device=self.device)
-        ).get_matrix()[:, :3, 3].view(self.cfg.num_envs, self.cfg.num_robots, 3)+dpose[:, :, :3, 0]
-        rot = torch.tensor(
-            [
-                [0, -1, 0, 0, 0, 0],
-                [1, 0, 0, 0, 0, 0],
-                [0, 0, 1, 0, 0, 0],
-                [0, 0, 0, 0, -1, 0],
-                [0, 0, 0, 1, 0, 0],
-                [0, 0, 0, 0, 0, 1],
-            ],
-            dtype=torch.float,
-            device=self.device)
-        while True:
-            j_eef = rot@self.chain.jacobian(
-                current_joint.view(-1, self.franka_hand_index),
-            ).view(self.cfg.num_envs, self.cfg.num_robots, 6, self.franka_hand_index)
-            j_eef_T = j_eef.transpose(-2, -1)
-            current_joint = (j_eef_T @ torch.inverse(j_eef @ j_eef_T + lmbda) @ dpose).view(
-                self.cfg.num_envs, self.cfg.num_robots, self.franka_hand_index) + current_joint
-            current_ee_trans = self.chain.forward_kinematics(
-                current_joint.view(-1, self.franka_hand_index),
-                world=pk.Transform3d(
-                    pos=[0, -0.5, 0.4],
-                    rot=[0, 0, np.pi/2], device=self.device)
-            )
-            current_ee_pos = current_ee_trans.get_matrix()[:, :3, 3]
-            current_ee_rot = pk.matrix_to_quaternion(
-                current_ee_trans.get_matrix()[:, :3, :3])
-            current_ee_rot = torch.cat(
-                (current_ee_rot[..., 1:4], current_ee_rot[..., :1]), dim=-1)
-            orn_errs = self.orientation_error(self.franka_default_orn, current_ee_rot.view(
-                self.cfg.num_envs, self.cfg.num_robots, 4))
-            pos_errs = target_ee_pos - current_ee_pos
-            dpose = torch.cat([pos_errs, orn_errs], -1).unsqueeze(-1)
-            err = torch.norm(dpose.squeeze(-1), dim=-1)
-            num_it += 1
-            # print(num_it, current_ee_pos, target_ee_pos)
-            if err < self.cfg.ik_err or num_it > self.cfg.max_ik_iter:
-                break
-        return current_joint
-
     def control_ik_old(self, dpose):
         # solve damped least squares
         j_eefs = torch.stack(self.j_eefs).transpose(0, 1)
@@ -1273,13 +1224,13 @@ class FrankaCube(gym.Env):
         _quat_diff[..., 0:2] = 0.0
         _quat_diff = quat_unit(_quat_diff)
         current_z = 2 * torch.atan2(_quat_diff[..., 2], _quat_diff[..., 3])
-        # test
-        _axis = torch.zeros((self.cfg.num_envs, self.cfg.num_robots,
-                            3), dtype=torch.float, device=self.device)
-        _axis[..., 2] = 1
-        print(torch.norm(quat_mul(quat_from_angle_axis(
-            current_z, _axis), self.franka_default_orn) - rot_tensor))
-        # end
+        # # test
+        # _axis = torch.zeros((self.cfg.num_envs, self.cfg.num_robots,
+        #                     3), dtype=torch.float, device=self.device)
+        # _axis[..., 2] = 1
+        # print(torch.norm(quat_mul(quat_from_angle_axis(
+        #     current_z, _axis), self.franka_default_orn) - rot_tensor))
+        # # end
         return current_z
 
     def ezpolicy(self, obs):
@@ -1687,12 +1638,12 @@ if __name__ == '__main__':
     parser.add_argument('-r', '--random', action='store_true')
     parser.add_argument('-e', '--ezpolicy', action='store_true')
     parser.add_argument('-a', '--action', nargs='+',
-                        type=float, default=[0, 0, 0, 0, 0, 0, 0, 0])
+                        type=float, default=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
     args = parser.parse_args()
     '''
     run policy
     '''
-    env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0,
+    env = gym.make('FrankaPNP-v0', num_envs=1, num_robots=2, num_cameras=1, headless=True, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0,
                    max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2')
     start = time.time()
     # action_list = [
@@ -1700,6 +1651,8 @@ if __name__ == '__main__':
     # 	*([[0,1,0,1]]*4),
     # 	*([[-1,0,0,1]]*4),
     # 	*([[0,-1,0,1]]*4),]
+    if not os.path.exists("tmp"):
+        os.mkdir("tmp")
     obs = env.reset()[0]
     for i in range(10):
         for j in range(env.cfg.max_steps):
@@ -1717,7 +1670,9 @@ if __name__ == '__main__':
                     [args.action]*env.cfg.num_envs, device=env.device)
                 # act = torch.tensor([action_list[j%16]]*env.cfg.num_robots*env.cfg.num_envs, device=env.device)
             obs, rew, done, info = env.step(act)
-            # env.render(mode='human')
+            images = env.render(mode='rgb_array')
+            for k in range(len(images)):
+                plt.imsave(f"tmp/traj{i}_cam{k}_{j}.png", images[k])
             # print(info_dict.step.item())
         # Image.fromarray(images[0]).save('foo.png')
 

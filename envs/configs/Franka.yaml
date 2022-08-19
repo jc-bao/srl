@@ -73,7 +73,7 @@ goal_os_rate: 0.5
 enable_robot_id: false
 num_robots: 2
 bound_robot: true
-action_shift: [0,0,0,0]
+action_shift: [0, 0, 0, 0, 0]
 asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
