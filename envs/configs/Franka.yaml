@@ -76,6 +76,8 @@ action_shift: [0,0,0,0]
 asset:
   assetRoot: 'isaac_assets'
   assetFileNameFranka: 'urdf/franka_description/robots/franka_panda.urdf'
+  # assetFileNameFranka: 'urdf/xarm_description/xarm.urdf'
+  # assetFileNameFranka: 'urdf/kuka_allegro_description/kuka.urdf'
   assetFileNameSphere: 'urdf/sphere.urdf'
 # table 
 table_size: [1.0, 2.0, 0.4]
@@ -92,7 +94,7 @@ robot_gap: 0.7
 robot_y: 0.5
 # random mode
 base_center_point: [[-0.2, 0], [0.2, 0]]
-base_radius_range: [0.55, 0.65]
+base_radius_range: [0.5, 0.55]
 
 origin_shift: [-0.35, 0.35]
 

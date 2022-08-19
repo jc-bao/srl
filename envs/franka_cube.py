@@ -211,7 +211,8 @@ class FrankaCube(gym.Env):
     franka_asset_file = self.cfg.asset.assetFileNameFranka
     # load franka asset
     asset_options = gymapi.AssetOptions()
-    asset_options.flip_visual_attachments = True
+    # asset_options.flip_visual_attachments = True
+    asset_options.flip_visual_attachments = False
     asset_options.fix_base_link = True
     asset_options.collapse_fixed_joints = True
     asset_options.disable_gravity = True
@@ -1564,7 +1565,7 @@ if __name__ == '__main__':
   '''
   run policy
   '''
-  env = gym.make('FrankaPNP-v0', num_envs=16, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2', robot_base_mode='random', franka_init_pos = 'center')
+  env = gym.make('FrankaPNP-v0', num_envs=16, num_robots=2, num_cameras=0, headless=False, bound_robot=True, sim_device_id=0, rl_device_id=0, num_goals=2, current_num_goals=2, os_rate=1.0, max_handover_time=2, inhand_rate=1.0, table_gap=0.1, base_step=1, early_termin_step=10, extra_goal_sample=100, max_sample_time=200, goal_sample_mode='uniform', goal_shape='tower2', robot_base_mode='auto', franka_init_pos = 'predefined')
   start = time.time()
   # action_list = [
   # 	*([[1,0,0,1]]*4), 
