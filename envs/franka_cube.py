@@ -412,7 +412,7 @@ class FrankaCube(gym.Env):
           )
         elif robot_name == 'xarm':
           franka_actor = self.gym.create_actor(
-            env_ptr, xarm_asset, franka_pos, f"franka{franka_id}", i+100, 1, i
+            env_ptr, xarm_asset, franka_pos, f"franka{franka_id}", i, 0, i
           )
         elif robot_name == 'kuka':
           franka_actor = self.gym.create_actor(
@@ -1541,7 +1541,6 @@ class FrankaCube(gym.Env):
     for _ in trange(200):
       # setup control params
       orn_errs = self.orientation_error(self.franka_default_orn, torch.stack(self.hand_rot, dim=1))
-      print(orn_errs[0,0])
       filtered_pos_target = self.cfg.filter_param * pos_target + (1 - self.cfg.filter_param) * filtered_pos_target
       # filtered_pos_target = pos_target
       pos_errs = filtered_pos_target - self.hand_pos_tensor 
@@ -1570,9 +1569,9 @@ class FrankaCube(gym.Env):
       self.gym.refresh_rigid_body_state_tensor(self.sim)
       self.gym.refresh_jacobian_tensors(self.sim)
       self.hand_pos_tensor = torch.stack(self.hand_pos, dim=1)
-      act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
-      self.reset_buf[:] = False
-      self.step(act)
+      # act = torch.zeros((self.cfg.num_envs, 4*self.cfg.num_robots), device=self.device, dtype=torch.float)
+      # self.reset_buf[:] = False
+      # self.step(act)
     print('end:', self.hand_pos_tensor - pos_target)
 
   def close(self):
