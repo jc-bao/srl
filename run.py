@@ -53,6 +53,10 @@ def train(config):
 		result = exp_agent.explore_vec_env()
 		log(result, prefix='explore')
 
+	if config.step_comparison:
+		mean_num_steps = exp_agent.calculate_mean_step(target_episodes=1000)
+		print(config.act_net, mean_num_steps)
+		return
 	'''start training'''
 	best_rew = -1000
 	num_rollouts = int(config.max_collect_steps//config.steps_per_rollout)
