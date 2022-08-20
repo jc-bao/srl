@@ -242,15 +242,16 @@ class AgentBase:
   def calculate_mean_step(self, target_episodes: int):
     n_episodes = 0
     stored_length = []
-    episode_length = torch.zeros((self.env.num_envs,))
+    episode_length = torch.zeros((self.EP.num_envs,))
     state, reward, done, info = self.env.reset()
     while n_episodes < target_episodes:
       action = self.act.get_action(state, info).detach()
       state, reward, done, info = self.env.step(action)
       episode_length += 1
-      stored_length.extend(episode_length[done])
-      episode_length[done] = 0
+      stored_length.extend(episode_length[done.long()])
+      episode_length[done.long()] = 0
       n_episodes += done.sum().int()
+    print(stored_length)
     return np.mean(stored_length)
 
   def explore_vec_env(self, target_steps=None):

@@ -137,7 +137,7 @@ class ActorFixSAC(nn.Module):
 
   @torch.jit.ignore
   def forward(self, state, info=None):
-    mask = self.EP.info_parser(info, "goal_mask")
+    mask = info[..., 6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*2:6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*3].bool()
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
       if self.cfg.mask_other_robot_obs:
@@ -196,7 +196,7 @@ class ActorFixSAC(nn.Module):
     return a_avg
 
   def get_action(self, state, info=None):
-    mask = self.EP.info_parser(info, "goal_mask")
+    mask = info[..., 6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*2:6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*3].bool()
     if self.cfg.shared_actor or self.cfg.mirror_actor:
       state = torch.stack((state, state@self.EP.obs_rot_mat),dim=1).view(-1,state.shape[-1]) # [batch * 2, state_dim]
       if mask is not None:
@@ -332,24 +332,23 @@ class ActorFixSAC(nn.Module):
 class ActorManualPhase(ActorFixSAC):
   def __init__(self, cfg):
     super().__init__(cfg)
-    self.phase_is_local = torch.ones((self.EP.num_envs,), dtype=torch.bool, device=self.cfg.device)
-    self.phase_current_local_ids = [[] for _ in range(self.EP.num_envs)]
-    self.phase_current_handover_id = [[] for _ in range(self.EP.num_envs)]
-
+    
   def get_action(self, state, info=None):
     # play with mask here. 1 correspond to existing goal, 0 correspond to non-exising goal
     # for local tasks, need to concat two branches
     g = state[..., self.EP.shared_dim+self.EP.seperate_dim:self.EP.shared_dim +
               self.EP.seperate_dim+self.EP.goal_dim].reshape(-1, self.EP.num_goals, self.EP.goal_dim // self.EP.num_goals)
     additional_info = dict(
-      ag_normed=self.EP.info_parser(info, 'ag'),
-      has_reached=self.EP.info_parser(info, 'reached_ag'),
+      ag_normed=info[..., 6:6+self.EP.goal_dim],
+      has_reached=info[..., 6+self.EP.goal_dim+self.EP.num_robots*3:6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals],
       goal_mean=self.EP.goal_mean,
       goal_std=self.EP.goal_std,
       franka_roots=self.EP.franka_roots,
-      goal_mask=self.EP.info_parser(info,"goal_mask"),
+      goal_mask=info[..., 6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*2:6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*3].bool(),
     )
-    raw_ag = additional_info["ag_normed"].reshape(-1, self.EP.num_goals, self.EP.goal_dim // self.num_goals) * additional_info["goal_std"] + additional_info["goal_mean"]
+    assert torch.all(additional_info["goal_mask"].sum(dim=-1) > 0)
+    # print("original goal mask", additional_info["goal_mask"][:100].reshape(-1))
+    raw_ag = additional_info["ag_normed"].reshape(-1, self.EP.num_goals, self.EP.goal_dim // self.EP.num_goals) * additional_info["goal_std"] + additional_info["goal_mean"]
     raw_g = g * additional_info["goal_std"] + additional_info["goal_mean"]
     obj_near_left = torch.norm(
       raw_ag - additional_info["franka_roots"][0, :3].reshape(1, 1, 3), dim=-1
@@ -357,9 +356,9 @@ class ActorManualPhase(ActorFixSAC):
       raw_ag - additional_info["franka_roots"][1, :3].reshape(1, 1, 3), dim=-1
     )
     goal_near_left = torch.norm(
-      raw_g - additional_info["franka_robots"][0, :3].reshape(1, 1, 3), dim=-1
+      raw_g - additional_info["franka_roots"][0, :3].reshape(1, 1, 3), dim=-1
     ) < torch.norm(
-      raw_g - additional_info["franka_robots"][1, :3].reshape(1, 1, 3), dim=-1
+      raw_g - additional_info["franka_roots"][1, :3].reshape(1, 1, 3), dim=-1
     )
     is_local_left = torch.logical_and(
       torch.logical_and(
@@ -386,22 +385,26 @@ class ActorManualPhase(ActorFixSAC):
       )
     )
     # check which phase should be
-    if torch.sum(is_local_left, dim=-1) + torch.sum(is_local_right, dim=-1) > 0:
-      # local phase
-      new_info = AttrDict(
-        goal_mask=torch.logical_and(
-          additional_info["goal_mask"].to(dtype=torch.bool), ~is_cross
-        ).float()
-      )
-    else:
-      # cross phase
-      new_info = AttrDict(
-        goal_mask=torch.logical_and(
-          additional_info["goal_mask"].to(dtype=torch.bool), is_cross
-        ).float()
-      )
-    info = self.EP.info_updater(info, new_info)
-    super().get_action(state, info)
+    phase_indicator = torch.sum(is_local_left, dim=-1) + torch.sum(is_local_right, dim=-1)
+    # print("phase indicator", phase_indicator[:100])
+    # print("is left", is_local_left[:100].reshape(-1))
+    # print("is right", is_local_right[:100].reshape(-1))
+    # print("is cross", is_cross[:100].reshape(-1))
+    # print("has reached", additional_info["has_reached"][:100].reshape(-1))
+    new_goal_mask = torch.clone(additional_info["goal_mask"])
+    new_goal_mask[phase_indicator > 0] = torch.logical_and(
+      additional_info["goal_mask"], torch.logical_or(is_local_left, is_local_right)
+    )[phase_indicator > 0]
+    new_goal_mask[phase_indicator <= 0] = torch.logical_and(
+      additional_info["goal_mask"], is_cross
+    )[phase_indicator <= 0]
+    # print("new goal mask", new_goal_mask[:100].reshape(-1))
+    # avoid masking out all objects
+    assert torch.all(additional_info["goal_mask"].sum(dim=-1) > 0)
+    new_goal_mask[new_goal_mask.sum(dim=-1) == 0] = additional_info["goal_mask"][new_goal_mask.sum(dim=-1) == 0]
+    assert torch.all(new_goal_mask.sum(dim=-1) > 0), new_goal_mask.sum(dim=-1).reshape(-1)
+    info[..., 6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*2:6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*3] = new_goal_mask
+    return super().get_action(state, info)
     
 
 class ActorPPO(nn.Module):
@@ -955,7 +958,7 @@ def filter_cfg(config):
   cfg, EP = AttrDict(), AttrDict()
   # filter out isaac object to make function pickleable
   for k, v in config.env_params.items():
-    if (not hasattr(v, '__call__')) or k in ["info_parser", "info_updater"]:
+    if (not hasattr(v, '__call__')):
       EP[k] = v
   for k, v in config.items():
     if k != 'env_params':

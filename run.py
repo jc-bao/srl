@@ -3,6 +3,7 @@ import torch
 import wandb
 import hydra
 from attrdict import AttrDict
+import os
 
 import agent
 from envs.franka_cube import FrankaCube
@@ -14,6 +15,8 @@ def train(config):
 	config = AttrDict(config)
 	'''init'''
 	if config.wandb:
+		if os.environ["WANDB_API_KEY"]:
+			wandb.login()
 		if config.resume_mode is None or config.resume_mode == 'restart':
 			print('[Wandb] start new run...')
 			wandb.init(name=config.name, project=config.project, config=config)
