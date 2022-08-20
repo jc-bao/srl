@@ -1476,6 +1476,10 @@ class FrankaCube(gym.Env):
 			obs_parser=self.obs_parser, 
 			obs_updater=self.obs_updater,
 			obs_mirror=self.obs_mirror,
+            # additional
+            goal_mean=self.goal_mean,
+            goal_std=self.goal_std,
+            franka_roots=self.franka_roots,
 		)
 
 

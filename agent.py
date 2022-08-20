@@ -147,7 +147,7 @@ class AgentBase:
     # loop
     collected_eps = 0
     while collected_eps < target_eps or (num_ep < 1).any():
-      ten_a = self.act(ten_s, self.EP.info_parser(ten_info, 'goal_mask')).detach()
+      ten_a = self.act(ten_s, ten_info).detach()
       ten_s_next, ten_rewards, ten_dones, ten_info = self.env.step(
         ten_a)  # different
       if self.cfg.render and render:
@@ -239,6 +239,20 @@ class AgentBase:
     results.update(curri=reset_params)
     return results
 
+  def calculate_mean_step(self, target_episodes: int):
+    n_episodes = 0
+    stored_length = []
+    episode_length = torch.zeros((self.env.num_envs,))
+    state, reward, done, info = self.env.reset()
+    while n_episodes < target_episodes:
+      action = self.act.get_action(state, info).detach()
+      state, reward, done, info = self.env.step(action)
+      episode_length += 1
+      stored_length.extend(episode_length[done])
+      episode_length[done] = 0
+      n_episodes += done.sum().int()
+    return np.mean(stored_length)
+
   def explore_vec_env(self, target_steps=None):
     # auto set target steps
     if target_steps is None:
@@ -258,8 +272,8 @@ class AgentBase:
     useless_steps = 0  # data explored but dropped
     # loop
     s, rew, done, info = self.env.reset()
-    mask = self.EP.info_parser(info, 'goal_mask')
-    act = self.act.get_action(s, mask).detach()
+    # mask = self.EP.info_parser(info, 'goal_mask')
+    act = self.act.get_action(s, info).detach()
     while collected_steps < target_steps or (num_ep < 1).any():
       # if done.any():
       #   print('======================================')
@@ -267,8 +281,8 @@ class AgentBase:
       #   qs = self.cri.get_q_all(s, act, mask)
       # setup next state
       s, rew, done, info = self.env.step(act)  # different
-      mask = self.EP.info_parser(info, 'goal_mask')
-      act = self.act.get_action(s, mask).detach()
+      # mask = self.EP.info_parser(info, 'goal_mask')
+      act = self.act.get_action(s, info).detach()
 
       # update buffer
       num_ep[done.type(torch.bool)] += 1
