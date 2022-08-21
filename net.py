@@ -334,6 +334,8 @@ class ActorManualPhase(ActorFixSAC):
     super().__init__(cfg)
     
   def get_action(self, state, info=None):
+    if info is not None:
+      info = torch.clone(info)
     # play with mask here. 1 correspond to existing goal, 0 correspond to non-exising goal
     # for local tasks, need to concat two branches
     g = state[..., self.EP.shared_dim+self.EP.seperate_dim:self.EP.shared_dim +

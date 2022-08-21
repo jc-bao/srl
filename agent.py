@@ -1,6 +1,7 @@
 from cgitb import reset
 from gc import get_stats
 from re import S
+import shutil
 import torch
 import numpy as np
 from copy import deepcopy
@@ -9,6 +10,7 @@ import logging
 from attrdict import AttrDict
 import gym
 import wandb
+from tqdm import tqdm
 
 import net
 from replay_buffer import ReplayBuffer, ReplayBufferList
@@ -239,19 +241,39 @@ class AgentBase:
     results.update(curri=reset_params)
     return results
 
-  def calculate_mean_step(self, target_episodes: int):
+  def calculate_mean_step(self, target_episodes: int, render=False):
     n_episodes = 0
     stored_length = []
-    episode_length = torch.zeros((self.EP.num_envs,))
+    episode_length = torch.zeros((self.EP.num_envs,), device=self.cfg.device)
     state, reward, done, info = self.env.reset()
+    pbar = tqdm(total=target_episodes, desc="step evaluation")
+    if render:
+      image = self.env.render(mode='rgb_array')[0]
+      video = [image]
     while n_episodes < target_episodes:
       action = self.act.get_action(state, info).detach()
       state, reward, done, info = self.env.step(action)
+      if render:
+        image = self.env.render(mode='rgb_array')[0]
+        video.append(image)
       episode_length += 1
-      stored_length.extend(episode_length[done.long()])
-      episode_length[done.long()] = 0
-      n_episodes += done.sum().int()
+      assert torch.norm(episode_length - info[..., 1]) < 0.1
+      finished_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0] > 0.5))[0]]
+      filtered_lengths = finished_lengths[torch.where(finished_lengths > 1)[0]]
+      stored_length.extend(filtered_lengths.cpu())
+      episode_length[torch.where(done >  0.5)[0]] = 0
+      n_episodes += len(filtered_lengths)
+      pbar.update(len(filtered_lengths))
     print(stored_length)
+    if render:
+      import matplotlib.pyplot as plt
+      if os.path.exists("tmp"):
+        shutil.rmtree("tmp")
+      os.mkdir("tmp")
+      for i in range(len(video)):
+        plt.imsave("tmp/img%d.png" % i, video[i])
+      os.system("ffmpeg -r 10 -i tmp/img%d.png -pix_fmt yuv420p output.mp4")
+      shutil.rmtree("tmp")
     return np.mean(stored_length)
 
   def explore_vec_env(self, target_steps=None):
