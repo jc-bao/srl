@@ -335,6 +335,7 @@ class ActorManualPhase(ActorFixSAC):
     self.is_local_left = torch.zeros((self.EP.num_envs, self.EP.num_goals), dtype=torch.bool, device=self.cfg.device)
     self.is_local_right = torch.zeros((self.EP.num_envs, self.EP.num_goals), dtype=torch.bool, device=self.cfg.device)
     self.is_cross = torch.zeros((self.EP.num_envs, self.EP.num_goals), dtype=torch.bool, device=self.cfg.device)
+    self.last_done = torch.ones((self.EP.num_envs,), dtype=torch.float, device=self.cfg.device)
   
   def get_action(self, state, info=None, done=None):
     if info is not None:
@@ -358,14 +359,14 @@ class ActorManualPhase(ActorFixSAC):
     raw_ag = additional_info["ag_normed"].reshape(-1, self.EP.num_goals, self.EP.goal_dim // self.EP.num_goals) * additional_info["goal_std"] + additional_info["goal_mean"]
     raw_g = g * additional_info["goal_std"] + additional_info["goal_mean"]
     obj_near_left = torch.norm(
-      raw_ag - additional_info["franka_roots"][0, :3].reshape(1, 1, 3), dim=-1
+      raw_ag[..., 0:1] - additional_info["franka_roots"][0, 0:1].reshape(1, 1, 1), dim=-1
     ) < torch.norm(
-      raw_ag - additional_info["franka_roots"][1, :3].reshape(1, 1, 3), dim=-1
+      raw_ag[..., 0:1] - additional_info["franka_roots"][1, 0:1].reshape(1, 1, 1), dim=-1
     )
     goal_near_left = torch.norm(
-      raw_g - additional_info["franka_roots"][0, :3].reshape(1, 1, 3), dim=-1
+      raw_g[..., 0:1] - additional_info["franka_roots"][0, 0:1].reshape(1, 1, 1), dim=-1
     ) < torch.norm(
-      raw_g - additional_info["franka_roots"][1, :3].reshape(1, 1, 3), dim=-1
+      raw_g[..., 0:1] - additional_info["franka_roots"][1, 0:1].reshape(1, 1, 1), dim=-1
     )
     _is_local_left = torch.logical_and(
       # torch.logical_and(
@@ -395,9 +396,11 @@ class ActorManualPhase(ActorFixSAC):
       )
     )
     # update only when environment reset
-    self.is_local_left[done > 0.5] = _is_local_left[done > 0.5]
-    self.is_local_right[done > 0.5] = _is_local_right[done > 0.5]
-    self.is_cross[done > 0.5] = _is_cross[done > 0.5]
+    self.is_local_left[self.last_done > 0.5] = _is_local_left[self.last_done > 0.5]
+    self.is_local_right[self.last_done > 0.5] = _is_local_right[self.last_done > 0.5]
+    self.is_cross[self.last_done > 0.5] = _is_cross[self.last_done > 0.5]
+    # if self.last_done[0] > 0.5:
+    #   print("raw_ag", raw_ag[0], "raw_goal", raw_g[0], "franka_roots", additional_info["franka_roots"])
     # check which phase should be
     phase_indicator = torch.sum(
       torch.logical_and(self.is_local_left, additional_info["has_reached"].bool() == 0), 
@@ -416,12 +419,15 @@ class ActorManualPhase(ActorFixSAC):
     new_goal_mask[phase_indicator <= 0] = torch.logical_and(
       additional_info["goal_mask"], self.is_cross
     )[phase_indicator <= 0]
+    # print("is_local_left", self.is_local_left[0], "is_local_right", self.is_local_right[0], 
+    #       "is_cross", self.is_cross[0], "new_goal_mask", new_goal_mask[0])
     # print("new goal mask", new_goal_mask[:100].reshape(-1))
     # avoid masking out all objects
     assert torch.all(additional_info["goal_mask"].sum(dim=-1) > 0)
     new_goal_mask[new_goal_mask.sum(dim=-1) == 0] = additional_info["goal_mask"][new_goal_mask.sum(dim=-1) == 0]
     assert torch.all(new_goal_mask.sum(dim=-1) > 0), new_goal_mask.sum(dim=-1).reshape(-1)
     info[..., 6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*2:6+self.EP.goal_dim+self.EP.num_robots*3+self.EP.num_goals*3] = new_goal_mask
+    self.last_done[:] = done[:]
     return super().get_action(state, info)
     
 

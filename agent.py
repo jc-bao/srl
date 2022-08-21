@@ -248,17 +248,24 @@ class AgentBase:
     state, reward, done, info = self.env.reset()
     pbar = tqdm(total=target_episodes, desc="step evaluation")
     if render:
+      import matplotlib.pyplot as plt
+      if os.path.exists("tmp"):
+        shutil.rmtree("tmp")
+      os.mkdir("tmp")
       image = self.env.render(mode='rgb_array')[0]
       video = [image]
+      plt.imsave("tmp/img%d.png" % len(video), video[-1])
     while n_episodes < target_episodes:
       if isinstance(self.act, net.ActorManualPhase):
-        action = self.act.get_action(state, info, done).detach()
+        action = self.act.get_action(state, info, done)
+        action = action.detach()
       else:
         action = self.act.get_action(state, info).detach()
       state, reward, done, info = self.env.step(action)
       if render:
         image = self.env.render(mode='rgb_array')[0]
         video.append(image)
+        plt.imsave("tmp/img%d.png" % len(video), video[-1])
       episode_length += 1
       assert torch.norm(episode_length - info[..., 1]) < 0.1
       finished_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0] > 0.5))[0]]
@@ -269,12 +276,6 @@ class AgentBase:
       pbar.update(len(filtered_lengths))
     print(stored_length)
     if render:
-      import matplotlib.pyplot as plt
-      if os.path.exists("tmp"):
-        shutil.rmtree("tmp")
-      os.mkdir("tmp")
-      for i in range(len(video)):
-        plt.imsave("tmp/img%d.png" % i, video[i])
       os.system("ffmpeg -r 10 -i tmp/img%d.png -pix_fmt yuv420p output.mp4")
       shutil.rmtree("tmp")
     return np.mean(stored_length)
