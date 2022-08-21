@@ -33,4 +33,4 @@ eval_eps: 128
 step_comparison: true
 warm_up: false
 defaults:
-  - override /env: 2ho_render
+  - override /env: 2ho_step
