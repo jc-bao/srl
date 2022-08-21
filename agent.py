@@ -251,7 +251,7 @@ class AgentBase:
       image = self.env.render(mode='rgb_array')[0]
       video = [image]
     while n_episodes < target_episodes:
-      action = self.act.get_action(state, info).detach()
+      action = self.act.get_action(state, info, done).detach()
       state, reward, done, info = self.env.step(action)
       if render:
         image = self.env.render(mode='rgb_array')[0]

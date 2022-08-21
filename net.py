@@ -332,10 +332,15 @@ class ActorFixSAC(nn.Module):
 class ActorManualPhase(ActorFixSAC):
   def __init__(self, cfg):
     super().__init__(cfg)
-    
-  def get_action(self, state, info=None):
+    self.is_local_left = torch.zeros((self.EP.num_envs, self.EP.num_goals), dtype=torch.bool, device=self.cfg.device)
+    self.is_local_right = torch.zeros((self.EP.num_envs, self.EP.num_goals), dtype=torch.bool, device=self.cfg.device)
+    self.is_cross = torch.zeros((self.EP.num_envs, self.EP.num_goals), dtype=torch.bool, device=self.cfg.device)
+  
+  def get_action(self, state, info=None, done=None):
     if info is not None:
       info = torch.clone(info)
+    if done is not None:
+      done = torch.clone(done)
     # play with mask here. 1 correspond to existing goal, 0 correspond to non-exising goal
     # for local tasks, need to concat two branches
     g = state[..., self.EP.shared_dim+self.EP.seperate_dim:self.EP.shared_dim +
@@ -362,32 +367,43 @@ class ActorManualPhase(ActorFixSAC):
     ) < torch.norm(
       raw_g - additional_info["franka_roots"][1, :3].reshape(1, 1, 3), dim=-1
     )
-    is_local_left = torch.logical_and(
-      torch.logical_and(
-        additional_info["goal_mask"], 
-        additional_info["has_reached"].to(dtype=torch.bool) == 0
-      ), 
+    _is_local_left = torch.logical_and(
+      # torch.logical_and(
+      #   additional_info["goal_mask"], 
+      #   additional_info["has_reached"].to(dtype=torch.bool) == 0
+      # ),
+      additional_info["goal_mask"], 
       torch.logical_and(obj_near_left, goal_near_left)
     )  # should be of shape (num_envs, num_goals)
-    is_local_right = torch.logical_and(
-      torch.logical_and(
-        additional_info["goal_mask"].to(dtype=torch.bool),
-        additional_info["has_reached"].to(dtype=torch.bool) == 0,
-      ),
+    _is_local_right = torch.logical_and(
+      # torch.logical_and(
+      #   additional_info["goal_mask"].to(dtype=torch.bool),
+      #   additional_info["has_reached"].to(dtype=torch.bool) == 0,
+      # ),
+      additional_info["goal_mask"],
       torch.logical_and(~obj_near_left, ~goal_near_left)
     )
-    is_cross = torch.logical_and(
-      torch.logical_and(
-        additional_info["goal_mask"].to(dtype=torch.bool),
-        additional_info["has_reached"].to(dtype=torch.bool) == 0,
-      ),
+    _is_cross = torch.logical_and(
+      # torch.logical_and(
+      #   additional_info["goal_mask"].to(dtype=torch.bool),
+      #   additional_info["has_reached"].to(dtype=torch.bool) == 0,
+      # ),
+      additional_info["goal_mask"],
       torch.logical_or(
         torch.logical_and(obj_near_left, ~goal_near_left),
         torch.logical_and(~obj_near_left, goal_near_left)
       )
     )
+    # update only when environment reset
+    self.is_local_left[done > 0.5] = _is_local_left[done > 0.5]
+    self.is_local_right[done > 0.5] = _is_local_right[done > 0.5]
+    self.is_cross[done > 0.5] = _is_cross[done > 0.5]
     # check which phase should be
-    phase_indicator = torch.sum(is_local_left, dim=-1) + torch.sum(is_local_right, dim=-1)
+    phase_indicator = torch.sum(
+      torch.logical_and(self.is_local_left, additional_info["has_reached"].bool() == 0), 
+      dim=-1) + torch.sum(
+        torch.logical_and(self.is_local_right, additional_info["has_reached"].bool() == 0), 
+        dim=-1)
     # print("phase indicator", phase_indicator[:100])
     # print("is left", is_local_left[:100].reshape(-1))
     # print("is right", is_local_right[:100].reshape(-1))
@@ -395,10 +411,10 @@ class ActorManualPhase(ActorFixSAC):
     # print("has reached", additional_info["has_reached"][:100].reshape(-1))
     new_goal_mask = torch.clone(additional_info["goal_mask"])
     new_goal_mask[phase_indicator > 0] = torch.logical_and(
-      additional_info["goal_mask"], torch.logical_or(is_local_left, is_local_right)
+      additional_info["goal_mask"], torch.logical_or(self.is_local_left, self.is_local_right)
     )[phase_indicator > 0]
     new_goal_mask[phase_indicator <= 0] = torch.logical_and(
-      additional_info["goal_mask"], is_cross
+      additional_info["goal_mask"], self.is_cross
     )[phase_indicator <= 0]
     # print("new goal mask", new_goal_mask[:100].reshape(-1))
     # avoid masking out all objects
