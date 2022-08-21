@@ -15,7 +15,7 @@ def train(config):
 	config = AttrDict(config)
 	'''init'''
 	if config.wandb:
-		if os.environ["WANDB_API_KEY"]:
+		if os.environ.get("WANDB_API_KEY"):
 			wandb.login()
 		if config.resume_mode is None or config.resume_mode == 'restart':
 			print('[Wandb] start new run...')
@@ -57,8 +57,8 @@ def train(config):
 		log(result, prefix='explore')
 
 	if config.step_comparison:
-		mean_num_steps = exp_agent.calculate_mean_step(target_episodes=1000, render=True)
-		print(config.act_net, mean_num_steps)
+		mean_num_steps, success_rate = exp_agent.calculate_mean_step(target_episodes=1000, render=True, only_success=config.only_success)
+		print(config.act_net, mean_num_steps, success_rate)
 		return
 	'''start training'''
 	best_rew = -1000

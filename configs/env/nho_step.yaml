@@ -1,6 +1,7 @@
-num_goals: 4
-current_num_goals: 4
+num_goals: 2
+current_num_goals: 2
 num_robots: 2
+inhand_rate: 0.0
 os_rate: 0.8
 num_envs: 256
 num_cameras: 4
@@ -9,4 +10,4 @@ max_sample_time: 500
 render_size: [640, 400]
 
 # disable early termination
-early_termin_step: 100000
+# early_termin_step: 100000

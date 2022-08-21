@@ -5,9 +5,10 @@ project: handover8
 name: step_comparison
 
 resume_mode: load_only
-# load_tag: latest_7 
-# wid: 3cn88b0q
-load_path: /home/yunfei/projects/isaac_projects/srl/2ho_latest_17.pth
+load_project: corl-2022
+load_tag: latest_17 
+wid: 23bfj0ac
+# load_path: /home/yunfei/projects/isaac_projects/srl/2ho_latest_17.pth
 load_curri: true
 
 render: true
@@ -31,6 +32,7 @@ eval_per_rollout: 1
 eval_eps: 128
 
 step_comparison: true
+only_success: true
 warm_up: false
 defaults:
   - override /env: nho_step

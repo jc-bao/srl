@@ -241,8 +241,9 @@ class AgentBase:
     results.update(curri=reset_params)
     return results
 
-  def calculate_mean_step(self, target_episodes: int, render=False):
+  def calculate_mean_step(self, target_episodes: int, render=False, only_success=True):
     n_episodes = 0
+    n_success = 0
     stored_length = []
     episode_length = torch.zeros((self.EP.num_envs,), device=self.cfg.device)
     state, reward, done, info = self.env.reset()
@@ -255,7 +256,7 @@ class AgentBase:
       image = self.env.render(mode='rgb_array')[0]
       video = [image]
       plt.imsave("tmp/img%d.png" % len(video), video[-1])
-    while n_episodes < target_episodes:
+    while (only_success and n_success < target_episodes) or ((not only_success) and n_episodes < target_episodes):
       if isinstance(self.act, net.ActorManualPhase):
         action = self.act.get_action(state, info, done)
         action = action.detach()
@@ -268,17 +269,24 @@ class AgentBase:
         plt.imsave("tmp/img%d.png" % len(video), video[-1])
       episode_length += 1
       assert torch.norm(episode_length - info[..., 1]) < 0.1
-      finished_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0] > 0.5))[0]]
-      filtered_lengths = finished_lengths[torch.where(finished_lengths > 1)[0]]
+      # finished_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0] > 0.5))[0]]
+      finished_lengths = episode_length[torch.where(done > 0.5)[0]]
+      success_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0]))[0]]
+      # filtered_lengths = finished_lengths[torch.where(finished_lengths > 1)[0]]
+      if only_success:
+        filtered_lengths = success_lengths
+      else:
+        filtered_lengths = finished_lengths
       stored_length.extend(filtered_lengths.cpu())
       episode_length[torch.where(done >  0.5)[0]] = 0
-      n_episodes += len(filtered_lengths)
+      n_episodes += len(finished_lengths)
+      n_success += len(success_lengths)
       pbar.update(len(filtered_lengths))
     print(stored_length)
     if render:
       os.system("ffmpeg -r 10 -i tmp/img%d.png -pix_fmt yuv420p output.mp4")
       shutil.rmtree("tmp")
-    return np.mean(stored_length)
+    return np.mean(stored_length), n_success / n_episodes
 
   def explore_vec_env(self, target_steps=None):
     # auto set target steps
