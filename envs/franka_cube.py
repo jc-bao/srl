@@ -202,13 +202,13 @@ class FrankaCube(gym.Env):
     if self.cfg.robot_type[0] == 'franka':
       orn0 = [0.924, -0.383, 0., 0.]
     elif self.cfg.robot_type[0] == 'xarm':
-      orn0 = [1.0, 0.0, 0., 0]
+      orn0 = [0.0, 1.0, 0., 0]
     else:
       orn0 = [1.0, 0.0, 0.0, 0.0]
     if self.cfg.robot_type[1] == 'franka':
       orn1 = [0.383, 0.924, 0., 0.]
     elif self.cfg.robot_type[1] == 'xarm':
-      orn1 = [1.0, 0.0, 0., 0.0]
+      orn1 = [0.0, -1.0, 0., 0.0]
     else:
       orn1 = [-1.0, 0.0, 0.0, 0.0]
     orns = [orn0,orn1]
