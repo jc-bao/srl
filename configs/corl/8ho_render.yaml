@@ -1,3 +1,5 @@
+# @package _global_
+
 wandb: true
 project: handover8
 name: render
@@ -23,5 +25,5 @@ steps_per_rollout: 100
 eval_per_rollout: 1
 eval_eps: 128
 
-# defaults:
-#   - override /env: 2ho
+defaults:
+  - override /env: 8ho_debug
