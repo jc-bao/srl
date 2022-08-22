@@ -1,0 +1,8 @@
+current_num_goals: 8
+num_goals: 8
+extra_goal_sample: 100
+max_sample_time: 500
+num_robots: 2
+os_rate: 0.8
+num_envs: 4096
+num_cameras: 0

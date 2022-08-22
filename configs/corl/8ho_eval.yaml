@@ -1,0 +1,32 @@
+# @package _global_
+
+wandb: true
+project: corl-main
+name: 8ho_eval
+
+resume_mode: restart 
+load_tag: latest_19
+wid: 25dqffwv
+load_curri: true
+
+render: false
+
+net_layer: 6
+shared_net_layer: 4
+
+agent_name: AgentSAC
+act_net: ActorFixSAC
+critic_net: CriticTwin
+net_type: attn
+if_act_target: false
+shared_critic: true
+
+buffer_size: 100000
+batch_size: 20
+reuse: 0.00000001
+steps_per_rollout: 100
+eval_per_rollout: 1
+eval_eps: 4096
+
+defaults:
+  - override /env: 8ho_eval
