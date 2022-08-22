@@ -1,5 +1,7 @@
 # Sparse-RL
 
+| Note: Please use Isaacgym v3 rather than v4 to aviod robot control issues. 
+
 ## Features
   
 * Fast: Fully GPU-Based Pipeline  (isaac support, fast buffer indexing, fast batch relabeling)

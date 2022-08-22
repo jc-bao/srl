@@ -1,15 +1,18 @@
 # @package _global_
 
 wandb: true
-project: handover8
+project: corl-main
 name: render
 
 resume_mode: restart 
-load_tag: latest_7 
-wid: 3cn88b0q
+load_tag: latest_19
+wid: 25dqffwv
 load_curri: true
 
 render: true
+
+net_layer: 6
+shared_net_layer: 4
 
 agent_name: AgentSAC
 act_net: ActorFixSAC
