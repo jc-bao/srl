@@ -5,16 +5,19 @@ project: handover8
 name: step_comparison
 
 resume_mode: load_only
-load_project: corl-2022
-load_tag: latest_17 
-wid: 23bfj0ac
+# load_project: corl-2022
+# load_tag: latest_17 
+# wid: 23bfj0ac
+load_project: handover8
+load_tag: latest_7 
+wid: 3cn88b0q
 # load_path: /home/yunfei/projects/isaac_projects/srl/2ho_latest_17.pth
 load_curri: true
 
 render: true
 
-net_layer: 6
-shared_net_layer: 4
+# net_layer: 6
+# shared_net_layer: 4
 
 agent_name: AgentSAC
 # act_net: ActorManualPhase
