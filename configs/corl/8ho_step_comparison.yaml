@@ -11,10 +11,10 @@ resume_mode: load_only
 load_project: corl-main
 # load_tag: latest_7 
 # wid: 3cn88b0q
-# load_path: /home/yunfei/projects/isaac_projects/srl/2ho_latest_17.pth
-load_tag: latest_19
-wid: 25dqffwv
-load_curri: true
+load_path: /home/yunfei/projects/isaac_projects/srl/8ho_latest_19.pth
+# load_tag: latest_19
+# wid: 25dqffwv
+load_curri: false
 
 render: true
 
@@ -41,3 +41,4 @@ only_success: true
 warm_up: false
 defaults:
   - override /env: nho_step
+  - override /curri: eval
