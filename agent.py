@@ -241,10 +241,12 @@ class AgentBase:
     results.update(curri=reset_params)
     return results
 
-  def calculate_mean_step(self, target_episodes: int, render=False, only_success=True):
-    n_episodes = 0
-    n_success = 0
-    stored_length = []
+  def calculate_mean_step(
+    self, target_episodes: int, render=False, only_success=True
+  ):
+    n_episodes = dict()
+    n_success = dict()
+    stored_length = dict()
     episode_length = torch.zeros((self.EP.num_envs,), device=self.cfg.device)
     state, reward, done, info = self.env.reset()
     pbar = tqdm(total=target_episodes, desc="step evaluation")
@@ -256,7 +258,22 @@ class AgentBase:
       image = self.env.render(mode='rgb_array')[0]
       video = [image]
       plt.imsave("tmp/img%d.png" % len(video), video[-1])
-    while (only_success and n_success < target_episodes) or ((not only_success) and n_episodes < target_episodes):
+    def loop_cond():
+      if only_success:
+        if len(n_success.values()) == 0:
+          return True
+        if len(n_success.values()) > 0 and min(n_success.values()) < target_episodes:
+          return True
+        return False
+      else:
+        if len(n_episodes.values()) == 0:
+          return True
+        if len(n_episodes.values()) > 0 and min(n_episodes.values()) < target_episodes:
+          return True
+        return False
+
+    last_min = 0
+    while loop_cond():
       if isinstance(self.act, net.ActorManualPhase):
         action = self.act.get_action(state, info, done)
         action = action.detach()
@@ -268,25 +285,42 @@ class AgentBase:
         video.append(image)
         plt.imsave("tmp/img%d.png" % len(video), video[-1])
       episode_length += 1
+      goal_num = self.EP.info_parser(info, 'goal_mask').sum(dim=-1)
+      handover_num = self.env.num_handovers
       assert torch.norm(episode_length - info[..., 1]) < 0.1
-      # finished_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0] > 0.5))[0]]
-      finished_lengths = episode_length[torch.where(done > 0.5)[0]]
-      success_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0]))[0]]
-      # filtered_lengths = finished_lengths[torch.where(finished_lengths > 1)[0]]
-      if only_success:
-        filtered_lengths = success_lengths
-      else:
-        filtered_lengths = finished_lengths
-      stored_length.extend(filtered_lengths.cpu())
+      for i in range(0, torch.max(goal_num).int() + 1):
+        _finish_cond = torch.logical_and(handover_num == i, done > 0.5)
+        _success_cond = torch.logical_and(_finish_cond, info[..., 0])
+        # finished_lengths = episode_length[torch.where(torch.logical_and(done > 0.5, info[..., 0] > 0.5))[0]]
+        finished_lengths = episode_length[torch.where(_finish_cond)[0]]
+        success_lengths = episode_length[torch.where(_success_cond)[0]]
+        # filtered_lengths = finished_lengths[torch.where(finished_lengths > 1)[0]]
+        if only_success:
+          filtered_lengths = success_lengths
+        else:
+          filtered_lengths = finished_lengths
+        if not (i in stored_length):
+          stored_length[i] = filtered_lengths.cpu().tolist()
+        else:
+          stored_length[i].extend(filtered_lengths.cpu().tolist())
+        if not (i in n_episodes):
+          n_episodes[i] = len(finished_lengths)
+        else:
+          n_episodes[i] += len(finished_lengths)
+        if not (i in n_success):
+          n_success[i] = len(success_lengths)
+        else:
+          n_success[i] += len(success_lengths)
+        pbar.update(min(n_success.values()) - last_min)
+        last_min = min(n_success.values())
       episode_length[torch.where(done >  0.5)[0]] = 0
-      n_episodes += len(finished_lengths)
-      n_success += len(success_lengths)
-      pbar.update(len(filtered_lengths))
-    print(stored_length)
+    # print(stored_length)
     if render:
       os.system("ffmpeg -r 10 -i tmp/img%d.png -pix_fmt yuv420p output.mp4")
       shutil.rmtree("tmp")
-    return np.mean(stored_length), n_success / n_episodes
+    mean_len_dict = {key: np.mean(stored_length[key]) for key in stored_length}
+    success_rate_dict = {key: n_success[key] / n_episodes[key] for key in stored_length}
+    return mean_len_dict, success_rate_dict, n_success, n_episodes
 
   def explore_vec_env(self, target_steps=None):
     # auto set target steps

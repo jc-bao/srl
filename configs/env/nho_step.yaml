@@ -7,6 +7,8 @@ num_envs: 256
 num_cameras: 4
 extra_goal_sample: 50
 max_sample_time: 500
+obj_sample_mode: task_distri
+task_distri: [0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.11, 0.12]
 render_size: [640, 400]
 
 # disable early termination
