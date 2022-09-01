@@ -57,7 +57,7 @@ def train(config):
 		log(result, prefix='explore')
 
 	if config.step_comparison:
-		mean_num_steps, success_rate, n_success, n_episode = exp_agent.calculate_mean_step(target_episodes=1000, render=True, only_success=config.only_success)
+		mean_num_steps, success_rate, n_success, n_episode = exp_agent.calculate_mean_step(target_episodes=100, render=True, only_success=config.only_success)
 		print(config.act_net, mean_num_steps, success_rate, n_success, n_episode)
 		return
 	'''start training'''

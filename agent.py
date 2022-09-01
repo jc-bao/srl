@@ -262,13 +262,13 @@ class AgentBase:
       if only_success:
         if len(n_success.values()) == 0:
           return True
-        if len(n_success.values()) > 0 and sum(n_success.values()) < target_episodes:
+        if len(n_success.values()) > 0 and min(n_success.values()) < target_episodes:
           return True
         return False
       else:
         if len(n_episodes.values()) == 0:
           return True
-        if len(n_episodes.values()) > 0 and sum(n_episodes.values()) < target_episodes:
+        if len(n_episodes.values()) > 0 and min(n_episodes.values()) < target_episodes:
           return True
         return False
 

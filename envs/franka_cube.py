@@ -734,7 +734,8 @@ class FrankaCube(gym.Env):
 					block_ws = torch.zeros((done_env_num, max_num_goals), device=self.device, dtype=torch.long)
 					now_prob = self.cfg.task_distri[0] 
 					for i in range(1, max_num_goals+1):
-						block_ws[now_prob<=rand_number<now_prob+self.cfg.task_distri[i], :i] = 1
+						_slice = torch.logical_and(rand_number >= now_prob, rand_number < now_prob + self.cfg.task_distri[i])
+						block_ws[_slice, :i] = 1
 						now_prob += self.cfg.task_distri[i]
 					block_ws += self.goal_workspace[reset_idx] 
 					extra_block_ws = block_ws.repeat(self.cfg.extra_goal_sample,1,1)
