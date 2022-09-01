@@ -13,6 +13,7 @@ early_termin_step: 30
 early_termin_bar: 0.05
 max_ag_unmoved_steps: 25
 ag_moved_threshold: 0.002
+ag_moved_rot_threshold: 0.01
 # rew
 reward_type: sparse
 contact_force_penalty: 0.0
@@ -38,7 +39,7 @@ state_dim: null # calculate later
 per_shared_dim: 8 # pos3, zrot1, vel3, finger1 
 per_seperate_dim: 7 # block state
 seperate_dim: null
-per_goal_dim: 3
+per_goal_dim: 7
 goal_dim: null
 info_dim: 7 #is_success1, step1, early_termin, traj_idx, traj_len, tleft, achieved_goal3n, grip pos, reached_ag, if_press_block(last)
 # control
@@ -57,15 +58,16 @@ ik_err: 0.005 # for iteration version of IK
 dof_vel_scale: 1
 finger_shift: [0,0,-0.04]
 err: 0.05
+rot_err: 0.1
 clip_actions: 1.0
 # block
 inhand_rate: 0.2
 block_size: 0.04 
-block_length: null 
+block_length: 0.16
 goal_sample_mode: bernoulli
 obj_sample_mode: bernoulli
 task_distri: null
-lock_block_orn: true
+lock_block_orn: false
 os_rate: 0.8
 max_handover_time: 100
 goal_os_rate: 0.5

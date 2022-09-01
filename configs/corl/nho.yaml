@@ -2,7 +2,7 @@
 
 wandb: true
 project: corl-main
-name: main
+name: zrot
 
 render: false
 
