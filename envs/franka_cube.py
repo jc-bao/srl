@@ -250,11 +250,12 @@ class FrankaCube(gym.Env):
         asset_options = gymapi.AssetOptions()
         asset_options.flip_visual_attachments = True
         asset_options.fix_base_link = True
-        asset_options.collapse_fixed_joints = True
+        # asset_options.collapse_fixed_joints = True
         asset_options.disable_gravity = True
-        asset_options.thickness = 0.001
+        asset_options.armature = 0.01
+        # asset_options.thickness = 0.001
         asset_options.default_dof_drive_mode = gymapi.DOF_MODE_POS
-        asset_options.use_mesh_materials = True
+        # asset_options.use_mesh_materials = True
         franka_asset = self.gym.load_asset(
             self.sim, asset_root, franka_asset_file, asset_options
         )
@@ -307,10 +308,10 @@ class FrankaCube(gym.Env):
 
         # create block assets
         box_opts = gymapi.AssetOptions()
-        box_opts.density = 50
-        box_opts.angular_damping = 100
-        box_opts.linear_damping = 10
-        box_opts.thickness = 0.005
+        # box_opts.density = 50
+        # box_opts.angular_damping = 100
+        # box_opts.linear_damping = 10
+        # box_opts.thickness = 0.005
         if self.cfg.lock_block_orn and self.cfg.num_robots > 1:
             block_asset = self.gym.load_asset(
                 self.sim, asset_root, 'urdf/cube.urdf', box_opts)
@@ -1115,6 +1116,17 @@ class FrankaCube(gym.Env):
                         torch.any(self.block_states[..., 2].view(
                             self.cfg.num_envs, self.cfg.num_goals) < self.cfg.table_size[2], dim=-1)
                         ))
+        '''
+        if torch.any(early_termin):
+            if torch.any(torch.all(torch.max(self.init_ag[..., :3] - self.block_states[..., :3], dim=-1)[0] < self.cfg.early_termin_bar, dim=-1)):
+                print("not touch all the object")
+            if torch.any(torch.all(self.ag_unmoved_steps > self.cfg.max_ag_unmoved_steps, dim=-1)):
+                print("all ag long time unmoved")
+            if torch.any(torch.any(self.grip_pos[..., 2] < (self.cfg.block_size/4+self.cfg.table_size[2]), dim=-1)):
+                print("hit ground")
+            if torch.any(torch.any(self.block_states[..., 2].view(self.cfg.num_envs, self.cfg.num_goals) < self.cfg.table_size[2], dim=-1)):
+                print("block dropped")
+        '''
         # print(torch.any(torch.abs(self.init_ag - self.block_states[..., :3])<self.cfg.early_termin_bar, dim=-1))
         success_env = rew > self.cfg.success_bar
         self.success_step_buf[~success_env] = self.progress_buf[~success_env]

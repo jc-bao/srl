@@ -131,6 +131,7 @@ class AgentBase:
                          device=self.cfg.device)
     ep_step = torch.zeros(self.EP.num_envs,
                           device=self.cfg.device)
+    ep_length = torch.zeros(self.EP.num_envs, device=self.cfg.device)
     final_rew = torch.zeros(
       self.EP.num_envs, device=self.cfg.device)
     success_rate = torch.zeros(
@@ -159,6 +160,11 @@ class AgentBase:
       num_ep[ten_dones] += 1
       ep_rew += ten_rewards
       ep_step += 1
+      ep_length += 1
+      traj_length = ep_length[ten_dones]
+      # if len(traj_length):
+      #   print("traj length", traj_length, "is_success", self.EP.info_parser(ten_info[ten_dones], 'success'))
+      ep_length[ten_dones] = 0
       final_rew[ten_dones] += ten_rewards[ten_dones]
       success_rate[ten_dones] += self.EP.info_parser(
         ten_info[ten_dones], 'success')

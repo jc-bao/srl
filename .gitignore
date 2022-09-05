@@ -8,6 +8,7 @@
 *plot_*.jpg
 *recorder.npy
 *replay*.npz
+*.mp4
 
 # Runs created by Isaac Gym
 runs/
