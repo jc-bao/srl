@@ -3,8 +3,9 @@ table_gap: # env properties
   now: 0.10 
   end: 0.30
   step: 0.05
-  indicator: results.handover_1_2_success_rate 
-  bar: 0.3 # reward bar to change curriculum
+  indicator: results.handover_1_1_success_rate
+  precondition: os_rate
+  bar: 0.7 # reward bar to change curriculum
 os_rate: 
   init: 0.2
   now: 0.2

@@ -208,7 +208,10 @@ class AgentBase:
       for k, v in self.cfg.curri.items():
         try:
           if eval(v['indicator']) > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
-            self.cfg.curri[k]['now'] += v['step']
+            if ("precondition" in v and 
+                self.cfg.curri[v["precondition"]]['now'] >= self.cfg.curri[v["precondition"]]['end']) \
+                or not ("precondition" in v): 
+              self.cfg.curri[k]['now'] += v['step']
         except Exception as e:
           print(f'{e}, fail to change curriculum param {k}')
         reset_params[k] = self.cfg.curri[k]['now']
