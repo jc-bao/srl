@@ -1,0 +1,2053 @@
+Importing module 'gym_38' (/home/pcy/rl/isaacgym/python/isaacgym/_bindings/linux-x86_64/gym_38.so)
+Setting GYM_USD_PLUG_INFO_PATH to /home/pcy/rl/isaacgym/python/isaacgym/_bindings/linux-x86_64/usd/plugInfo.json
+PyTorch version 1.11.0+cu113
+Device count 3
+/home/pcy/rl/isaacgym/python/isaacgym/_bindings/src/gymtorch
+Using /home/pcy/.cache/torch_extensions/py38_cu113 as PyTorch extensions root...
+Emitting ninja build file /home/pcy/.cache/torch_extensions/py38_cu113/gymtorch/build.ninja...
+Building extension module gymtorch...
+Allowing ninja to set a default number of workers... (overridable by setting the environment variable MAX_JOBS=N)
+ninja: no work to do.
+Loading extension module gymtorch...
+Not connected to PVD
++++ Using GPU PhysX
+Physics Engine: PhysX
+Physics Device: cuda:1
+GPU Pipeline: enabled
+[Agent] env setup
+num franka bodies:  10
+num franka dofs:  9
+[Env] Warn: multi robot, multi goal, goal height > 0.01
+[Params] change step per rollout to 46080
+[Params] change epoches per eval to 1024
+[Agent] net setup
+[Agent] data setup
+warm up...
+AttrDict({'steps': 157414, 'collected_steps': 157414, 'useless_steps': 0})
+========explore0==========
+AttrDict({'steps': 301610, 'collected_steps': 144196, 'useless_steps': 0})
+========update0...========
+AttrDict({'critic_loss': 0.013815026730298996, 'actor_loss': -0.006058366969227791, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval0...===========
+[Curriculum] change table_gap from 0.0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 301610, 'ep_rew': -36.25188064575195, 'final_rew': -0.9672083854675293, 'success_rate': 0.001102120615541935, 'handover0_success_rate': 0.003957037813961506, 'handover1_success_rate': 0.0, 'handover2_success_rate': 0.0, 'exchange0_success_rate': 0.0, 'exchange1_success_rate': 0.0, 'ep_steps': 39.162479400634766, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore1==========
+AttrDict({'steps': 486547, 'collected_steps': 184937, 'useless_steps': 0})
+========update1...========
+AttrDict({'critic_loss': 0.005651174578815699, 'actor_loss': -0.18845345079898834, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore2==========
+AttrDict({'steps': 673041, 'collected_steps': 186494, 'useless_steps': 0})
+========update2...========
+AttrDict({'critic_loss': 0.0038941882085055113, 'actor_loss': -0.28386586904525757, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore3==========
+AttrDict({'steps': 840661, 'collected_steps': 167620, 'useless_steps': 0})
+========update3...========
+AttrDict({'critic_loss': 0.00338840764015913, 'actor_loss': -0.34447231888771057, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore4==========
+AttrDict({'steps': 1023900, 'collected_steps': 183239, 'useless_steps': 0})
+========update4...========
+AttrDict({'critic_loss': 0.0031129480339586735, 'actor_loss': -0.44225651025772095, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval1...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 1023900, 'ep_rew': -35.0718879699707, 'final_rew': -0.972667932510376, 'success_rate': 0.0009998140158131719, 'handover0_success_rate': 0.0039040714036673307, 'handover1_success_rate': 0.0, 'handover2_success_rate': 0.0, 'exchange0_success_rate': 0.0, 'exchange1_success_rate': 0.0, 'ep_steps': 37.99292755126953, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore5==========
+AttrDict({'steps': 1206158, 'collected_steps': 182258, 'useless_steps': 0})
+========update5...========
+AttrDict({'critic_loss': 0.0031832654494792223, 'actor_loss': -0.6381840109825134, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore6==========
+AttrDict({'steps': 1382710, 'collected_steps': 176552, 'useless_steps': 0})
+========update6...========
+AttrDict({'critic_loss': 0.0034002899192273617, 'actor_loss': -0.8147318363189697, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore7==========
+AttrDict({'steps': 1559233, 'collected_steps': 176523, 'useless_steps': 0})
+========update7...========
+AttrDict({'critic_loss': 0.004117490258067846, 'actor_loss': -1.0619328022003174, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore8==========
+AttrDict({'steps': 1732283, 'collected_steps': 173050, 'useless_steps': 0})
+========update8...========
+AttrDict({'critic_loss': 0.004969754256308079, 'actor_loss': -1.3513586521148682, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval2...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 1732283, 'ep_rew': -43.510948181152344, 'final_rew': -0.9671003222465515, 'success_rate': 0.0014043899718672037, 'handover0_success_rate': 0.00495662959292531, 'handover1_success_rate': 0.00042408821173012257, 'handover2_success_rate': 0.0, 'exchange0_success_rate': 0.0, 'exchange1_success_rate': 0.0, 'ep_steps': 47.71577453613281, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore9==========
+AttrDict({'steps': 1900344, 'collected_steps': 168061, 'useless_steps': 0})
+========update9...========
+AttrDict({'critic_loss': 0.0056098150089383125, 'actor_loss': -1.6265963315963745, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore10==========
+AttrDict({'steps': 2077197, 'collected_steps': 176853, 'useless_steps': 0})
+========update10...========
+AttrDict({'critic_loss': 0.00587106728926301, 'actor_loss': -1.9860016107559204, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore11==========
+AttrDict({'steps': 2249244, 'collected_steps': 172047, 'useless_steps': 0})
+========update11...========
+AttrDict({'critic_loss': 0.008666045032441616, 'actor_loss': -2.286653518676758, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore12==========
+AttrDict({'steps': 2417421, 'collected_steps': 168177, 'useless_steps': 0})
+========update12...========
+AttrDict({'critic_loss': 0.009340384043753147, 'actor_loss': -2.691798210144043, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval3...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 2417421, 'ep_rew': -47.341651916503906, 'final_rew': -0.9637858271598816, 'success_rate': 0.0046247211284935474, 'handover0_success_rate': 0.009609225206077099, 'handover1_success_rate': 0.0037629350554198027, 'handover2_success_rate': 0.0023400934878736734, 'exchange0_success_rate': 0.003169572213664651, 'exchange1_success_rate': 0.0015337422955781221, 'ep_steps': 54.13922882080078, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore13==========
+AttrDict({'steps': 2578366, 'collected_steps': 160945, 'useless_steps': 0})
+========update13...========
+AttrDict({'critic_loss': 0.010850228369235992, 'actor_loss': -3.070984363555908, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore14==========
+AttrDict({'steps': 2743110, 'collected_steps': 164744, 'useless_steps': 0})
+========update14...========
+AttrDict({'critic_loss': 0.010845248587429523, 'actor_loss': -3.482074737548828, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore15==========
+AttrDict({'steps': 2889431, 'collected_steps': 146321, 'useless_steps': 0})
+========update15...========
+AttrDict({'critic_loss': 0.01440450455993414, 'actor_loss': -3.9186484813690186, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore16==========
+AttrDict({'steps': 3042319, 'collected_steps': 152888, 'useless_steps': 0})
+========update16...========
+AttrDict({'critic_loss': 0.014562389813363552, 'actor_loss': -4.222633361816406, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval4...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 3042319, 'ep_rew': -55.14454650878906, 'final_rew': -0.9617024660110474, 'success_rate': 0.0070661273784935474, 'handover0_success_rate': 0.013688760809600353, 'handover1_success_rate': 0.004721930716186762, 'handover2_success_rate': 0.012027491815388203, 'exchange0_success_rate': 0.012389380484819412, 'exchange1_success_rate': 0.011666666716337204, 'ep_steps': 62.930152893066406, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore17==========
+AttrDict({'steps': 3195967, 'collected_steps': 153648, 'useless_steps': 0})
+========update17...========
+AttrDict({'critic_loss': 0.015971245244145393, 'actor_loss': -4.69370174407959, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore18==========
+AttrDict({'steps': 3352473, 'collected_steps': 156506, 'useless_steps': 0})
+========update18...========
+AttrDict({'critic_loss': 0.017210055142641068, 'actor_loss': -4.990300178527832, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore19==========
+AttrDict({'steps': 3506683, 'collected_steps': 154210, 'useless_steps': 0})
+========update19...========
+AttrDict({'critic_loss': 0.02041611261665821, 'actor_loss': -5.314310550689697, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore20==========
+AttrDict({'steps': 3657959, 'collected_steps': 151276, 'useless_steps': 0})
+========update20...========
+AttrDict({'critic_loss': 0.021503223106265068, 'actor_loss': -5.535717010498047, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval5...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 3657959, 'ep_rew': -55.51725769042969, 'final_rew': -0.9556698799133301, 'success_rate': 0.00633138045668602, 'handover0_success_rate': 0.011021307669579983, 'handover1_success_rate': 0.006399999838322401, 'handover2_success_rate': 0.00946073792874813, 'exchange0_success_rate': 0.00374531839042902, 'exchange1_success_rate': 0.015267175622284412, 'ep_steps': 63.346351623535156, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore21==========
+AttrDict({'steps': 3810820, 'collected_steps': 152861, 'useless_steps': 0})
+========update21...========
+AttrDict({'critic_loss': 0.019993484020233154, 'actor_loss': -6.184475898742676, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore22==========
+AttrDict({'steps': 3961826, 'collected_steps': 151006, 'useless_steps': 0})
+========update22...========
+AttrDict({'critic_loss': 0.02462703362107277, 'actor_loss': -6.561445236206055, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore23==========
+AttrDict({'steps': 4112258, 'collected_steps': 150432, 'useless_steps': 0})
+========update23...========
+AttrDict({'critic_loss': 0.01973157562315464, 'actor_loss': -6.8271284103393555, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore24==========
+AttrDict({'steps': 4261351, 'collected_steps': 149093, 'useless_steps': 0})
+========update24...========
+AttrDict({'critic_loss': 0.022825179621577263, 'actor_loss': -6.891401767730713, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval6...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 4261351, 'ep_rew': -54.887725830078125, 'final_rew': -0.9501999616622925, 'success_rate': 0.008065941743552685, 'handover0_success_rate': 0.014904187060892582, 'handover1_success_rate': 0.003331482410430908, 'handover2_success_rate': 0.007778738159686327, 'exchange0_success_rate': 0.005328597035259008, 'exchange1_success_rate': 0.010084033943712711, 'ep_steps': 64.31826782226562, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore25==========
+AttrDict({'steps': 4407869, 'collected_steps': 146518, 'useless_steps': 0})
+========update25...========
+AttrDict({'critic_loss': 0.02599976398050785, 'actor_loss': -7.329944133758545, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore26==========
+AttrDict({'steps': 4556821, 'collected_steps': 148952, 'useless_steps': 0})
+========update26...========
+AttrDict({'critic_loss': 0.021218858659267426, 'actor_loss': -7.739462375640869, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore27==========
+AttrDict({'steps': 4710899, 'collected_steps': 154078, 'useless_steps': 0})
+========update27...========
+AttrDict({'critic_loss': 0.028370043262839317, 'actor_loss': -7.840907573699951, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore28==========
+AttrDict({'steps': 4860994, 'collected_steps': 150095, 'useless_steps': 0})
+========update28...========
+AttrDict({'critic_loss': 0.03212416172027588, 'actor_loss': -8.235429763793945, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval7...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 4860994, 'ep_rew': -64.1637191772461, 'final_rew': -0.9403018355369568, 'success_rate': 0.01483909972012043, 'handover0_success_rate': 0.027800491079688072, 'handover1_success_rate': 0.012564249336719513, 'handover2_success_rate': 0.01766437664628029, 'exchange0_success_rate': 0.02182539738714695, 'exchange1_success_rate': 0.013565891422331333, 'ep_steps': 74.48102569580078, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore29==========
+AttrDict({'steps': 5007639, 'collected_steps': 146645, 'useless_steps': 0})
+========update29...========
+AttrDict({'critic_loss': 0.03407559171319008, 'actor_loss': -8.46479320526123, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore30==========
+AttrDict({'steps': 5160308, 'collected_steps': 152669, 'useless_steps': 0})
+========update30...========
+AttrDict({'critic_loss': 0.03439350426197052, 'actor_loss': -8.698104858398438, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore31==========
+AttrDict({'steps': 5308957, 'collected_steps': 148649, 'useless_steps': 0})
+========update31...========
+AttrDict({'critic_loss': 0.02909035049378872, 'actor_loss': -9.001243591308594, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore32==========
+AttrDict({'steps': 5461192, 'collected_steps': 152235, 'useless_steps': 0})
+========update32...========
+AttrDict({'critic_loss': 0.040047913789749146, 'actor_loss': -9.31635856628418, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval8...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 5461192, 'ep_rew': -57.01191711425781, 'final_rew': -0.9402064681053162, 'success_rate': 0.00956101156771183, 'handover0_success_rate': 0.029169782996177673, 'handover1_success_rate': 0.004912663716822863, 'handover2_success_rate': 0.0028653296176344156, 'exchange0_success_rate': 0.001988071482628584, 'exchange1_success_rate': 0.0036697247996926308, 'ep_steps': 68.83370971679688, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore33==========
+AttrDict({'steps': 5606853, 'collected_steps': 145661, 'useless_steps': 0})
+========update33...========
+AttrDict({'critic_loss': 0.039893973618745804, 'actor_loss': -9.635188102722168, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore34==========
+AttrDict({'steps': 5755067, 'collected_steps': 148214, 'useless_steps': 0})
+========update34...========
+AttrDict({'critic_loss': 0.03979633376002312, 'actor_loss': -9.648334503173828, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore35==========
+AttrDict({'steps': 5899035, 'collected_steps': 143968, 'useless_steps': 0})
+========update35...========
+AttrDict({'critic_loss': 0.041673798114061356, 'actor_loss': -9.92650032043457, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore36==========
+AttrDict({'steps': 6053178, 'collected_steps': 154143, 'useless_steps': 0})
+========update36...========
+AttrDict({'critic_loss': 0.047359976917505264, 'actor_loss': -9.998472213745117, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval9...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 6053178, 'ep_rew': -63.0290641784668, 'final_rew': -0.9287283420562744, 'success_rate': 0.01908482238650322, 'handover0_success_rate': 0.040102388709783554, 'handover1_success_rate': 0.012266355566680431, 'handover2_success_rate': 0.014767932705581188, 'exchange0_success_rate': 0.00849256943911314, 'exchange1_success_rate': 0.02092050202190876, 'ep_steps': 76.56575012207031, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore37==========
+AttrDict({'steps': 6204685, 'collected_steps': 151507, 'useless_steps': 0})
+========update37...========
+AttrDict({'critic_loss': 0.050331804901361465, 'actor_loss': -10.026409149169922, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore38==========
+AttrDict({'steps': 6357363, 'collected_steps': 152678, 'useless_steps': 0})
+========update38...========
+AttrDict({'critic_loss': 0.04749530553817749, 'actor_loss': -10.175155639648438, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore39==========
+AttrDict({'steps': 6500634, 'collected_steps': 143271, 'useless_steps': 0})
+========update39...========
+AttrDict({'critic_loss': 0.051651325076818466, 'actor_loss': -10.42514419555664, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore40==========
+AttrDict({'steps': 6646143, 'collected_steps': 145509, 'useless_steps': 0})
+========update40...========
+AttrDict({'critic_loss': 0.051886122673749924, 'actor_loss': -10.485589981079102, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval10...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 6646143, 'ep_rew': -63.627689361572266, 'final_rew': -0.9204984903335571, 'success_rate': 0.01381835900247097, 'handover0_success_rate': 0.035652175545692444, 'handover1_success_rate': 0.008313539437949657, 'handover2_success_rate': 0.01342281885445118, 'exchange0_success_rate': 0.013513513840734959, 'exchange1_success_rate': 0.013303769752383232, 'ep_steps': 79.58100891113281, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore41==========
+AttrDict({'steps': 6789492, 'collected_steps': 143349, 'useless_steps': 0})
+========update41...========
+AttrDict({'critic_loss': 0.05733567848801613, 'actor_loss': -10.517268180847168, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore42==========
+AttrDict({'steps': 6927031, 'collected_steps': 137539, 'useless_steps': 0})
+========update42...========
+AttrDict({'critic_loss': 0.04738830402493477, 'actor_loss': -10.768227577209473, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore43==========
+AttrDict({'steps': 7068416, 'collected_steps': 141385, 'useless_steps': 0})
+========update43...========
+AttrDict({'critic_loss': 0.04680250212550163, 'actor_loss': -11.160284042358398, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore44==========
+AttrDict({'steps': 7215822, 'collected_steps': 147406, 'useless_steps': 0})
+========update44...========
+AttrDict({'critic_loss': 0.04712654650211334, 'actor_loss': -11.270187377929688, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval11...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 7215822, 'ep_rew': -71.082763671875, 'final_rew': -0.9066185355186462, 'success_rate': 0.02960146963596344, 'handover0_success_rate': 0.0541825108230114, 'handover1_success_rate': 0.023562023416161537, 'handover2_success_rate': 0.01836968958377838, 'exchange0_success_rate': 0.01886792480945587, 'exchange1_success_rate': 0.01785714365541935, 'ep_steps': 89.09040069580078, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore45==========
+AttrDict({'steps': 7360693, 'collected_steps': 144871, 'useless_steps': 0})
+========update45...========
+AttrDict({'critic_loss': 0.05514414608478546, 'actor_loss': -11.457710266113281, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore46==========
+AttrDict({'steps': 7509706, 'collected_steps': 149013, 'useless_steps': 0})
+========update46...========
+AttrDict({'critic_loss': 0.05415477976202965, 'actor_loss': -11.214503288269043, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore47==========
+AttrDict({'steps': 7651413, 'collected_steps': 141707, 'useless_steps': 0})
+========update47...========
+AttrDict({'critic_loss': 0.04605976119637489, 'actor_loss': -11.38599967956543, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore48==========
+AttrDict({'steps': 7792891, 'collected_steps': 141478, 'useless_steps': 0})
+========update48...========
+AttrDict({'critic_loss': 0.056708864867687225, 'actor_loss': -11.446627616882324, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval12...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 7792891, 'ep_rew': -74.5653076171875, 'final_rew': -0.897705078125, 'success_rate': 0.02738560363650322, 'handover0_success_rate': 0.06515580415725708, 'handover1_success_rate': 0.011053794994950294, 'handover2_success_rate': 0.013871374540030956, 'exchange0_success_rate': 0.014563106931746006, 'exchange1_success_rate': 0.013089004904031754, 'ep_steps': 93.52864074707031, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore49==========
+AttrDict({'steps': 7931683, 'collected_steps': 138792, 'useless_steps': 0})
+========update49...========
+AttrDict({'critic_loss': 0.05977751687169075, 'actor_loss': -11.473064422607422, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore50==========
+AttrDict({'steps': 8070027, 'collected_steps': 138344, 'useless_steps': 0})
+========update50...========
+AttrDict({'critic_loss': 0.05462087318301201, 'actor_loss': -12.097753524780273, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore51==========
+AttrDict({'steps': 8214673, 'collected_steps': 144646, 'useless_steps': 0})
+========update51...========
+AttrDict({'critic_loss': 0.059828005731105804, 'actor_loss': -11.880157470703125, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore52==========
+AttrDict({'steps': 8358441, 'collected_steps': 143768, 'useless_steps': 0})
+========update52...========
+AttrDict({'critic_loss': 0.06857241690158844, 'actor_loss': -11.769186973571777, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval13...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 8358441, 'ep_rew': -70.57234191894531, 'final_rew': -0.8947916030883789, 'success_rate': 0.02691592276096344, 'handover0_success_rate': 0.07163053750991821, 'handover1_success_rate': 0.012977649457752705, 'handover2_success_rate': 0.012406948022544384, 'exchange0_success_rate': 0.012406948022544384, 'exchange1_success_rate': 0.012376237660646439, 'ep_steps': 91.5043716430664, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore53==========
+AttrDict({'steps': 8501921, 'collected_steps': 143480, 'useless_steps': 0})
+========update53...========
+AttrDict({'critic_loss': 0.06007184460759163, 'actor_loss': -11.995766639709473, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore54==========
+AttrDict({'steps': 8638410, 'collected_steps': 136489, 'useless_steps': 0})
+========update54...========
+AttrDict({'critic_loss': 0.0643451139330864, 'actor_loss': -11.825509071350098, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore55==========
+AttrDict({'steps': 8780877, 'collected_steps': 142467, 'useless_steps': 0})
+========update55...========
+AttrDict({'critic_loss': 0.06930337846279144, 'actor_loss': -12.159215927124023, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore56==========
+AttrDict({'steps': 8923731, 'collected_steps': 142854, 'useless_steps': 0})
+========update56...========
+AttrDict({'critic_loss': 0.06948716193437576, 'actor_loss': -11.726761817932129, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval14...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 8923731, 'ep_rew': -69.65965270996094, 'final_rew': -0.9110409617424011, 'success_rate': 0.02390020526945591, 'handover0_success_rate': 0.07046332210302353, 'handover1_success_rate': 0.012162161991000175, 'handover2_success_rate': 0.010033444501459599, 'exchange0_success_rate': 0.00923787523061037, 'exchange1_success_rate': 0.01075268816202879, 'ep_steps': 88.55421447753906, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore57==========
+AttrDict({'steps': 9061278, 'collected_steps': 137547, 'useless_steps': 0})
+========update57...========
+AttrDict({'critic_loss': 0.07111869007349014, 'actor_loss': -12.25649642944336, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore58==========
+AttrDict({'steps': 9203571, 'collected_steps': 142293, 'useless_steps': 0})
+========update58...========
+AttrDict({'critic_loss': 0.08304307609796524, 'actor_loss': -12.104055404663086, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore59==========
+AttrDict({'steps': 9347820, 'collected_steps': 144249, 'useless_steps': 0})
+========update59...========
+AttrDict({'critic_loss': 0.06442846357822418, 'actor_loss': -12.362818717956543, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore60==========
+AttrDict({'steps': 9488134, 'collected_steps': 140314, 'useless_steps': 0})
+========update60...========
+AttrDict({'critic_loss': 0.08121982216835022, 'actor_loss': -12.044535636901855, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval15...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 9488134, 'ep_rew': -72.7432632446289, 'final_rew': -0.8721424341201782, 'success_rate': 0.038818359375, 'handover0_success_rate': 0.09365558624267578, 'handover1_success_rate': 0.018853696063160896, 'handover2_success_rate': 0.018411967903375626, 'exchange0_success_rate': 0.01946472004055977, 'exchange1_success_rate': 0.01742919348180294, 'ep_steps': 94.47172546386719, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore61==========
+AttrDict({'steps': 9624291, 'collected_steps': 136157, 'useless_steps': 0})
+========update61...========
+AttrDict({'critic_loss': 0.06650279462337494, 'actor_loss': -12.38218879699707, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore62==========
+AttrDict({'steps': 9761350, 'collected_steps': 137059, 'useless_steps': 0})
+========update62...========
+AttrDict({'critic_loss': 0.0801645889878273, 'actor_loss': -12.337103843688965, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore63==========
+AttrDict({'steps': 9901494, 'collected_steps': 140144, 'useless_steps': 0})
+========update63...========
+AttrDict({'critic_loss': 0.06258264929056168, 'actor_loss': -12.509377479553223, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore64==========
+AttrDict({'steps': 10040788, 'collected_steps': 139294, 'useless_steps': 0})
+========update64...========
+AttrDict({'critic_loss': 0.07457820326089859, 'actor_loss': -12.386709213256836, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval16...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 10040788, 'ep_rew': -74.33788299560547, 'final_rew': -0.8983944654464722, 'success_rate': 0.02454892173409462, 'handover0_success_rate': 0.0677083358168602, 'handover1_success_rate': 0.015217390842735767, 'handover2_success_rate': 0.015116279013454914, 'exchange0_success_rate': 0.012195121496915817, 'exchange1_success_rate': 0.017738359048962593, 'ep_steps': 94.71260833740234, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore65==========
+AttrDict({'steps': 10181308, 'collected_steps': 140520, 'useless_steps': 0})
+========update65...========
+AttrDict({'critic_loss': 0.07262614369392395, 'actor_loss': -12.602217674255371, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore66==========
+AttrDict({'steps': 10327198, 'collected_steps': 145890, 'useless_steps': 0})
+========update66...========
+AttrDict({'critic_loss': 0.07239481806755066, 'actor_loss': -12.466583251953125, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore67==========
+AttrDict({'steps': 10469558, 'collected_steps': 142360, 'useless_steps': 0})
+========update67...========
+AttrDict({'critic_loss': 0.06629698723554611, 'actor_loss': -12.561508178710938, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore68==========
+AttrDict({'steps': 10609050, 'collected_steps': 139492, 'useless_steps': 0})
+========update68...========
+AttrDict({'critic_loss': 0.06567441672086716, 'actor_loss': -12.811013221740723, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval17...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 10609050, 'ep_rew': -81.81642150878906, 'final_rew': -0.8843749761581421, 'success_rate': 0.02598818764090538, 'handover0_success_rate': 0.07464324682950974, 'handover1_success_rate': 0.015187849290668964, 'handover2_success_rate': 0.008219177834689617, 'exchange0_success_rate': 0.008152173832058907, 'exchange1_success_rate': 0.00826446246355772, 'ep_steps': 104.43917083740234, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore69==========
+AttrDict({'steps': 10745524, 'collected_steps': 136474, 'useless_steps': 0})
+========update69...========
+AttrDict({'critic_loss': 0.07594617456197739, 'actor_loss': -12.651345252990723, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore70==========
+AttrDict({'steps': 10881485, 'collected_steps': 135961, 'useless_steps': 0})
+========update70...========
+AttrDict({'critic_loss': 0.06467092037200928, 'actor_loss': -12.28311538696289, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore71==========
+AttrDict({'steps': 11018584, 'collected_steps': 137099, 'useless_steps': 0})
+========update71...========
+AttrDict({'critic_loss': 0.07483645528554916, 'actor_loss': -12.753790855407715, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore72==========
+AttrDict({'steps': 11158225, 'collected_steps': 139641, 'useless_steps': 0})
+========update72...========
+AttrDict({'critic_loss': 0.07460352778434753, 'actor_loss': -12.631420135498047, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval18...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 11158225, 'ep_rew': -84.48899841308594, 'final_rew': -0.8554826974868774, 'success_rate': 0.032493956387043, 'handover0_success_rate': 0.09558823704719543, 'handover1_success_rate': 0.020593080669641495, 'handover2_success_rate': 0.01267605647444725, 'exchange0_success_rate': 0.00872093066573143, 'exchange1_success_rate': 0.01634877361357212, 'ep_steps': 111.81454467773438, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore73==========
+AttrDict({'steps': 11294790, 'collected_steps': 136565, 'useless_steps': 0})
+========update73...========
+AttrDict({'critic_loss': 0.08067819476127625, 'actor_loss': -12.662496566772461, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore74==========
+AttrDict({'steps': 11430965, 'collected_steps': 136175, 'useless_steps': 0})
+========update74...========
+AttrDict({'critic_loss': 0.08483868837356567, 'actor_loss': -12.761027336120605, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore75==========
+AttrDict({'steps': 11566013, 'collected_steps': 135048, 'useless_steps': 0})
+========update75...========
+AttrDict({'critic_loss': 0.0743526816368103, 'actor_loss': -12.910483360290527, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore76==========
+AttrDict({'steps': 11706825, 'collected_steps': 140812, 'useless_steps': 0})
+========update76...========
+AttrDict({'critic_loss': 0.07773718982934952, 'actor_loss': -12.779871940612793, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval19...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 11706825, 'ep_rew': -71.90927124023438, 'final_rew': -0.8952323198318481, 'success_rate': 0.02066824771463871, 'handover0_success_rate': 0.06120331957936287, 'handover1_success_rate': 0.008208955638110638, 'handover2_success_rate': 0.012687427923083305, 'exchange0_success_rate': 0.007025761064141989, 'exchange1_success_rate': 0.01814058981835842, 'ep_steps': 93.37332916259766, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore77==========
+AttrDict({'steps': 11843903, 'collected_steps': 137078, 'useless_steps': 0})
+========update77...========
+AttrDict({'critic_loss': 0.060188233852386475, 'actor_loss': -12.672440528869629, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore78==========
+AttrDict({'steps': 11975877, 'collected_steps': 131974, 'useless_steps': 0})
+========update78...========
+AttrDict({'critic_loss': 0.08607009798288345, 'actor_loss': -12.635276794433594, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore79==========
+AttrDict({'steps': 12112992, 'collected_steps': 137115, 'useless_steps': 0})
+========update79...========
+AttrDict({'critic_loss': 0.0666641965508461, 'actor_loss': -12.78128719329834, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore80==========
+AttrDict({'steps': 12252917, 'collected_steps': 139925, 'useless_steps': 0})
+========update80...========
+AttrDict({'critic_loss': 0.06998705118894577, 'actor_loss': -13.079933166503906, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval20...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 12252917, 'ep_rew': -84.1646499633789, 'final_rew': -0.8523716330528259, 'success_rate': 0.04264787957072258, 'handover0_success_rate': 0.1301703155040741, 'handover1_success_rate': 0.01845637522637844, 'handover2_success_rate': 0.009408602491021156, 'exchange0_success_rate': 0.008356546051800251, 'exchange1_success_rate': 0.010362694039940834, 'ep_steps': 109.03179931640625, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore81==========
+AttrDict({'steps': 12386565, 'collected_steps': 133648, 'useless_steps': 0})
+========update81...========
+AttrDict({'critic_loss': 0.08265957236289978, 'actor_loss': -12.530517578125, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore82==========
+AttrDict({'steps': 12523926, 'collected_steps': 137361, 'useless_steps': 0})
+========update82...========
+AttrDict({'critic_loss': 0.07254073768854141, 'actor_loss': -12.827912330627441, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore83==========
+AttrDict({'steps': 12656289, 'collected_steps': 132363, 'useless_steps': 0})
+========update83...========
+AttrDict({'critic_loss': 0.08367881923913956, 'actor_loss': -12.477057456970215, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore84==========
+AttrDict({'steps': 12789132, 'collected_steps': 132843, 'useless_steps': 0})
+========update84...========
+AttrDict({'critic_loss': 0.07234397530555725, 'actor_loss': -13.12036418914795, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval21...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 12789132, 'ep_rew': -78.31317901611328, 'final_rew': -0.8556152582168579, 'success_rate': 0.03023391030728817, 'handover0_success_rate': 0.08324084430932999, 'handover1_success_rate': 0.01580698788166046, 'handover2_success_rate': 0.015665795654058456, 'exchange0_success_rate': 0.01923076994717121, 'exchange1_success_rate': 0.012406948022544384, 'ep_steps': 106.13745880126953, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore85==========
+AttrDict({'steps': 12924272, 'collected_steps': 135140, 'useless_steps': 0})
+========update85...========
+AttrDict({'critic_loss': 0.06465207040309906, 'actor_loss': -12.427867889404297, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore86==========
+AttrDict({'steps': 13065959, 'collected_steps': 141687, 'useless_steps': 0})
+========update86...========
+AttrDict({'critic_loss': 0.06877391040325165, 'actor_loss': -12.80176830291748, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore87==========
+AttrDict({'steps': 13199718, 'collected_steps': 133759, 'useless_steps': 0})
+========update87...========
+AttrDict({'critic_loss': 0.07764477282762527, 'actor_loss': -12.589773178100586, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore88==========
+AttrDict({'steps': 13336170, 'collected_steps': 136452, 'useless_steps': 0})
+========update88...========
+AttrDict({'critic_loss': 0.09585323184728622, 'actor_loss': -12.71010684967041, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval22...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 13336170, 'ep_rew': -85.72712707519531, 'final_rew': -0.8490246534347534, 'success_rate': 0.04641229659318924, 'handover0_success_rate': 0.12229299545288086, 'handover1_success_rate': 0.018916595727205276, 'handover2_success_rate': 0.03867403417825699, 'exchange0_success_rate': 0.046070460230112076, 'exchange1_success_rate': 0.03089887648820877, 'ep_steps': 112.24934387207031, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore89==========
+AttrDict({'steps': 13469495, 'collected_steps': 133325, 'useless_steps': 0})
+========update89...========
+AttrDict({'critic_loss': 0.07175357639789581, 'actor_loss': -12.669797897338867, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore90==========
+AttrDict({'steps': 13604440, 'collected_steps': 134945, 'useless_steps': 0})
+========update90...========
+AttrDict({'critic_loss': 0.06543703377246857, 'actor_loss': -12.442156791687012, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore91==========
+AttrDict({'steps': 13734060, 'collected_steps': 129620, 'useless_steps': 0})
+========update91...========
+AttrDict({'critic_loss': 0.08056380599737167, 'actor_loss': -13.103608131408691, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore92==========
+AttrDict({'steps': 13867925, 'collected_steps': 133865, 'useless_steps': 0})
+========update92...========
+AttrDict({'critic_loss': 0.08516190946102142, 'actor_loss': -12.7755708694458, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval23...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 13867925, 'ep_rew': -82.32905578613281, 'final_rew': -0.8462088704109192, 'success_rate': 0.05385160818696022, 'handover0_success_rate': 0.17004504799842834, 'handover1_success_rate': 0.020270269364118576, 'handover2_success_rate': 0.016260161995887756, 'exchange0_success_rate': 0.008021390065550804, 'exchange1_success_rate': 0.024657534435391426, 'ep_steps': 109.05900573730469, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore93==========
+AttrDict({'steps': 14002261, 'collected_steps': 134336, 'useless_steps': 0})
+========update93...========
+AttrDict({'critic_loss': 0.08042863756418228, 'actor_loss': -12.848847389221191, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore94==========
+AttrDict({'steps': 14137400, 'collected_steps': 135139, 'useless_steps': 0})
+========update94...========
+AttrDict({'critic_loss': 0.0629696473479271, 'actor_loss': -13.157869338989258, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore95==========
+AttrDict({'steps': 14269890, 'collected_steps': 132490, 'useless_steps': 0})
+========update95...========
+AttrDict({'critic_loss': 0.07846217602491379, 'actor_loss': -13.018452644348145, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore96==========
+AttrDict({'steps': 14401304, 'collected_steps': 131414, 'useless_steps': 0})
+========update96...========
+AttrDict({'critic_loss': 0.06945281475782394, 'actor_loss': -13.01288890838623, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval24...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 14401304, 'ep_rew': -84.27769470214844, 'final_rew': -0.8155773282051086, 'success_rate': 0.05596865713596344, 'handover0_success_rate': 0.17783191800117493, 'handover1_success_rate': 0.018001800402998924, 'handover2_success_rate': 0.01287553645670414, 'exchange0_success_rate': 0.017595307901501656, 'exchange1_success_rate': 0.008356546051800251, 'ep_steps': 116.796875, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore97==========
+AttrDict({'steps': 14531747, 'collected_steps': 130443, 'useless_steps': 0})
+========update97...========
+AttrDict({'critic_loss': 0.06471331417560577, 'actor_loss': -13.009248733520508, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore98==========
+AttrDict({'steps': 14662151, 'collected_steps': 130404, 'useless_steps': 0})
+========update98...========
+AttrDict({'critic_loss': 0.06918428093194962, 'actor_loss': -13.125964164733887, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore99==========
+AttrDict({'steps': 14793877, 'collected_steps': 131726, 'useless_steps': 0})
+========update99...========
+AttrDict({'critic_loss': 0.08716536313295364, 'actor_loss': -12.941304206848145, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore100==========
+AttrDict({'steps': 14922374, 'collected_steps': 128497, 'useless_steps': 0})
+========update100...========
+AttrDict({'critic_loss': 0.06972738355398178, 'actor_loss': -12.702241897583008, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval25...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 14922374, 'ep_rew': -91.5104751586914, 'final_rew': -0.8086739778518677, 'success_rate': 0.0637090802192688, 'handover0_success_rate': 0.19383825361728668, 'handover1_success_rate': 0.03404669091105461, 'handover2_success_rate': 0.012698412872850895, 'exchange0_success_rate': 0.008982036262750626, 'exchange1_success_rate': 0.016835017129778862, 'ep_steps': 121.22116088867188, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore101==========
+AttrDict({'steps': 15058161, 'collected_steps': 135787, 'useless_steps': 0})
+========update101...========
+AttrDict({'critic_loss': 0.07673771679401398, 'actor_loss': -13.052606582641602, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore102==========
+AttrDict({'steps': 15191287, 'collected_steps': 133126, 'useless_steps': 0})
+========update102...========
+AttrDict({'critic_loss': 0.07608859241008759, 'actor_loss': -12.983485221862793, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore103==========
+AttrDict({'steps': 15322812, 'collected_steps': 131525, 'useless_steps': 0})
+========update103...========
+AttrDict({'critic_loss': 0.08029229193925858, 'actor_loss': -12.226819038391113, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore104==========
+AttrDict({'steps': 15458877, 'collected_steps': 136065, 'useless_steps': 0})
+========update104...========
+AttrDict({'critic_loss': 0.06714994460344315, 'actor_loss': -13.093830108642578, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval26...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 15458877, 'ep_rew': -96.34794616699219, 'final_rew': -0.7723348140716553, 'success_rate': 0.0906168669462204, 'handover0_success_rate': 0.2904624342918396, 'handover1_success_rate': 0.03329753130674362, 'handover2_success_rate': 0.030110934749245644, 'exchange0_success_rate': 0.019607843831181526, 'exchange1_success_rate': 0.03987729921936989, 'ep_steps': 130.15554809570312, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore105==========
+AttrDict({'steps': 15592125, 'collected_steps': 133248, 'useless_steps': 0})
+========update105...========
+AttrDict({'critic_loss': 0.0871872678399086, 'actor_loss': -12.621615409851074, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore106==========
+AttrDict({'steps': 15727169, 'collected_steps': 135044, 'useless_steps': 0})
+========update106...========
+AttrDict({'critic_loss': 0.08225468546152115, 'actor_loss': -13.024785041809082, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore107==========
+AttrDict({'steps': 15859165, 'collected_steps': 131996, 'useless_steps': 0})
+========update107...========
+AttrDict({'critic_loss': 0.08017051964998245, 'actor_loss': -12.4962158203125, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore108==========
+AttrDict({'steps': 15993543, 'collected_steps': 134378, 'useless_steps': 0})
+========update108...========
+AttrDict({'critic_loss': 0.08320404589176178, 'actor_loss': -13.108662605285645, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval27...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 15993543, 'ep_rew': -103.32308197021484, 'final_rew': -0.759637713432312, 'success_rate': 0.10391555726528168, 'handover0_success_rate': 0.2912482023239136, 'handover1_success_rate': 0.05097087472677231, 'handover2_success_rate': 0.025925925001502037, 'exchange0_success_rate': 0.027586206793785095, 'exchange1_success_rate': 0.023904383182525635, 'ep_steps': 135.97190856933594, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore109==========
+AttrDict({'steps': 16124532, 'collected_steps': 130989, 'useless_steps': 0})
+========update109...========
+AttrDict({'critic_loss': 0.08020853996276855, 'actor_loss': -12.80113697052002, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore110==========
+AttrDict({'steps': 16260750, 'collected_steps': 136218, 'useless_steps': 0})
+========update110...========
+AttrDict({'critic_loss': 0.07942446321249008, 'actor_loss': -12.659377098083496, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore111==========
+AttrDict({'steps': 16389812, 'collected_steps': 129062, 'useless_steps': 0})
+========update111...========
+AttrDict({'critic_loss': 0.09036415815353394, 'actor_loss': -12.707405090332031, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore112==========
+AttrDict({'steps': 16517567, 'collected_steps': 127755, 'useless_steps': 0})
+========update112...========
+AttrDict({'critic_loss': 0.08631042391061783, 'actor_loss': -12.901686668395996, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval28...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 16517567, 'ep_rew': -97.58415222167969, 'final_rew': -0.7453659772872925, 'success_rate': 0.0977492555975914, 'handover0_success_rate': 0.3027777671813965, 'handover1_success_rate': 0.03715847060084343, 'handover2_success_rate': 0.02300884947180748, 'exchange0_success_rate': 0.01773049682378769, 'exchange1_success_rate': 0.028169013559818268, 'ep_steps': 132.7432098388672, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore113==========
+AttrDict({'steps': 16651913, 'collected_steps': 134346, 'useless_steps': 0})
+========update113...========
+AttrDict({'critic_loss': 0.07961628586053848, 'actor_loss': -12.577598571777344, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore114==========
+AttrDict({'steps': 16784142, 'collected_steps': 132229, 'useless_steps': 0})
+========update114...========
+AttrDict({'critic_loss': 0.09527114033699036, 'actor_loss': -12.58034896850586, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore115==========
+AttrDict({'steps': 16920656, 'collected_steps': 136514, 'useless_steps': 0})
+========update115...========
+AttrDict({'critic_loss': 0.0964527502655983, 'actor_loss': -12.699935913085938, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore116==========
+AttrDict({'steps': 17057706, 'collected_steps': 137050, 'useless_steps': 0})
+========update116...========
+AttrDict({'critic_loss': 0.09338031709194183, 'actor_loss': -12.262896537780762, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval29...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 17057706, 'ep_rew': -95.23638916015625, 'final_rew': -0.7069766521453857, 'success_rate': 0.14003440737724304, 'handover0_success_rate': 0.4083915948867798, 'handover1_success_rate': 0.05753739923238754, 'handover2_success_rate': 0.03135313466191292, 'exchange0_success_rate': 0.029801324009895325, 'exchange1_success_rate': 0.032786883413791656, 'ep_steps': 132.85433959960938, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore117==========
+AttrDict({'steps': 17191866, 'collected_steps': 134160, 'useless_steps': 0})
+========update117...========
+AttrDict({'critic_loss': 0.10268917679786682, 'actor_loss': -12.69167709350586, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore118==========
+AttrDict({'steps': 17323009, 'collected_steps': 131143, 'useless_steps': 0})
+========update118...========
+AttrDict({'critic_loss': 0.08578784018754959, 'actor_loss': -12.28979206085205, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore119==========
+AttrDict({'steps': 17456137, 'collected_steps': 133128, 'useless_steps': 0})
+========update119...========
+AttrDict({'critic_loss': 0.08716670423746109, 'actor_loss': -12.167899131774902, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore120==========
+AttrDict({'steps': 17589376, 'collected_steps': 133239, 'useless_steps': 0})
+========update120...========
+AttrDict({'critic_loss': 0.08704756945371628, 'actor_loss': -12.579903602600098, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval30...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 17589376, 'ep_rew': -100.89826965332031, 'final_rew': -0.7379359602928162, 'success_rate': 0.10855654627084732, 'handover0_success_rate': 0.32919254899024963, 'handover1_success_rate': 0.05727923661470413, 'handover2_success_rate': 0.015597919933497906, 'exchange0_success_rate': 0.01034482754766941, 'exchange1_success_rate': 0.02083333395421505, 'ep_steps': 136.84429931640625, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore121==========
+AttrDict({'steps': 17724878, 'collected_steps': 135502, 'useless_steps': 0})
+========update121...========
+AttrDict({'critic_loss': 0.09381677955389023, 'actor_loss': -12.092306137084961, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore122==========
+AttrDict({'steps': 17859915, 'collected_steps': 135037, 'useless_steps': 0})
+========update122...========
+AttrDict({'critic_loss': 0.08622732013463974, 'actor_loss': -12.391234397888184, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore123==========
+AttrDict({'steps': 17993389, 'collected_steps': 133474, 'useless_steps': 0})
+========update123...========
+AttrDict({'critic_loss': 0.09525015205144882, 'actor_loss': -12.280097007751465, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore124==========
+AttrDict({'steps': 18127068, 'collected_steps': 133679, 'useless_steps': 0})
+========update124...========
+AttrDict({'critic_loss': 0.09333641082048416, 'actor_loss': -11.828423500061035, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval31...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 18127068, 'ep_rew': -99.65478515625, 'final_rew': -0.6613816022872925, 'success_rate': 0.1508905291557312, 'handover0_success_rate': 0.47812971472740173, 'handover1_success_rate': 0.060225848108530045, 'handover2_success_rate': 0.013861386105418205, 'exchange0_success_rate': 0.016194332391023636, 'exchange1_success_rate': 0.011583011597394943, 'ep_steps': 143.47190856933594, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore125==========
+AttrDict({'steps': 18260800, 'collected_steps': 133732, 'useless_steps': 0})
+========update125...========
+AttrDict({'critic_loss': 0.09242202341556549, 'actor_loss': -12.296889305114746, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore126==========
+AttrDict({'steps': 18394765, 'collected_steps': 133965, 'useless_steps': 0})
+========update126...========
+AttrDict({'critic_loss': 0.10259240865707397, 'actor_loss': -12.293630599975586, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore127==========
+AttrDict({'steps': 18531357, 'collected_steps': 136592, 'useless_steps': 0})
+========update127...========
+AttrDict({'critic_loss': 0.09566665440797806, 'actor_loss': -12.12890338897705, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore128==========
+AttrDict({'steps': 18663103, 'collected_steps': 131746, 'useless_steps': 0})
+========update128...========
+AttrDict({'critic_loss': 0.10134262591600418, 'actor_loss': -12.42920207977295, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval32...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 18663103, 'ep_rew': -99.7052001953125, 'final_rew': -0.7080764174461365, 'success_rate': 0.12332357466220856, 'handover0_success_rate': 0.3954545557498932, 'handover1_success_rate': 0.06989853084087372, 'handover2_success_rate': 0.022263450548052788, 'exchange0_success_rate': 0.011029412038624287, 'exchange1_success_rate': 0.033582091331481934, 'ep_steps': 138.1845245361328, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore129==========
+AttrDict({'steps': 18801416, 'collected_steps': 138313, 'useless_steps': 0})
+========update129...========
+AttrDict({'critic_loss': 0.10104195773601532, 'actor_loss': -11.836458206176758, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore130==========
+AttrDict({'steps': 18938970, 'collected_steps': 137554, 'useless_steps': 0})
+========update130...========
+AttrDict({'critic_loss': 0.09548389911651611, 'actor_loss': -12.293448448181152, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore131==========
+AttrDict({'steps': 19074082, 'collected_steps': 135112, 'useless_steps': 0})
+========update131...========
+AttrDict({'critic_loss': 0.08602288365364075, 'actor_loss': -11.767077445983887, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore132==========
+AttrDict({'steps': 19210187, 'collected_steps': 136105, 'useless_steps': 0})
+========update132...========
+AttrDict({'critic_loss': 0.09124632179737091, 'actor_loss': -11.64323902130127, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval33...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 19210187, 'ep_rew': -97.0245361328125, 'final_rew': -0.6515311002731323, 'success_rate': 0.16135603189468384, 'handover0_success_rate': 0.4795321524143219, 'handover1_success_rate': 0.09762202948331833, 'handover2_success_rate': 0.009025271050632, 'exchange0_success_rate': 0.0037174720782786608, 'exchange1_success_rate': 0.0139860138297081, 'ep_steps': 141.87686157226562, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore133==========
+AttrDict({'steps': 19346268, 'collected_steps': 136081, 'useless_steps': 0})
+========update133...========
+AttrDict({'critic_loss': 0.09591373801231384, 'actor_loss': -11.585614204406738, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore134==========
+AttrDict({'steps': 19479401, 'collected_steps': 133133, 'useless_steps': 0})
+========update134...========
+AttrDict({'critic_loss': 0.10113002359867096, 'actor_loss': -11.938390731811523, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore135==========
+AttrDict({'steps': 19612370, 'collected_steps': 132969, 'useless_steps': 0})
+========update135...========
+AttrDict({'critic_loss': 0.09738322347402573, 'actor_loss': -11.613221168518066, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore136==========
+AttrDict({'steps': 19743834, 'collected_steps': 131464, 'useless_steps': 0})
+========update136...========
+AttrDict({'critic_loss': 0.09776391834020615, 'actor_loss': -11.660075187683105, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval34...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 19743834, 'ep_rew': -96.32728576660156, 'final_rew': -0.6203845739364624, 'success_rate': 0.1872907280921936, 'handover0_success_rate': 0.5668135285377502, 'handover1_success_rate': 0.0917431190609932, 'handover2_success_rate': 0.04856115207076073, 'exchange0_success_rate': 0.04395604506134987, 'exchange1_success_rate': 0.05281690135598183, 'ep_steps': 141.9554443359375, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore137==========
+AttrDict({'steps': 19870003, 'collected_steps': 126169, 'useless_steps': 0})
+========update137...========
+AttrDict({'critic_loss': 0.08873102068901062, 'actor_loss': -11.606395721435547, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore138==========
+AttrDict({'steps': 20003019, 'collected_steps': 133016, 'useless_steps': 0})
+========update138...========
+AttrDict({'critic_loss': 0.09001749008893967, 'actor_loss': -11.362335205078125, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore139==========
+AttrDict({'steps': 20136982, 'collected_steps': 133963, 'useless_steps': 0})
+========update139...========
+AttrDict({'critic_loss': 0.09692228585481644, 'actor_loss': -11.671631813049316, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore140==========
+AttrDict({'steps': 20271737, 'collected_steps': 134755, 'useless_steps': 0})
+========update140...========
+AttrDict({'critic_loss': 0.08852268755435944, 'actor_loss': -11.359536170959473, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval35...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 20271737, 'ep_rew': -97.73049926757812, 'final_rew': -0.5806722044944763, 'success_rate': 0.23166504502296448, 'handover0_success_rate': 0.5896773934364319, 'handover1_success_rate': 0.1480996012687683, 'handover2_success_rate': 0.0714285746216774, 'exchange0_success_rate': 0.054621849209070206, 'exchange1_success_rate': 0.08786610513925552, 'ep_steps': 140.89028930664062, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+=========saved!
+========explore141==========
+AttrDict({'steps': 20409605, 'collected_steps': 137868, 'useless_steps': 0})
+========update141...========
+AttrDict({'critic_loss': 0.09566053003072739, 'actor_loss': -11.482193946838379, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore142==========
+AttrDict({'steps': 20549983, 'collected_steps': 140378, 'useless_steps': 0})
+========update142...========
+AttrDict({'critic_loss': 0.08909602463245392, 'actor_loss': -11.67969036102295, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore143==========
+AttrDict({'steps': 20685692, 'collected_steps': 135709, 'useless_steps': 0})
+========update143...========
+AttrDict({'critic_loss': 0.08780120313167572, 'actor_loss': -11.477852821350098, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore144==========
+AttrDict({'steps': 20824172, 'collected_steps': 138480, 'useless_steps': 0})
+========update144...========
+AttrDict({'critic_loss': 0.08351562917232513, 'actor_loss': -11.459280014038086, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval36...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 20824172, 'ep_rew': -92.25909423828125, 'final_rew': -0.6310040950775146, 'success_rate': 0.19944313168525696, 'handover0_success_rate': 0.5137614607810974, 'handover1_success_rate': 0.1496437042951584, 'handover2_success_rate': 0.03539822995662689, 'exchange0_success_rate': 0.03345724940299988, 'exchange1_success_rate': 0.03703703731298447, 'ep_steps': 134.71934509277344, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore145==========
+AttrDict({'steps': 20960709, 'collected_steps': 136537, 'useless_steps': 0})
+========update145...========
+AttrDict({'critic_loss': 0.08520122617483139, 'actor_loss': -11.184785842895508, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore146==========
+AttrDict({'steps': 21093951, 'collected_steps': 133242, 'useless_steps': 0})
+========update146...========
+AttrDict({'critic_loss': 0.08153001219034195, 'actor_loss': -11.546685218811035, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore147==========
+AttrDict({'steps': 21228439, 'collected_steps': 134488, 'useless_steps': 0})
+========update147...========
+AttrDict({'critic_loss': 0.08360372483730316, 'actor_loss': -11.047463417053223, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore148==========
+AttrDict({'steps': 21367973, 'collected_steps': 139534, 'useless_steps': 0})
+========update148...========
+AttrDict({'critic_loss': 0.07939217239618301, 'actor_loss': -11.174351692199707, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval37...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.2
+AttrDict({'steps': 21367973, 'ep_rew': -97.11216735839844, 'final_rew': -0.5189453363418579, 'success_rate': 0.29469403624534607, 'handover0_success_rate': 0.6968876719474792, 'handover1_success_rate': 0.21578946709632874, 'handover2_success_rate': 0.06465516984462738, 'exchange0_success_rate': 0.0476190485060215, 'exchange1_success_rate': 0.0784313753247261, 'ep_steps': 144.462890625, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.2}})
+========explore149==========
+AttrDict({'steps': 21507979, 'collected_steps': 140006, 'useless_steps': 0})
+========update149...========
+AttrDict({'critic_loss': 0.07680762559175491, 'actor_loss': -11.069414138793945, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore150==========
+AttrDict({'steps': 21650149, 'collected_steps': 142170, 'useless_steps': 0})
+========update150...========
+AttrDict({'critic_loss': 0.08574432879686356, 'actor_loss': -11.052083015441895, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore151==========
+AttrDict({'steps': 21787830, 'collected_steps': 137681, 'useless_steps': 0})
+========update151...========
+AttrDict({'critic_loss': 0.09139066189527512, 'actor_loss': -10.844199180603027, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore152==========
+AttrDict({'steps': 21926238, 'collected_steps': 138408, 'useless_steps': 0})
+========update152...========
+AttrDict({'critic_loss': 0.09164169430732727, 'actor_loss': -10.917040824890137, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========eval38...===========
+[Curriculum] change table_gap from 0 to 0
+[Curriculum] change os_rate from 0.2 to 0.5
+/buildAgent/work/45f70df4210b2e3e/source/gpunarrowphase/src/PxgNarrowphaseCore.cpp (1443) : internal error : memcpy failed fail! 2  700 
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpunarrowphase/src/PxgNarrowphaseCore.cpp (1453) : internal error : GPU cudaMainGjkEpa or prepareLostFoundPairs kernel fail!
+  700
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (54) : internal error : SynchronizeStreams cuEventRecord failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (60) : internal error : SynchronizeStreams cuStreamWaitEvent failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpunarrowphase/src/PxgNarrowphaseCore.cpp (1701) : internal error : memcpy failed fail!
+  700
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (54) : internal error : SynchronizeStreams cuEventRecord failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (60) : internal error : SynchronizeStreams cuStreamWaitEvent failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (54) : internal error : SynchronizeStreams cuEventRecord failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (60) : internal error : SynchronizeStreams cuStreamWaitEvent failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (80) : internal error : SynchronizeStreams failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1121) : internal error : GPU contactConstraintPrepare fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1192) : internal error : GPU artiContactConstraintPrepare fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (80) : internal error : SynchronizeStreams failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1473) : internal error : GPU solveContactParallel fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1510) : internal error : GPU solveContactParallel fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1593) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1678) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1737) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1754) : internal error : GPU propagate solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1784) : internal error : GPU concludeBlockFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1828) : internal error : GPU solveContactParallel fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1064) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (1074) : internal error : GPU averageDeltaV fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1911) : internal error : GPU mArtiSolvePartitionFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (1976) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (859) : internal error : GPU solveSelfConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (879) : internal error : GPU artiSolveInternalTendonConstraints1T fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpuarticulation/src/PxgArticulationCore.cpp (907) : internal error : GPU solveInternalConstraints fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (2032) : internal error : GPU solveStaticBlock fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (2049) : internal error : GPU compute solver bodies average velocities fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (2076) : internal error : GPU mWritebackBlockFunction fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (80) : internal error : SynchronizeStreams failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpusolver/src/PxgTGSCudaSolverCore.cpp (2361) : internal error : GPU integrateCoreParallel fail to launch kernel!!
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (80) : internal error : SynchronizeStreams failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/gpucommon/include/PxgCudaUtils.h (80) : internal error : SynchronizeStreams failed
+
+
+/buildAgent/work/45f70df4210b2e3e/source/physx/src/NpScene.cpp (3189) : internal error : PhysX Internal CUDA error. Simulation can not continue!
+
+AttrDict({'steps': 21926238, 'ep_rew': -99.87689208984375, 'final_rew': -0.4794154465198517, 'success_rate': 0.31904879212379456, 'handover0_success_rate': 0.7362784743309021, 'handover1_success_rate': 0.2762284278869629, 'handover2_success_rate': 0.04009433835744858, 'exchange0_success_rate': 0.03755868598818779, 'exchange1_success_rate': 0.04245283082127571, 'ep_steps': 147.86248779296875, 'video': None, 'curri': {'table_gap': 0, 'os_rate': 0.5}})
+========explore153==========
+AttrDict({'steps': 22060131, 'collected_steps': 133893, 'useless_steps': 0})
+========update153...========
+AttrDict({'critic_loss': 0.07392046600580215, 'actor_loss': -10.72766399383545, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore154==========
+AttrDict({'steps': 22200912, 'collected_steps': 140781, 'useless_steps': 0})
+========update154...========
+AttrDict({'critic_loss': 0.08468391746282578, 'actor_loss': -11.181062698364258, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore155==========
+AttrDict({'steps': 22341672, 'collected_steps': 140760, 'useless_steps': 0})
+========update155...========
+AttrDict({'critic_loss': 0.09043636173009872, 'actor_loss': -10.626641273498535, 'ag_random_relabel_rate': 0.0, 'g_random_relabel_rate': 0.0})
+========explore156==========
