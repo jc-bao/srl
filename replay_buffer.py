@@ -73,7 +73,8 @@ class ReplayBuffer:  # for off-policy
 			g_fix_relabel_idx = unmoved_ag_idx & (~rand_mask)
 			g_random_relabel_num = g_random_relabel_idx.sum()
 			g_fix_relabel_num = g_fix_relabel_idx.sum()
-			self.g_random_relabel_rate = g_random_relabel_num / her_batch_size 
+			_total_num = torch.ones_like(g_random_relabel_idx).sum()
+			self.g_random_relabel_rate = g_random_relabel_num / _total_num 
 			if g_random_relabel_num > 0:
 				fut_ag = fut_ag.view(fut_ag.shape[0],self.EP.num_goals,-1)
 				if self.cfg.g_random_relabel_change_ws:
