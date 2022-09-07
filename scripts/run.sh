@@ -46,7 +46,7 @@ do
     done
     tmux send-keys -t ":0.0" "echo start new run" Enter
     tmux send-keys -t ":0.0" "cd /home/pcy/rl/srl; conda activate rlgpu; export LD_LIBRARY_PATH=/home/pcy/miniconda3/envs/rlgpu/lib:$LD_LIBRARY_PATH" Enter
-    tmux send-keys -t ":0.0" "python run.py +corl=28ho name=28ho random_seed=$2 gpu_id=$1" Enter
+    tmux send-keys -t ":0.0" "python run.py +corl=28ho name=26ho random_seed=$2 gpu_id=$1" Enter
     idle_time=0
   fi
   sleep 1
