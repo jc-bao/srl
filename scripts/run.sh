@@ -12,7 +12,7 @@ echo "seed: $seed"
 load_tag=$3
 echo "load_tag: $load_tag"
 
-if (($# == 2))
+if (($# == 3))
 then
   monitor_gpu_id=$1
 else
