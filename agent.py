@@ -43,13 +43,13 @@ class AgentBase:
     if not self.cfg.render:
       self.env_kwargs.num_cameras = 0
     # handle special case: change goal number
-    if self.cfg.curri is not None and 'num_goals' in self.cfg.curri:
+    if self.cfg.get("curri", None) is not None and 'num_goals' in self.cfg.curri:
       self.env_kwargs.num_goals = self.cfg.curri.num_goals.now
       print(f'[Env] change number of goals from {self.env_kwargs.num_goals} to {self.cfg.curri.num_goals.now} in the init...')
     self.env = gym.make(cfg.env_name, **self.env_kwargs)
     self.cfg.update(env_params=self.env.env_params(), env_cfg=self.env.cfg)
     reset_params = AttrDict()
-    if self.cfg.curri is not None:
+    if self.cfg.get("curri", None) is not None:
       for k, v in self.cfg.curri.items():
         reset_params[k] = v['now']
       self.env.reset(config=reset_params)
@@ -204,7 +204,7 @@ class AgentBase:
       **ho_success_dict,
       ep_steps=torch.mean(ep_step / num_ep).item(),
       video=video)  # record curriculum
-    if self.cfg.curri is not None:
+    if self.cfg.get("curri", None) is not None:
       for k, v in self.cfg.curri.items():
         try:
           if eval(v['indicator']) > v['bar'] and abs(v['now'] - v['end']) > abs(v['step']/2):
@@ -458,7 +458,7 @@ class AgentBase:
     name_obj_list = [(name, obj)
                      for name, obj in name_obj_list if obj is not None]
     if if_save:
-      data = {'step': self.total_step, 'curri': self.cfg.curri, 'total_save': self.total_save}
+      data = {'step': self.total_step, 'curri': self.cfg.get("curri", None), 'total_save': self.total_save}
       for name, obj in name_obj_list:
         data[name] = obj.state_dict()
       last_save_path = f"{cwd}/{file_tag}_{self.total_save}.pth"
