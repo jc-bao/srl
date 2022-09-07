@@ -8,8 +8,8 @@ fi
 echo "use GPU: $gpu_id"
 
 min_memory_usage=5000
-min_gpu_usage=50
-max_wait_time=60
+min_gpu_usage=65
+max_wait_time=30
 idle_time=0
 
 while true 
