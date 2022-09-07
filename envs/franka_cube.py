@@ -876,25 +876,27 @@ class FrankaCube(gym.Env):
                 # choosed_block = torch.randint(max_num_goals, (1,), device=self.device)[0]
                 # NOTE can only choose block 0 in hand now TODO fix it
                 choosed_block = 0
-                choosed_robot = torch.randint(high=self.cfg.num_robots, size=(
-                    self.inhand_idx.sum().item(),), device=self.device)
+                # choosed_robot = torch.randint(high=self.cfg.num_robots, size=(
+                #     self.inhand_idx.sum().item(),), device=self.device)
+                choosed_robot = self.block_workspace[self.inhand_idx, choosed_block]
                 self.init_ag[self.inhand_idx, choosed_block, :3] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
                     (torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch(
                         [self.cfg.block_length*0.7, 0., 0.], device=self.device)
                 self.init_ag[self.inhand_idx, choosed_block, 3:6] = 0.0
                 self.init_ag[self.inhand_idx, choosed_block, 6] = 1.0
-                self.block_workspace[self.inhand_idx,
-                                     choosed_block] = choosed_robot
+                # self.block_workspace[self.inhand_idx,
+                #                      choosed_block] = choosed_robot
                 if max_num_goals > 1 and self.cfg.num_robots > 1 and torch.rand(1)[0] < 0.5:
                     choosed_block = (choosed_block+1) % max_num_goals
-                    choosed_robot = (choosed_robot+1) % self.cfg.num_robots
+                    # choosed_robot = (choosed_robot+1) % self.cfg.num_robots
+                    choosed_robot = self.block_workspace[self.inhand_idx, choosed_block]
                     self.init_ag[self.inhand_idx, choosed_block, :3] = self.default_grip_pos[self.inhand_idx, choosed_robot] + \
                         (torch.rand_like(self.default_grip_pos[self.inhand_idx, choosed_robot], device=self.device) - 0.5) * to_torch(
                             [self.cfg.block_length*0.7, 0., 0.], device=self.device)
                     self.init_ag[self.inhand_idx, choosed_block, 3:6] = 0.0
                     self.init_ag[self.inhand_idx, choosed_block, 6] = 1.0
-                    self.block_workspace[self.inhand_idx,
-                                         choosed_block] = choosed_robot
+                    # self.block_workspace[self.inhand_idx,
+                    #                      choosed_block] = choosed_robot
             self.num_handovers = (self.block_workspace !=
                                   self.goal_workspace).sum(dim=-1)
             self.last_step_ag[reset_idx] = self.init_ag[reset_idx]
@@ -928,7 +930,7 @@ class FrankaCube(gym.Env):
         current_z = self.estimate_zangle_from_rot(self.hand_rot_tensor)
         zrot_target = torch.clip(
             self.actions[..., -1] * self.cfg.zrot_scale + current_z,
-            -np.pi / 2, np.pi / 2  # may be wrong for a constant factor
+            -np.pi, np.pi  # may be wrong for a constant factor
         )
         filtered_pos_target = self.hand_pos_tensor
         filtered_zrot_target = current_z
