@@ -47,6 +47,13 @@ def train(config):
 				wandb.log({"Media/video": wandb.Video(msg.video, fps=10, format="mp4")})
 	torch.set_grad_enabled(False)
 
+	if config.get("eval_only", False):
+		num_eval = 0
+		print(f'========eval{num_eval}...===========')
+		result = exp_agent.eval_vec_env(render=True)
+		log(result, prefix=f'eval')
+		return
+	
 	# warmup
 	if config.warm_up:
 		print('warm up...')

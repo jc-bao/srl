@@ -1460,7 +1460,7 @@ class FrankaCube(gym.Env):
         cfg.action_shift = torch.tensor(
             cfg.action_shift, device=cfg.sim_device)
         # table size
-        cfg.table_size = [cfg.robot_gap-cfg.table_gap,
+        cfg.table_size = [cfg.robot_gap-0 * cfg.table_gap,
                           cfg.table_size[1], cfg.table_size[2]]
         sim_params = gymapi.SimParams()
         if cfg.up_axis not in ["z", "y"]:
