@@ -4,11 +4,11 @@ wandb: true
 project: debug
 name: 2ho_render
 
-resume_mode: restart
-load_project: corl-main
-load_tag: latest_16 
-wid: u3x1h0p1
-load_curri: true
+resume_mode: restart 
+load_project: corl-2022
+load_tag: latest_17 
+wid: 23bfj0ac
+load_curri: false
 
 render: true
 
@@ -30,7 +30,6 @@ eval_per_rollout: 1
 eval_eps: 16
 render_per_eval: 1
 eval_only: true
-
 defaults:
   - override /curri: null
   - override /env: 2ho_render

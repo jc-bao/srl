@@ -1,7 +1,8 @@
 num_goals: 1
 current_num_goals: 1
 num_robots: 2
-os_rate: 1.0 
+os_rate: 1.0
+table_gap: 0.3
 num_envs: 1
 num_cameras: 1
 render_size: [1000, 1000]
