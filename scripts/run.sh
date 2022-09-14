@@ -22,7 +22,7 @@ echo "monitor gpu: $monitor_gpu_id"
 
 min_memory_usage=5000
 min_gpu_usage=65
-max_wait_time=60
+max_wait_time=40
 idle_time=0
 
 while true 
@@ -57,9 +57,9 @@ do
         fi
       fi
     done
-    tmux send-keys -t ":0.$1" "echo start new run" Enter
-    tmux send-keys -t ":0.$1" "cd /home/pcy/rl/srl; conda activate rlgpu; export LD_LIBRARY_PATH=/home/pcy/miniconda3/envs/rlgpu/lib:$LD_LIBRARY_PATH" Enter
-    tmux send-keys -t ":0.$1" "python run.py +corl_rebuttal=26to name=26ho_$load_tag random_seed=$seed gpu_id=$1 load_tag=latest_$load_tag" Enter
+    tmux send-keys -t ":0.2" "echo start new run" Enter
+    tmux send-keys -t ":0.2" "cd /home/pcy/rl/srl; conda activate rlgpu; export LD_LIBRARY_PATH=/home/pcy/miniconda3/envs/rlgpu/lib:$LD_LIBRARY_PATH" Enter
+    tmux send-keys -t ":0.2" "python run.py +corl_rebuttal=26to name=26ho_$load_tag random_seed=$seed gpu_id=$1 load_tag=latest_$load_tag" Enter
     idle_time=0
   fi
   sleep 1

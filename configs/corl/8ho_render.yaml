@@ -2,7 +2,7 @@
 
 wandb: true
 project: corl-main
-name: render
+name: 8ho_rand_render
 
 resume_mode: restart 
 load_tag: latest_19
@@ -26,7 +26,7 @@ batch_size: 20
 reuse: 0.000001
 steps_per_rollout: 100
 eval_per_rollout: 1
-eval_eps: 2
+eval_eps: 1
 
 defaults:
   - override /env: 8ho_debug

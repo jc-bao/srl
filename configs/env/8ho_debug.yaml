@@ -2,7 +2,10 @@ num_goals: 8
 current_num_goals: 8
 extra_goal_sample: 100
 max_sample_time: 500
-num_envs: 2
-num_cameras: 2
+num_envs: 32
+num_cameras: 32 
 num_robots: 2
 os_rate: 0.8
+robot_base_mode: random
+render_size: [1280, 720]
+base_radius_range: [0.55, 0.7]
